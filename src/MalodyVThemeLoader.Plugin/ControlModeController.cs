@@ -16,13 +16,9 @@ internal sealed class ControlModeController : MonoBehaviour
     private const float ProjectionDistance = 8f;
     private const float BackgroundDistance = 80f;
     private const float CameraMoveSpeed = 5.5f;
-    private const float MouseLookSensitivity = 2.4f;
+    private const float MousePixelSensitivity = 0.12f;
+    private const float LegacyMouseSensitivity = 2.4f;
     private const float RollStep = 7.5f;
-    private const float MaxPitchDegrees = 85f;
-    private const float MaxLateralDistance = 20f;
-    private const float MaxVerticalDistance = 14f;
-    private const float MaxBackoff = 24f;
-    private const float NearPlaneMargin = 0.08f;
 
     private string loaderRoot = "";
     private bool controlMode;
@@ -36,12 +32,12 @@ internal sealed class ControlModeController : MonoBehaviour
     private PropertyInfo? mouseScrollDeltaProperty;
     private Coroutine? captureCoroutine;
 
-    private Vector3 cameraPosition;
-    private float pitchDegrees;
-    private float yawDegrees;
-    private float rollDegrees;
+    private Vector3 cameraPosition = new(0f, 0f, -ProjectionDistance);
+    private Quaternion cameraRotation = Quaternion.identity;
     private bool savedCursorVisible;
     private CursorLockMode savedCursorLockMode;
+    private NativePoint savedCursorPosition;
+    private bool hasSavedCursorPosition;
 
     private GameObject? projectionRoot;
     private GameObject? capturedFrameRoot;
@@ -92,21 +88,19 @@ internal sealed class ControlModeController : MonoBehaviour
         }
 
         var input = ReadControlInput();
-        pitchDegrees = Math.Clamp(
-            pitchDegrees - input.MouseY * MouseLookSensitivity,
-            -MaxPitchDegrees,
-            MaxPitchDegrees);
-        yawDegrees = WrapDegrees(
-            yawDegrees + input.MouseX * MouseLookSensitivity);
-        if (Math.Abs(input.Scroll) > 0.001f)
+        var rollDelta = Math.Abs(input.Scroll) > 0.001f
+            ? input.Scroll * RollStep
+            : 0f;
+        if (Math.Abs(input.PitchDegrees) > 0.0001f
+            || Math.Abs(input.YawDegrees) > 0.0001f
+            || Math.Abs(rollDelta) > 0.0001f)
         {
-            rollDegrees = WrapDegrees(rollDegrees + input.Scroll * RollStep);
+            cameraRotation *= Quaternion.Euler(
+                input.PitchDegrees,
+                input.YawDegrees,
+                rollDelta);
         }
 
-        var cameraRotation = Quaternion.Euler(
-            pitchDegrees,
-            yawDegrees,
-            rollDegrees);
         var movement = cameraRotation
                        * new Vector3(input.Horizontal, 0f, input.Forward);
         if (movement.sqrMagnitude > 1f)
@@ -115,18 +109,6 @@ internal sealed class ControlModeController : MonoBehaviour
         }
 
         cameraPosition += movement * CameraMoveSpeed * Time.unscaledDeltaTime;
-        cameraPosition.x = Math.Clamp(
-            cameraPosition.x,
-            -MaxLateralDistance,
-            MaxLateralDistance);
-        cameraPosition.y = Math.Clamp(
-            cameraPosition.y,
-            -MaxVerticalDistance,
-            MaxVerticalDistance);
-        cameraPosition.z = Math.Clamp(
-            cameraPosition.z,
-            -MaxBackoff,
-            ProjectionDistance - NearPlaneMargin);
     }
 
     private IEnumerator CaptureAndPresentLoop()
@@ -208,12 +190,69 @@ internal sealed class ControlModeController : MonoBehaviour
 
     private ControlInput ReadControlInput()
     {
+        var mouseLook = ReadMouseLook();
         return new ControlInput(
             Axis(KeyCode.D, KeyCode.A),
             Axis(KeyCode.W, KeyCode.S),
-            ReadAxis("Mouse X"),
-            ReadAxis("Mouse Y"),
+            mouseLook.y,
+            mouseLook.x,
             ReadScroll());
+    }
+
+    private Vector2 ReadMouseLook()
+    {
+        if (TryReadCenteredMouseDelta(out var pixelDelta))
+        {
+            return pixelDelta * MousePixelSensitivity;
+        }
+
+        return new Vector2(
+            ReadAxis("Mouse X") * LegacyMouseSensitivity,
+            -ReadAxis("Mouse Y") * LegacyMouseSensitivity);
+    }
+
+    private static bool TryReadCenteredMouseDelta(out Vector2 delta)
+    {
+        delta = Vector2.zero;
+        if (!TryGetForegroundClientCenter(out var center)
+            || !GetCursorPos(out var current))
+        {
+            return false;
+        }
+
+        var deltaX = Math.Clamp(current.X - center.X, -500, 500);
+        var deltaY = Math.Clamp(current.Y - center.Y, -500, 500);
+        SetCursorPos(center.X, center.Y);
+        delta = new Vector2(deltaX, deltaY);
+        return true;
+    }
+
+    private static bool TryGetForegroundClientCenter(out NativePoint center)
+    {
+        center = default;
+        var window = GetForegroundWindow();
+        if (window == IntPtr.Zero
+            || !GetClientRect(window, out var clientRect)
+            || clientRect.Right <= clientRect.Left
+            || clientRect.Bottom <= clientRect.Top)
+        {
+            return false;
+        }
+
+        center = new NativePoint
+        {
+            X = clientRect.Left + (clientRect.Right - clientRect.Left) / 2,
+            Y = clientRect.Top + (clientRect.Bottom - clientRect.Top) / 2
+        };
+        return ClientToScreen(window, ref center);
+    }
+
+    private static void CenterForegroundCursor()
+    {
+        if (TryGetForegroundClientCenter(out var center))
+        {
+            SetCursorPos(center.X, center.Y);
+        }
     }
 
     private void EnsureInputApi()
@@ -381,13 +420,21 @@ internal sealed class ControlModeController : MonoBehaviour
             {
                 savedCursorVisible = Cursor.visible;
                 savedCursorLockMode = Cursor.lockState;
+                hasSavedCursorPosition = GetCursorPos(out savedCursorPosition);
+                Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
+                CenterForegroundCursor();
             }
             else
             {
                 Cursor.lockState = savedCursorLockMode;
                 Cursor.visible = savedCursorVisible;
+                if (hasSavedCursorPosition)
+                {
+                    SetCursorPos(savedCursorPosition.X, savedCursorPosition.Y);
+                }
+
+                hasSavedCursorPosition = false;
             }
         }
         catch (Exception exception)
@@ -418,6 +465,8 @@ internal sealed class ControlModeController : MonoBehaviour
         {
             name = "MalodyVThemeLoader Captured Frame Material"
         };
+        screenMaterial.mainTextureScale = new Vector2(1f, -1f);
+        screenMaterial.mainTextureOffset = new Vector2(0f, 1f);
         backgroundMaterial = new Material(shader)
         {
             name = "MalodyVThemeLoader Background Material"
@@ -445,8 +494,7 @@ internal sealed class ControlModeController : MonoBehaviour
         capturedFrameRoot = new GameObject("Captured Original Screen");
         capturedFrameRoot.transform.SetParent(projectionRoot.transform, false);
         capturedFrameRoot.layer = ProjectionLayer;
-        capturedFrameRoot.transform.localPosition =
-            new Vector3(0f, 0f, ProjectionDistance);
+        capturedFrameRoot.transform.localPosition = Vector3.zero;
 
         screenQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
         screenQuad.name = "Captured Frame Surface";
@@ -519,13 +567,9 @@ internal sealed class ControlModeController : MonoBehaviour
             : (float)captureWidth / captureHeight;
         displayCamera.aspect = aspect;
         displayCamera.transform.localPosition = cameraPosition;
-        displayCamera.transform.localRotation = Quaternion.Euler(
-            pitchDegrees,
-            yawDegrees,
-            rollDegrees);
+        displayCamera.transform.localRotation = cameraRotation;
 
-        capturedFrameRoot.transform.localPosition =
-            new Vector3(0f, 0f, ProjectionDistance);
+        capturedFrameRoot.transform.localPosition = Vector3.zero;
         capturedFrameRoot.transform.localRotation = Quaternion.identity;
         var frameHeight =
             Mathf.Tan(displayCamera.fieldOfView * Mathf.Deg2Rad * 0.5f)
@@ -661,12 +705,14 @@ internal sealed class ControlModeController : MonoBehaviour
             }
 
             overlayRoot.SetActive(true);
+            var euler = cameraRotation.eulerAngles;
             overlayText.text =
                 "控制模式相机\n"
                 + $"Position: x {cameraPosition.x:F2}, y {cameraPosition.y:F2}, "
                 + $"z {cameraPosition.z:F2}\n"
-                + $"View: pitch {pitchDegrees:F1}, yaw {yawDegrees:F1}, "
-                + $"roll {rollDegrees:F1}\n"
+                + $"View: pitch {ToSignedDegrees(euler.x):F1}, "
+                + $"yaw {ToSignedDegrees(euler.y):F1}, "
+                + $"roll {ToSignedDegrees(euler.z):F1}\n"
                 + "Ctrl + WASD 移动 | Ctrl + 鼠标观察 | Ctrl + 滚轮滚转";
             overlayWarningLogged = false;
         }
@@ -788,28 +834,53 @@ internal sealed class ControlModeController : MonoBehaviour
         }
     }
 
-    private static float WrapDegrees(float value)
+    private static float ToSignedDegrees(float value)
     {
-        while (value > 180f)
-        {
-            value -= 360f;
-        }
-
-        while (value < -180f)
-        {
-            value += 360f;
-        }
-
-        return value;
+        return value > 180f ? value - 360f : value;
     }
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int virtualKey);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(IntPtr window, out NativeRect rect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ClientToScreen(IntPtr window, ref NativePoint point);
+
     private readonly record struct ControlInput(
         float Horizontal,
         float Forward,
-        float MouseX,
-        float MouseY,
+        float PitchDegrees,
+        float YawDegrees,
         float Scroll);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
 }

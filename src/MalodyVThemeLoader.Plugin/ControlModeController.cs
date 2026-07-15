@@ -465,8 +465,6 @@ internal sealed class ControlModeController : MonoBehaviour
         {
             name = "MalodyVThemeLoader Captured Frame Material"
         };
-        screenMaterial.mainTextureScale = new Vector2(1f, -1f);
-        screenMaterial.mainTextureOffset = new Vector2(0f, 1f);
         backgroundMaterial = new Material(shader)
         {
             name = "MalodyVThemeLoader Background Material"
@@ -576,7 +574,7 @@ internal sealed class ControlModeController : MonoBehaviour
             * ProjectionDistance
             * 2f;
         screenQuad.transform.localPosition = Vector3.zero;
-        screenQuad.transform.localRotation = Quaternion.identity;
+        screenQuad.transform.localRotation = Quaternion.Euler(180f, 0f, 0f);
         screenQuad.transform.localScale =
             new Vector3(frameHeight * aspect, frameHeight, 1f);
 

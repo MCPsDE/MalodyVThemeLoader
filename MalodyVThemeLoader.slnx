@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MalodyVThemeLoader.Installer/MalodyVThemeLoader.Installer.csproj" />
+    <Project Path="src/MalodyVThemeLoader.Plugin/MalodyVThemeLoader.Plugin.csproj" />
+    <Project Path="src/MalodyVThemeLoader.Shared/MalodyVThemeLoader.Shared.csproj" />
+    <Project Path="src/MalodyVThemeLoader.ThemeManager/MalodyVThemeLoader.ThemeManager.csproj" />
+    <Project Path="src/MalodyVThemeLoader.ThemeBuilder/MalodyVThemeLoader.ThemeBuilder.csproj" />
+    <Project Path="src/MalodyVThemeLoader.Windows/MalodyVThemeLoader.Windows.csproj" />
+    <Project Path="src/MalodyVThemeLoader.Authorizer/MalodyVThemeLoader.Authorizer.csproj" />
+  </Folder>
+</Solution>

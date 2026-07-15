@@ -1,0 +1,26 @@
+{
+  "formatVersion": 1,
+  "devices": [
+    {
+      "id": "d5d397cd4e804cc6aa7472c99cdf5b0e",
+      "label": "Development workstation",
+      "salt": "7OZsSmm+AyK40A7vdJQAtJr8IJS9fkTv",
+      "authorizationHash": "62RmEh16+TcRdPmTd2dQ6PLlmJ9jKriE6Di2GBnCpMg=",
+      "enabled": true
+    },
+    {
+      "id": "9444b37435ef4995a90aebbc9e70f84e",
+      "label": "SHENYE996",
+      "salt": "UEcg11MJCA3n\u002Bmz0LeEo2BN5ezAmDoF\u002B",
+      "authorizationHash": "KNWGlU3Mv769/gAlLGJyFf0aL88ZSvn\u002Bqsu0VShgv2U=",
+      "enabled": true
+    },
+    {
+      "id": "65ebd14043294fdab53c1a051470d96d",
+      "label": "XINHUN\u306ENOTEBOO",
+      "salt": "XgczYY/MmDARsllKg9gTze4sb2\u002BLIgYD",
+      "authorizationHash": "b6GBdw773Ebo\u002BI9Vnl82bZ7KaVIbpbj4m7OfitOIkTs=",
+      "enabled": true
+    }
+  ]
+}

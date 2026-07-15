@@ -1,0 +1,10 @@
+artifacts/
+generated/
+vendor/
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+*.suo
+Default.mtp

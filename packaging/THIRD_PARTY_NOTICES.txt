@@ -1,0 +1,25 @@
+Third-Party Notices
+===================
+
+BepInEx 6
+Copyright BepInEx contributors.
+Licensed under LGPL-2.1.
+https://github.com/BepInEx/BepInEx
+
+Unity Doorstop
+Copyright UnityDoorstop contributors.
+Distributed under the license included by the upstream project.
+https://github.com/NeighTools/UnityDoorstop
+
+Il2CppInterop
+Copyright BepInEx / Il2CppInterop contributors.
+https://github.com/BepInEx/Il2CppInterop
+
+Cpp2IL
+Copyright Cpp2IL contributors.
+Licensed under the MIT License.
+https://github.com/SamboyCoding/Cpp2IL
+
+The release installer does not contain target game artwork, fonts, or Live2D
+resources. Locally authored theme packs remain subject to the rights and
+distribution terms of their respective owners.

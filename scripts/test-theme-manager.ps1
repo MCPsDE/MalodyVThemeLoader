@@ -44,8 +44,9 @@ if (Test-Path $testRoot) {
 $gameRoot = Join-Path $testRoot 'MalodyV'
 $desktopRoot = Join-Path $testRoot 'Desktop'
 $authoringRoot = Join-Path $testRoot 'Authoring\Minimal'
-$packagePath = Join-Path $testRoot 'minimal.mtp'
-$exportPath = Join-Path $testRoot 'minimal-exported.mtp'
+    $packagePath = Join-Path $testRoot 'minimal.mtp'
+    $exportPath = Join-Path $testRoot 'minimal-exported.mtp'
+    $topImagePath = Join-Path $testRoot 'top.png'
 
 New-Item -ItemType Directory -Path `
     (Join-Path $gameRoot 'Malody V_Data\il2cpp_data') -Force | Out-Null
@@ -158,11 +159,19 @@ try {
     $libraryType.GetMethod('SetRealtimeMode').Invoke(
         $library,
         [object[]]@([bool]$true))
+    [IO.File]::WriteAllBytes($topImagePath, [byte[]](1, 2, 3, 4))
+    $installedTopImage = $libraryType.GetMethod('SetControlTopImage').Invoke(
+        $library,
+        [object[]]@([string]$topImagePath))
     $settings = $libraryType.GetMethod('GetSettings').Invoke(
         $library,
         [object[]]@())
     if (-not $settings.RealtimeMode) {
         throw 'Realtime mode was not persisted.'
+    }
+    if ($settings.ControlTopImage -ne 'control-top.png' -or
+        -not [IO.File]::Exists([string]$installedTopImage)) {
+        throw 'Control mode top image was not persisted.'
     }
     $libraryType.GetMethod('Export').Invoke(
         $library,

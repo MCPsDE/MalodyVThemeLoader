@@ -8,4 +8,5 @@ public sealed class ThemeLoaderSettings
     public bool RealtimeMode { get; set; }
     public bool ControlMode { get; set; }
     public string? ControlBackgroundImage { get; set; }
+    public string? ControlTopImage { get; set; }
 }

@@ -176,6 +176,44 @@ internal sealed class ThemeLibrary
         return target;
     }
 
+    public string SetControlTopImage(string sourcePath)
+    {
+        var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+        if (extension is not ".png" and not ".jpg" and not ".jpeg")
+        {
+            throw new InvalidDataException("控制模式顶图仅支持 PNG 或 JPG。");
+        }
+
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("顶图文件不存在。", sourcePath);
+        }
+
+        var relativePath = "control-top" + extension;
+        var target = PathRules.GetSafeCombinedPath(
+            gameRoot, "ThemeLoader/" + relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        var temporary = target + ".new-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.Copy(sourcePath, temporary, true);
+            File.Move(temporary, target, true);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+            {
+                File.Delete(temporary);
+            }
+        }
+
+        var settings = GetSettings();
+        settings.ControlTopImage = relativePath;
+        WriteSettings(settings);
+        ConsentReceipt.Write(gameRoot, "theme-control-top");
+        return target;
+    }
+
     public ThemeItem Import(string sourcePath, bool overwrite)
     {
         if (!string.Equals(

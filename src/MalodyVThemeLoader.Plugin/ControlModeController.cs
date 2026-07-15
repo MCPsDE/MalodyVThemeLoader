@@ -43,6 +43,8 @@ internal sealed class ControlModeController : MonoBehaviour
     private GameObject? capturedFrameRoot;
     private GameObject? screenQuad;
     private GameObject? backgroundQuad;
+    private GameObject? topOverlayRoot;
+    private RawImage? topOverlayImage;
     private Camera? displayCamera;
     private RenderTexture? captureTexture;
     private Material? screenMaterial;
@@ -50,6 +52,9 @@ internal sealed class ControlModeController : MonoBehaviour
     private Texture2D? backgroundTexture;
     private string loadedBackgroundPath = "";
     private DateTime loadedBackgroundWriteTimeUtc = DateTime.MinValue;
+    private Texture2D? topTexture;
+    private string loadedTopPath = "";
+    private DateTime loadedTopWriteTimeUtc = DateTime.MinValue;
     private int captureWidth;
     private int captureHeight;
 
@@ -127,6 +132,7 @@ internal sealed class ControlModeController : MonoBehaviour
                 EnsureProjectionObjects();
                 EnsureCaptureTexture();
                 LoadBackgroundTextureIfChanged();
+                LoadTopTextureIfChanged();
                 ApplyProjectionLayout();
                 UpdateOverlay(controlInputActive);
 
@@ -507,7 +513,9 @@ internal sealed class ControlModeController : MonoBehaviour
         backgroundQuad.GetComponent<MeshRenderer>().sharedMaterial =
             backgroundMaterial;
 
+        EnsureTopOverlay();
         LoadBackgroundTextureIfChanged();
+        LoadTopTextureIfChanged();
     }
 
     private void EnsureCaptureTexture()
@@ -588,6 +596,134 @@ internal sealed class ControlModeController : MonoBehaviour
         backgroundQuad.transform.localScale =
             new Vector3(backgroundHeight * aspect, backgroundHeight, 1f);
         backgroundQuad.SetActive(backgroundTexture != null);
+        if (topOverlayRoot != null)
+        {
+            topOverlayRoot.SetActive(topTexture != null);
+        }
+    }
+
+    private void EnsureTopOverlay()
+    {
+        if (topOverlayRoot != null
+            || displayCamera == null
+            || projectionRoot == null)
+        {
+            return;
+        }
+
+        topOverlayRoot = new GameObject("MalodyVThemeLoader Control Top Image");
+        topOverlayRoot.transform.SetParent(projectionRoot.transform, false);
+        topOverlayRoot.layer = ProjectionLayer;
+        topOverlayRoot.hideFlags = HideFlags.HideAndDontSave;
+        var canvas = topOverlayRoot.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = displayCamera;
+        canvas.planeDistance = 0.3f;
+        canvas.sortingOrder = short.MaxValue - 1;
+        var scaler = topOverlayRoot.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+
+        var imageObject = new GameObject("Top Image");
+        imageObject.transform.SetParent(topOverlayRoot.transform, false);
+        imageObject.layer = ProjectionLayer;
+        topOverlayImage = imageObject.AddComponent<RawImage>();
+        topOverlayImage.raycastTarget = false;
+        topOverlayImage.color = Color.white;
+        var rect = topOverlayImage.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        topOverlayRoot.SetActive(false);
+    }
+
+    private void LoadTopTextureIfChanged()
+    {
+        var path = ResolveTopImagePath();
+        var writeTimeUtc = !string.IsNullOrWhiteSpace(path) && File.Exists(path)
+            ? File.GetLastWriteTimeUtc(path)
+            : DateTime.MinValue;
+        if (string.Equals(
+                path,
+                loadedTopPath,
+                StringComparison.OrdinalIgnoreCase)
+            && writeTimeUtc == loadedTopWriteTimeUtc)
+        {
+            return;
+        }
+
+        loadedTopPath = path;
+        loadedTopWriteTimeUtc = writeTimeUtc;
+        if (topTexture != null)
+        {
+            UnityEngine.Object.Destroy(topTexture);
+            topTexture = null;
+        }
+
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            if (topOverlayImage != null)
+            {
+                topOverlayImage.texture = null;
+            }
+
+            return;
+        }
+
+        try
+        {
+            var bytes = File.ReadAllBytes(path);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false)
+            {
+                name = "MalodyVThemeLoader Control Top Image",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            if (!ImageConversion.LoadImage(texture, bytes))
+            {
+                UnityEngine.Object.Destroy(texture);
+                return;
+            }
+
+            topTexture = texture;
+            if (topOverlayImage != null)
+            {
+                topOverlayImage.texture = texture;
+            }
+        }
+        catch (Exception exception)
+        {
+            Plugin.Log.LogWarning(
+                $"Control mode top image was not loaded: {exception.Message}");
+            loadedTopPath = "";
+            loadedTopWriteTimeUtc = DateTime.MinValue;
+        }
+    }
+
+    private string ResolveTopImagePath()
+    {
+        string? configured;
+        try
+        {
+            configured = ThemeRuntime.ReadSettings(loaderRoot).ControlTopImage;
+        }
+        catch
+        {
+            configured = null;
+        }
+
+        var relative = string.IsNullOrWhiteSpace(configured)
+            ? "control-top.png"
+            : configured.Trim();
+        try
+        {
+            return PathRules.GetSafeCombinedPath(loaderRoot, relative);
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     private void LoadBackgroundTextureIfChanged()
@@ -802,6 +938,8 @@ internal sealed class ControlModeController : MonoBehaviour
         capturedFrameRoot = null;
         screenQuad = null;
         backgroundQuad = null;
+        topOverlayRoot = null;
+        topOverlayImage = null;
         displayCamera = null;
         overlayRoot = null;
         overlayText = null;
@@ -817,6 +955,12 @@ internal sealed class ControlModeController : MonoBehaviour
         {
             UnityEngine.Object.Destroy(backgroundTexture);
             backgroundTexture = null;
+        }
+
+        if (topTexture != null)
+        {
+            UnityEngine.Object.Destroy(topTexture);
+            topTexture = null;
         }
 
         if (screenMaterial != null)

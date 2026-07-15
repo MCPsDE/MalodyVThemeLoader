@@ -22,6 +22,8 @@ internal sealed class ThemeManagerForm : Form
     private readonly CheckBox controlModeToggle = new();
     private readonly Button controlBackgroundButton =
         AppVisuals.CreateButton("设置底图");
+    private readonly Button controlTopButton =
+        AppVisuals.CreateButton("设置顶图");
     private readonly Button exportButton;
     private readonly Button activateButton;
     private readonly Button removeButton;
@@ -173,6 +175,10 @@ internal sealed class ThemeManagerForm : Form
         controlBackgroundButton.Visible = false;
         controlBackgroundButton.Click += (_, _) => SetControlBackgroundImage();
 
+        controlTopButton.Size = new Size(94, 36);
+        controlTopButton.Visible = false;
+        controlTopButton.Click += (_, _) => SetControlTopImage();
+
         foreach (var button in new[]
                  {
                      import,
@@ -190,6 +196,8 @@ internal sealed class ThemeManagerForm : Form
         actions.Controls.Add(controlModeToggle);
         controlBackgroundButton.Margin = new Padding(10, 0, 10, 0);
         actions.Controls.Add(controlBackgroundButton);
+        controlTopButton.Margin = new Padding(0, 0, 10, 0);
+        actions.Controls.Add(controlTopButton);
         bar.Controls.Add(actions);
         bar.Controls.Add(new Separator());
         return bar;
@@ -657,6 +665,7 @@ internal sealed class ThemeManagerForm : Form
         {
             controlModeToggle.Checked = library.GetSettings().ControlMode;
             controlBackgroundButton.Visible = controlModeToggle.Checked;
+            controlTopButton.Visible = controlModeToggle.Checked;
         }
         finally
         {
@@ -696,6 +705,7 @@ internal sealed class ThemeManagerForm : Form
         {
             library.SetControlMode(controlModeToggle.Checked);
             controlBackgroundButton.Visible = controlModeToggle.Checked;
+            controlTopButton.Visible = controlModeToggle.Checked;
             ShowStatus(controlModeToggle.Checked
                 ? "控制模式已启用；按住 Ctrl 后用 WASD、鼠标和滚轮控制相机。"
                 : "控制模式已关闭；游戏会恢复原始完整画面。");
@@ -729,6 +739,31 @@ internal sealed class ThemeManagerForm : Form
         catch (Exception exception)
         {
             ShowError($"无法设置控制模式底图：{exception.Message}");
+        }
+    }
+
+    private void SetControlTopImage()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "设置控制模式顶图",
+            Filter = "图像文件 (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
+            Multiselect = false,
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            var target = library.SetControlTopImage(dialog.FileName);
+            ShowStatus($"控制模式顶图已更新：{target}");
+        }
+        catch (Exception exception)
+        {
+            ShowError($"无法设置控制模式顶图：{exception.Message}");
         }
     }
 

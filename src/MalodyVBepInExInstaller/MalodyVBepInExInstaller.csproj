@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <AssemblyName>MalodyVBepInExInstaller</AssemblyName>
+    <RootNamespace>MalodyVBepInExInstaller</RootNamespace>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <ApplicationIcon>..\MalodyVThemeLoader.Windows\Assets\mtp.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('..\..\artifacts\malody-bepinex-payload.zip')">
+    <EmbeddedResource Include="..\..\artifacts\malody-bepinex-payload.zip"
+                      LogicalName="MalodyVBepInExInstaller.Payload.zip" />
+  </ItemGroup>
+</Project>

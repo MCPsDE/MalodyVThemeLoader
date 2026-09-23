@@ -9,7 +9,8 @@ internal sealed class InstallService
 {
     public OperationResult InstallOrRepair(
         string gameDirectory,
-        IProgress<string>? progress = null)
+        IProgress<string>? progress = null,
+        bool installConfigurationManager = true)
     {
         if (!GameLocator.IsGameDirectory(gameDirectory, out var validationError))
         {
@@ -31,7 +32,7 @@ internal sealed class InstallService
         try
         {
             Directory.CreateDirectory(staging);
-            ExtractPayload(staging);
+            ExtractPayload(staging, installConfigurationManager);
             var payloadFiles = Directory.EnumerateFiles(
                     staging, "*", SearchOption.AllDirectories)
                 .Select(path => new PayloadFile(
@@ -58,7 +59,7 @@ internal sealed class InstallService
                     {
                         RelativePath = payloadFile.RelativePath,
                         Sha256 = ComputeSha256(target),
-                        Preserved = true
+                        Preserved = previousFile?.Preserved ?? true
                     });
                     continue;
                 }
@@ -100,6 +101,14 @@ internal sealed class InstallService
                 });
             }
 
+            RemoveObsoleteOwnedFiles(
+                gameDirectory,
+                staging,
+                previousFiles,
+                payloadFiles.Select(file => file.RelativePath),
+                rollback,
+                progress);
+
             var manifest = new BepInExInstallManifest
             {
                 ProductVersion = ProductInfo.InstallerVersion,
@@ -109,9 +118,16 @@ internal sealed class InstallService
                 Files = installed
             };
             WriteManifestAtomic(manifestPath, manifest);
-            progress?.Report("BepInEx 安装完成。首次启动 Malody V 时会生成 IL2CPP interop 文件。");
+            progress?.Report(
+                installConfigurationManager
+                    ? "BepInEx 与官方 ConfigurationManager 安装完成。"
+                    : "BepInEx 安装完成。");
+            progress?.Report(
+                "首次启动 Malody V 时会生成 IL2CPP interop 文件。");
             return OperationResult.Ok(
-                $"已安装 BepInEx {ProductInfo.BepInExVersion} 到 {gameDirectory}。");
+                installConfigurationManager
+                    ? $"已安装 BepInEx {ProductInfo.BepInExVersion} 和官方 ConfigurationManager 到 {gameDirectory}。"
+                    : $"已安装 BepInEx {ProductInfo.BepInExVersion} 到 {gameDirectory}。");
         }
         catch (Exception exception)
         {
@@ -209,10 +225,29 @@ internal sealed class InstallService
                 : $"BepInEx 已卸载，保留 {preserved} 个被修改的文件。");
     }
 
-    private static void ExtractPayload(string staging)
+    private static void ExtractPayload(
+        string staging,
+        bool installConfigurationManager)
     {
         using var payload = PayloadProvider.Open();
         using var archive = new ZipArchive(payload, ZipArchiveMode.Read);
+        ExtractArchiveEntries(archive, staging);
+        if (!installConfigurationManager)
+        {
+            return;
+        }
+
+        using var configurationManagerPayload =
+            ConfigurationManagerProvider.Open();
+        using var configurationManagerArchive = new ZipArchive(
+            configurationManagerPayload, ZipArchiveMode.Read);
+        ExtractArchiveEntries(configurationManagerArchive, staging);
+    }
+
+    private static void ExtractArchiveEntries(
+        ZipArchive archive,
+        string staging)
+    {
         foreach (var entry in archive.Entries)
         {
             if (string.IsNullOrWhiteSpace(entry.Name))
@@ -286,6 +321,47 @@ internal sealed class InstallService
 
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.Move(backup, target, true);
+    }
+
+    private static void RemoveObsoleteOwnedFiles(
+        string gameDirectory,
+        string staging,
+        IReadOnlyDictionary<string, BepInExInstalledFile> previousFiles,
+        IEnumerable<string> currentPaths,
+        ICollection<RollbackEntry> rollback,
+        IProgress<string>? progress)
+    {
+        var current = currentPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var previous in previousFiles.Values)
+        {
+            if (current.Contains(previous.RelativePath)
+                || previous.Preserved)
+            {
+                continue;
+            }
+
+            var target = PathRules.GetSafeCombinedPath(
+                gameDirectory, previous.RelativePath);
+            if (!File.Exists(target)
+                || !string.Equals(
+                    ComputeSha256(target),
+                    previous.Sha256,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var backup = PathRules.GetSafeCombinedPath(
+                staging,
+                Path.Combine(
+                    "rollback-obsolete",
+                    previous.RelativePath));
+            Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+            File.Copy(target, backup, true);
+            rollback.Add(new RollbackEntry(target, null, backup));
+            progress?.Report($"移除已取消的组件文件 {previous.RelativePath}");
+            File.Delete(target);
+        }
     }
 
     private static void WriteManifestAtomic(

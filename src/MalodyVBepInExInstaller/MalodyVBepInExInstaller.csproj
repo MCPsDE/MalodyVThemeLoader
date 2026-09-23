@@ -28,4 +28,8 @@
     <EmbeddedResource Include="..\..\artifacts\malody-bepinex-payload.zip"
                       LogicalName="MalodyVBepInExInstaller.Payload.zip" />
   </ItemGroup>
+  <ItemGroup Condition="Exists('..\..\artifacts\downloads\BepInEx.ConfigurationManager_IL2CPP_v19.0.zip')">
+    <EmbeddedResource Include="..\..\artifacts\downloads\BepInEx.ConfigurationManager_IL2CPP_v19.0.zip"
+                      LogicalName="MalodyVBepInExInstaller.ConfigurationManager.zip" />
+  </ItemGroup>
 </Project>

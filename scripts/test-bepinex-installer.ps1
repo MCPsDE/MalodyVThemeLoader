@@ -1,7 +1,8 @@
 param(
     [string]$PayloadZip = '',
     [string]$InstallerDll = '',
-    [string]$InstallerExe = ''
+    [string]$InstallerExe = '',
+    [bool]$InstallConfigurationManager = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +40,13 @@ foreach ($name in @('Malody V.exe', 'UnityPlayer.dll', 'GameAssembly.dll')) {
 
 $env:MALODY_BEPINEX_PAYLOAD = $PayloadZip
 $env:MALODY_BEPINEX_QUIET = '1'
+if ($InstallConfigurationManager) {
+    Remove-Item Env:MALODY_BEPINEX_INSTALL_CONFIGURATION_MANAGER `
+        -ErrorAction SilentlyContinue
+}
+else {
+    $env:MALODY_BEPINEX_INSTALL_CONFIGURATION_MANAGER = '0'
+}
 function Invoke-Installer([string]$Command) {
     if ([string]::IsNullOrWhiteSpace($InstallerExe)) {
         & dotnet $InstallerDll $Command $gameRoot
@@ -63,6 +71,17 @@ try {
     if ($exitCode -ne 0) {
         throw 'BepInEx verify failed.'
     }
+    $configurationManagerPath = Join-Path $gameRoot `
+        'BepInEx\plugins\ConfigurationManager\ConfigurationManager.dll'
+    if ($InstallConfigurationManager -and
+        -not (Test-Path $configurationManagerPath)) {
+        throw 'Default ConfigurationManager option did not install the official plugin.'
+    }
+    if (-not $InstallConfigurationManager -and
+        (Test-Path $configurationManagerPath)) {
+        throw 'Disabled ConfigurationManager option still installed the plugin.'
+    }
+    $env:MALODY_BEPINEX_INSTALL_CONFIGURATION_MANAGER = '0'
 
     $pluginPath = Join-Path $gameRoot 'BepInEx\plugins\sentinel.dll'
     New-Item -ItemType Directory -Path (Split-Path $pluginPath) -Force | Out-Null
@@ -79,6 +98,9 @@ try {
     }
     if (-not ([IO.File]::ReadAllText($configPath).Contains('# user change'))) {
         throw 'Repair overwrote the user BepInEx config.'
+    }
+    if (Test-Path $configurationManagerPath) {
+        throw 'Repair with ConfigurationManager disabled left the old official plugin behind.'
     }
 
     $exitCode = Invoke-Installer '--uninstall'
@@ -104,6 +126,8 @@ finally {
     if ([string]::IsNullOrWhiteSpace($InstallerExe)) {
         Remove-Item Env:MALODY_BEPINEX_PAYLOAD -ErrorAction SilentlyContinue
     }
+    Remove-Item Env:MALODY_BEPINEX_INSTALL_CONFIGURATION_MANAGER `
+        -ErrorAction SilentlyContinue
     Remove-Item Env:MALODY_BEPINEX_QUIET -ErrorAction SilentlyContinue
 }
 

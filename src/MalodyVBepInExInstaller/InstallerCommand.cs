@@ -14,10 +14,17 @@ internal static class InstallerCommand
         var progress = Environment.GetEnvironmentVariable("MALODY_BEPINEX_QUIET") == "1"
             ? null
             : new Progress<string>(Console.WriteLine);
+        var installConfigurationManager =
+            !string.Equals(
+                Environment.GetEnvironmentVariable(
+                    "MALODY_BEPINEX_INSTALL_CONFIGURATION_MANAGER"),
+                "0",
+                StringComparison.Ordinal);
         var service = new InstallService();
         var result = args[0].ToLowerInvariant() switch
         {
-            "--install" => service.InstallOrRepair(args[1], progress),
+            "--install" => service.InstallOrRepair(
+                args[1], progress, installConfigurationManager),
             "--verify" => service.Verify(args[1]),
             "--uninstall" => service.Uninstall(args[1], progress),
             _ => OperationResult.Fail($"未知命令：{args[0]}")

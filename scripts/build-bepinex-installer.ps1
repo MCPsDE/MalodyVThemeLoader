@@ -11,6 +11,13 @@ $payloadZip = Join-Path $artifactsRoot 'malody-bepinex-payload.zip'
 $buildRoot = Join-Path $artifactsRoot 'malody-bepinex-installer-build'
 $releaseRoot = Join-Path $artifactsRoot 'release-bepinex'
 $vendorRoot = Join-Path $repoRoot 'vendor\bepinex'
+$downloadsRoot = Join-Path $artifactsRoot 'downloads'
+$configurationManagerZip = Join-Path `
+    $downloadsRoot 'BepInEx.ConfigurationManager_IL2CPP_v19.0.zip'
+$configurationManagerUrl =
+    'https://github.com/BepInEx/BepInEx.ConfigurationManager/releases/download/v19.0/BepInEx.ConfigurationManager_IL2CPP_v19.0.zip'
+$configurationManagerSha256 =
+    '3ea26a2c354a1d960beca4c61a397c72a1641cb5872f6f89e7d972e15d8cfb29'
 
 function Reset-ArtifactDirectory([string]$Path) {
     $resolved = [IO.Path]::GetFullPath($Path)
@@ -26,6 +33,16 @@ function Reset-ArtifactDirectory([string]$Path) {
 
 if (-not (Test-Path (Join-Path $vendorRoot 'winhttp.dll'))) {
     throw 'vendor\bepinex is missing. Run scripts\prepare-dependencies.ps1 first.'
+}
+New-Item -ItemType Directory -Force -Path $downloadsRoot | Out-Null
+if (-not (Test-Path $configurationManagerZip) -or
+    (Get-FileHash $configurationManagerZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+    $configurationManagerSha256) {
+    Invoke-WebRequest -Uri $configurationManagerUrl -OutFile $configurationManagerZip
+}
+if ((Get-FileHash $configurationManagerZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne
+    $configurationManagerSha256) {
+    throw 'ConfigurationManager archive hash mismatch.'
 }
 
 Reset-ArtifactDirectory $payloadRoot

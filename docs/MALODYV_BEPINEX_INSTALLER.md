@@ -35,6 +35,14 @@ It does not install:
 
 The installer never starts Malody V automatically.
 
+The GUI also has a default-checked option for the official
+`BepInEx.ConfigurationManager` IL2CPP plugin `v19.0`. Its interface is
+English; there is no official Chinese localization bundled here. Clear the
+checkbox to install only BepInEx. The manager archive is embedded into the
+installer and is not downloaded during game installation.
+The package is the official asset named
+`BepInEx.ConfigurationManager_IL2CPP_v19.0.zip`.
+
 ## Exact Target
 
 | Item | Value |
@@ -49,6 +57,8 @@ The installer never starts Malody V automatically.
 | Plugin target | `net6.0` |
 | Installer target | .NET 8, self-contained, Windows x64 |
 | Plugin template | `BepInEx.Templates 2.0.0-be.4` |
+| Optional manager | Official `BepInEx.ConfigurationManager` IL2CPP `v19.0` |
+| Optional manager archive SHA-256 | `3ea26a2c354a1d960beca4c61a397c72a1641cb5872f6f89e7d972e15d8cfb29` |
 
 Do not silently change the BepInEx build. If the game or BepInEx version
 changes, treat it as a new compatibility target and regenerate interop files.
@@ -112,8 +122,8 @@ Build the standalone installer:
 Output:
 
 ```text
-artifacts/release/MalodyV-BepInEx-Installer-1.0.0.exe
-artifacts/release/SHA256SUMS-BepInEx-1.0.0.txt
+artifacts/release-bepinex/MalodyV-BepInEx-Installer-1.0.0.exe
+artifacts/release-bepinex/SHA256SUMS-BepInEx-1.0.0.txt
 ```
 
 The payload is embedded in the EXE. The release machine does not need to
@@ -131,6 +141,13 @@ $env:MALODY_BEPINEX_QUIET = '1'
 MalodyVBepInExInstaller.exe --install 'E:\...\MalodyV'
 MalodyVBepInExInstaller.exe --verify 'E:\...\MalodyV'
 MalodyVBepInExInstaller.exe --uninstall 'E:\...\MalodyV'
+```
+
+The CLI installs ConfigurationManager by default. To perform a pure BepInEx
+installation, set this before `--install`:
+
+```powershell
+$env:MALODY_BEPINEX_INSTALL_CONFIGURATION_MANAGER = '0'
 ```
 
 Run the disposable integration test:

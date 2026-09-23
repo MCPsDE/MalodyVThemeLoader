@@ -5,6 +5,7 @@ internal sealed class InstallerForm : Form
     private readonly TextBox pathBox = new();
     private readonly Label pathState = new();
     private readonly TextBox statusBox = new();
+    private readonly CheckBox configurationManagerCheckBox = new();
     private readonly Button installButton = new();
     private readonly Button uninstallButton = new();
     private readonly InstallService service = new();
@@ -12,8 +13,8 @@ internal sealed class InstallerForm : Form
     public InstallerForm()
     {
         Text = ProductInfo.Name;
-        ClientSize = new Size(720, 390);
-        MinimumSize = new Size(640, 350);
+        ClientSize = new Size(720, 410);
+        MinimumSize = new Size(640, 370);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
@@ -68,14 +69,23 @@ internal sealed class InstallerForm : Form
         pathState.AutoSize = true;
         pathState.Location = new Point(31, 161);
 
+        configurationManagerCheckBox.AutoSize = true;
+        configurationManagerCheckBox.Checked = true;
+        configurationManagerCheckBox.Location = new Point(30, 184);
+        configurationManagerCheckBox.Text =
+            "安装官方 BepInEx ConfigurationManager（英文界面）";
+
         installButton.Location = new Point(30, 192);
+        installButton.Top = 218;
         installButton.Size = new Size(130, 36);
         installButton.Text = "安装 / 修复";
         installButton.Click += async (_, _) =>
             await RunAsync(() => service.InstallOrRepair(
-                pathBox.Text, new Progress<string>(AppendStatus)));
+                pathBox.Text,
+                new Progress<string>(AppendStatus),
+                configurationManagerCheckBox.Checked));
 
-        uninstallButton.Location = new Point(170, 192);
+        uninstallButton.Location = new Point(170, 218);
         uninstallButton.Size = new Size(100, 36);
         uninstallButton.Text = "卸载";
         uninstallButton.Click += async (_, _) =>
@@ -94,8 +104,8 @@ internal sealed class InstallerForm : Form
                 pathBox.Text, new Progress<string>(AppendStatus)));
         };
 
-        statusBox.Location = new Point(30, 250);
-        statusBox.Size = new Size(650, 105);
+        statusBox.Location = new Point(30, 270);
+        statusBox.Size = new Size(650, 110);
         statusBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom
                            | AnchorStyles.Left | AnchorStyles.Right;
         statusBox.Multiline = true;
@@ -105,7 +115,7 @@ internal sealed class InstallerForm : Form
         Controls.AddRange(new Control[]
         {
             title, subtitle, label, pathBox, browse, pathState,
-            installButton, uninstallButton, statusBox
+            configurationManagerCheckBox, installButton, uninstallButton, statusBox
         });
         UpdatePathState();
     }

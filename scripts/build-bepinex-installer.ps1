@@ -11,6 +11,9 @@ $payloadZip = Join-Path $artifactsRoot 'malody-bepinex-payload.zip'
 $buildRoot = Join-Path $artifactsRoot 'malody-bepinex-installer-build'
 $releaseRoot = Join-Path $artifactsRoot 'release-bepinex'
 $vendorRoot = Join-Path $repoRoot 'vendor\bepinex'
+$interopHost = Join-Path $artifactsRoot 'interop-host'
+$unityLibsSource = Join-Path $interopHost 'BepInEx\unity-libs'
+$unityLibArchive = Join-Path $unityLibsSource '2022.3.62.zip'
 $downloadsRoot = Join-Path $artifactsRoot 'downloads'
 $configurationManagerZip = Join-Path `
     $downloadsRoot 'BepInEx.ConfigurationManager_IL2CPP_v19.0.zip'
@@ -34,6 +37,12 @@ function Reset-ArtifactDirectory([string]$Path) {
 if (-not (Test-Path (Join-Path $vendorRoot 'winhttp.dll'))) {
     throw 'vendor\bepinex is missing. Run scripts\prepare-dependencies.ps1 first.'
 }
+if (-not (Test-Path $unityLibArchive)) {
+    $unityError =
+        'Unity base library archive is missing: ' + $unityLibArchive + '. ' +
+        'Run scripts\prepare-dependencies.ps1 after fixing the BepInEx interop environment.'
+    throw $unityError
+}
 New-Item -ItemType Directory -Force -Path $downloadsRoot | Out-Null
 if (-not (Test-Path $configurationManagerZip) -or
     (Get-FileHash $configurationManagerZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne
@@ -54,6 +63,9 @@ if (Test-Path $payloadZip) {
 
 Copy-Item -Path (Join-Path $vendorRoot '*') `
     -Destination $payloadRoot -Recurse -Force
+New-Item -ItemType Directory -Force -Path (Join-Path $payloadRoot 'BepInEx\unity-libs') | Out-Null
+Copy-Item -LiteralPath $unityLibArchive `
+    -Destination (Join-Path $payloadRoot 'BepInEx\unity-libs\2022.3.62.zip') -Force
 Remove-Item -LiteralPath (Join-Path $payloadRoot 'changelog.txt') `
     -Force -ErrorAction SilentlyContinue
 

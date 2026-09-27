@@ -129,6 +129,17 @@ artifacts/release-bepinex/SHA256SUMS-BepInEx-1.0.0.txt
 The payload is embedded in the EXE. The release machine does not need to
 download BepInEx during installation.
 
+The payload must also include the Unity base-library archive required by
+Il2CppInterop. For the current Malody V build this is:
+
+```text
+BepInEx/unity-libs/2022.3.62.zip
+```
+
+`scripts/build-bepinex-installer.ps1` validates the archive from the isolated
+interop host and copies it into the payload. If the archive is missing, the
+build fails instead of producing an installer that cannot generate Interop.
+
 ## CLI Test Commands
 
 The GUI is the normal interface. The installer also exposes commands useful

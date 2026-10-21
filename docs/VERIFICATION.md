@@ -1,4 +1,4 @@
-# 2.0.0 验证记录
+# 2.1.0 验证记录
 
 验证日期：2026-10-22。所有安装操作均针对仓库 `artifacts` 内的可丢弃假游戏目录，未启动游戏。
 
@@ -37,6 +37,8 @@
 ## GitHub 自动更新验证
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
+
+当前公开 Release：[v2.1.0](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.1.0)。
 
 ## Fluent 2 视觉复核
 

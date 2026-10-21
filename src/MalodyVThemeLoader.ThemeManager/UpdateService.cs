@@ -45,6 +45,12 @@ internal static class UpdateService
             {
                 return UpdateResult.None;
             }
+            if (response.StatusCode is HttpStatusCode.Forbidden or (HttpStatusCode)429)
+            {
+                // GitHub's anonymous API limit is external state; do not turn it
+                // into a scary error in the manager or block theme work.
+                return UpdateResult.None;
+            }
             response.EnsureSuccessStatusCode();
             await using var releaseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var releaseDocument = await JsonDocument.ParseAsync(

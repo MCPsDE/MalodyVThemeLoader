@@ -17,6 +17,10 @@ internal sealed partial class ThemeManagerForm
     private ListBox? live2dModels;
     private ListBox? live2dAnimations;
     private Label? live2dState;
+    private Button? live2dImportDirectory;
+    private Button? live2dImportArchive;
+    private Button? live2dImportAnimation;
+    private Button? live2dImportTexture;
 
     public ThemeManagerForm(string gameRoot)
     {
@@ -337,7 +341,7 @@ internal sealed partial class ThemeManagerForm
         var stack = AppVisuals.Stack();
         AppVisuals.AddRow(stack, AppVisuals.TextBlock("Live2D 工作台", 22F, true));
         AppVisuals.AddRow(stack, AppVisuals.TextBlock(
-            "把模型目录、纹理和已有动画放进当前主题。目录会被实时监听，保存文件即可尝试热重载。"));
+            "把模型目录、纹理和已有动画放进当前主题。开启实时模式后，目录内保存文件即可尝试热重载。"));
         var notice = AppVisuals.TextBlock(
             "Live2D 模型由 model3.json / moc3（或旧式 json / moc）和纹理组成；动画只能导入已有兼容格式。静态图或 GIF 不能凭空生成可运行的 Live2D rig，GIF 导入会使用第一帧作为纹理。",
             9F);
@@ -395,10 +399,14 @@ internal sealed partial class ThemeManagerForm
         var importArchive = AppVisuals.CreateButton("导入 Live2D ZIP");
         var importAnimation = AppVisuals.CreateButton("添加动画");
         var importTexture = AppVisuals.CreateButton("替换纹理");
+        live2dImportDirectory = importDirectory;
+        live2dImportArchive = importArchive;
+        live2dImportAnimation = importAnimation;
+        live2dImportTexture = importTexture;
         foreach (var button in new[] { importDirectory, importArchive, importAnimation, importTexture })
         {
             button.AutoSize = true;
-            button.MinimumSize = new Size(120, 36);
+            button.MinimumSize = new Size(button == importArchive ? 150 : 120, 36);
             button.Margin = new Padding(0, 0, 8, 8);
             actions.Controls.Add(button);
         }
@@ -420,6 +428,11 @@ internal sealed partial class ThemeManagerForm
         live2dModels.Items.Clear();
         live2dAnimations?.Items.Clear();
         var item = SelectedTheme;
+        var editable = item is { IsValid: true, IsVirtual: false };
+        if (live2dImportDirectory is not null) live2dImportDirectory.Enabled = editable;
+        if (live2dImportArchive is not null) live2dImportArchive.Enabled = editable;
+        if (live2dImportAnimation is not null) live2dImportAnimation.Enabled = editable;
+        if (live2dImportTexture is not null) live2dImportTexture.Enabled = editable;
         if (item is null || !item.IsValid || item.IsVirtual)
         {
             if (live2dState is not null) live2dState.Text = "请先选择一个可编辑的目录主题。";

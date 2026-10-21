@@ -29,7 +29,7 @@ internal static class GameLocator
     {
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
         {
-            error = "The selected directory does not exist.";
+            error = "目录不存在，请选择包含 Malody V.exe 的游戏安装文件夹。";
             return false;
         }
 
@@ -37,7 +37,7 @@ internal static class GameLocator
         {
             if (!File.Exists(Path.Combine(path, file)))
             {
-                error = $"Missing {file}.";
+                error = $"未找到 {file}，请选择完整的 Malody V 游戏目录。";
                 return false;
             }
         }
@@ -46,7 +46,7 @@ internal static class GameLocator
         if (!Directory.Exists(dataPath)
             || !Directory.Exists(Path.Combine(dataPath, "il2cpp_data")))
         {
-            error = "Missing Malody V_Data or IL2CPP data.";
+            error = "未找到 Malody V_Data 或 IL2CPP 数据，请确认游戏文件完整。";
             return false;
         }
 

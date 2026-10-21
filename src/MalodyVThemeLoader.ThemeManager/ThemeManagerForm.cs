@@ -4,11 +4,11 @@ using MalodyVThemeLoader.Windows;
 
 namespace MalodyVThemeLoader.ThemeManager;
 
-internal sealed class ThemeManagerForm : Form
+internal sealed partial class ThemeManagerForm : Form
 {
     private readonly string gameRoot;
     private readonly ThemeLibrary library;
-    private readonly ListView themeList = new();
+    private readonly ListBox themeList = new();
     private readonly Label nameValue = CreateValueLabel();
     private readonly Label versionValue = CreateValueLabel();
     private readonly Label authorValue = CreateValueLabel();
@@ -30,312 +30,6 @@ internal sealed class ThemeManagerForm : Form
     private bool updatingRealtimeToggle;
     private bool updatingControlModeToggle;
 
-    public ThemeManagerForm(string gameRoot)
-    {
-        this.gameRoot = gameRoot;
-        library = new ThemeLibrary(gameRoot);
-
-        Text = "主题管理器";
-        StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(1040, 680);
-        MinimumSize = new Size(900, 600);
-        BackColor = AppVisuals.Canvas;
-        Font = AppVisuals.UiFont();
-        Icon = AppVisuals.CreateAppIcon();
-        AllowDrop = true;
-
-        var header = BuildHeader();
-        var commandBar = BuildCommandBar(
-            out exportButton, out activateButton, out removeButton);
-        var workspace = BuildWorkspace();
-        var dangerBar = BuildDangerBar();
-
-        Controls.Add(workspace);
-        Controls.Add(dangerBar);
-        Controls.Add(commandBar);
-        Controls.Add(header);
-
-        DragEnter += OnDragEnter;
-        DragDrop += OnDragDrop;
-        Shown += (_, _) =>
-        {
-            RefreshRealtimeMode();
-            RefreshControlMode();
-            RefreshThemes();
-        };
-    }
-
-    private Control BuildHeader()
-    {
-        var header = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 86,
-            BackColor = AppVisuals.Sidebar,
-            Padding = new Padding(26, 16, 26, 14)
-        };
-        var logo = new PictureBox
-        {
-            Image = AppVisuals.CreateLogoImage(),
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.Transparent,
-            Location = new Point(26, 18),
-            Size = new Size(44, 44)
-        };
-        var title = AppVisuals.CreateLabel(
-            "Theme Pack", 17F, Color.White, FontStyle.Bold);
-        title.Location = new Point(82, 15);
-        var subtitle = AppVisuals.CreateLabel(
-            "本地主题包管理",
-            9F,
-            AppVisuals.SidebarMuted);
-        subtitle.Location = new Point(84, 49);
-        statusLabel.AutoSize = true;
-        statusLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        statusLabel.Font = AppVisuals.UiFont(9F, FontStyle.Bold);
-        statusLabel.ForeColor = AppVisuals.Success;
-        statusLabel.Location = new Point(800, 31);
-        header.Controls.AddRange(new Control[] { logo, title, subtitle, statusLabel });
-        header.Resize += (_, _) =>
-            statusLabel.Left = header.ClientSize.Width - statusLabel.Width - 28;
-        return header;
-    }
-
-    private Control BuildCommandBar(
-        out Button export,
-        out Button activate,
-        out Button remove)
-    {
-        var bar = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 66,
-            BackColor = AppVisuals.Surface,
-            Padding = new Padding(0)
-        };
-
-        var actions = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoScroll = true,
-            BackColor = AppVisuals.Surface,
-            Padding = new Padding(22, 14, 22, 10)
-        };
-
-        var import = AppVisuals.CreateButton("导入 Theme Pack", primary: true);
-        import.Size = new Size(132, 36);
-        import.Click += (_, _) => ImportFromDialog();
-
-        export = AppVisuals.CreateButton("导出");
-        export.Size = new Size(90, 36);
-        export.Click += (_, _) => ExportSelected();
-
-        activate = AppVisuals.CreateButton("设为当前");
-        activate.Size = new Size(104, 36);
-        activate.Click += (_, _) => ActivateSelected();
-
-        remove = AppVisuals.CreateButton("移除");
-        remove.Size = new Size(88, 36);
-        remove.Click += (_, _) => RemoveSelected();
-
-        var openFolder = AppVisuals.CreateButton("打开主题目录");
-        openFolder.Size = new Size(118, 36);
-        openFolder.Click += (_, _) =>
-        {
-            var path = PathRules.GetSafeCombinedPath(
-                gameRoot, "ThemeLoader/themes");
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = path,
-                UseShellExecute = true
-            });
-        };
-
-        realtimeToggle.Text = "实时模式";
-        realtimeToggle.AutoSize = true;
-        realtimeToggle.Font = AppVisuals.UiFont(9.25F, FontStyle.Bold);
-        realtimeToggle.ForeColor = AppVisuals.Ink;
-        realtimeToggle.BackColor = AppVisuals.Surface;
-        realtimeToggle.Cursor = Cursors.Hand;
-        realtimeToggle.Margin = new Padding(14, 9, 8, 0);
-        realtimeToggle.CheckedChanged += (_, _) => ToggleRealtimeMode();
-
-        controlModeToggle.Text = "控制模式";
-        controlModeToggle.AutoSize = true;
-        controlModeToggle.Font = AppVisuals.UiFont(9.25F, FontStyle.Bold);
-        controlModeToggle.ForeColor = AppVisuals.Ink;
-        controlModeToggle.BackColor = AppVisuals.Surface;
-        controlModeToggle.Cursor = Cursors.Hand;
-        controlModeToggle.Margin = new Padding(8, 9, 0, 0);
-        controlModeToggle.CheckedChanged += (_, _) => ToggleControlMode();
-
-        controlBackgroundButton.Size = new Size(94, 36);
-        controlBackgroundButton.Visible = false;
-        controlBackgroundButton.Click += (_, _) => SetControlBackgroundImage();
-
-        controlTopButton.Size = new Size(94, 36);
-        controlTopButton.Visible = false;
-        controlTopButton.Click += (_, _) => SetControlTopImage();
-
-        foreach (var button in new[]
-                 {
-                     import,
-                     export,
-                     activate,
-                     remove,
-                     openFolder
-                 })
-        {
-            button.Margin = new Padding(0, 0, 10, 0);
-            actions.Controls.Add(button);
-        }
-
-        actions.Controls.Add(realtimeToggle);
-        actions.Controls.Add(controlModeToggle);
-        controlBackgroundButton.Margin = new Padding(10, 0, 10, 0);
-        actions.Controls.Add(controlBackgroundButton);
-        controlTopButton.Margin = new Padding(0, 0, 10, 0);
-        actions.Controls.Add(controlTopButton);
-        bar.Controls.Add(actions);
-        bar.Controls.Add(new Separator());
-        return bar;
-    }
-
-    private Control BuildWorkspace()
-    {
-        var split = new SplitContainer
-        {
-            Dock = DockStyle.Fill,
-            SplitterDistance = 310,
-            FixedPanel = FixedPanel.Panel1,
-            BackColor = AppVisuals.Line,
-            BorderStyle = BorderStyle.None
-        };
-
-        split.Panel1.BackColor = AppVisuals.Surface;
-        split.Panel1.Padding = new Padding(18, 16, 14, 14);
-        var listTitle = AppVisuals.CreateLabel(
-            "已安装主题", 10F, AppVisuals.Ink, FontStyle.Bold);
-        listTitle.Dock = DockStyle.Top;
-        listTitle.Height = 30;
-
-        themeList.Dock = DockStyle.Fill;
-        themeList.View = View.Details;
-        themeList.FullRowSelect = true;
-        themeList.HideSelection = false;
-        themeList.MultiSelect = false;
-        themeList.BorderStyle = BorderStyle.None;
-        themeList.BackColor = AppVisuals.Surface;
-        themeList.ForeColor = AppVisuals.Ink;
-        themeList.Font = AppVisuals.UiFont(9.5F);
-        themeList.Columns.Add("主题", 175);
-        themeList.Columns.Add("版本", 82);
-        themeList.SelectedIndexChanged += (_, _) => ShowSelection();
-        themeList.DoubleClick += (_, _) => ActivateSelected();
-        split.Panel1.Controls.Add(themeList);
-        split.Panel1.Controls.Add(listTitle);
-
-        split.Panel2.BackColor = AppVisuals.Canvas;
-        split.Panel2.Padding = new Padding(24, 16, 22, 18);
-        var tabs = new TabControl
-        {
-            Dock = DockStyle.Fill,
-            Font = AppVisuals.UiFont(9F, FontStyle.Bold)
-        };
-        tabs.TabPages.Add(BuildOverviewPage());
-        tabs.TabPages.Add(BuildJsonPage());
-        split.Panel2.Controls.Add(tabs);
-
-        return split;
-    }
-
-    private TabPage BuildOverviewPage()
-    {
-        var page = new TabPage("概览")
-        {
-            BackColor = AppVisuals.Surface,
-            Padding = new Padding(24, 22, 24, 20)
-        };
-        var table = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            ColumnCount = 2,
-            RowCount = 7,
-            BackColor = AppVisuals.Surface
-        };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        AddDetailRow(table, 0, "名称", nameValue);
-        AddDetailRow(table, 1, "版本", versionValue);
-        AddDetailRow(table, 2, "作者", authorValue);
-        AddDetailRow(table, 3, "游戏版本", gameVersionValue);
-        AddDetailRow(table, 4, "包内容", sizeValue);
-        AddDetailRow(table, 5, "状态", activeValue);
-        AddDetailRow(table, 6, "说明", descriptionValue, 92);
-        page.Controls.Add(table);
-        return page;
-    }
-
-    private TabPage BuildJsonPage()
-    {
-        var page = new TabPage("theme.json")
-        {
-            BackColor = AppVisuals.Surface,
-            Padding = new Padding(12)
-        };
-        jsonBox.Dock = DockStyle.Fill;
-        jsonBox.Multiline = true;
-        jsonBox.ReadOnly = true;
-        jsonBox.ScrollBars = ScrollBars.Both;
-        jsonBox.WordWrap = false;
-        jsonBox.BorderStyle = BorderStyle.None;
-        jsonBox.BackColor = Color.FromArgb(248, 249, 250);
-        jsonBox.ForeColor = AppVisuals.Ink;
-        jsonBox.Font = AppVisuals.MonoFont(9F);
-        page.Controls.Add(jsonBox);
-        return page;
-    }
-
-    private Control BuildDangerBar()
-    {
-        var bar = new Panel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 72,
-            BackColor = AppVisuals.Surface,
-            Padding = new Padding(22, 17, 22, 17)
-        };
-        bar.Controls.Add(new Separator());
-        var note = AppVisuals.CreateLabel(
-            "高风险操作不会启动游戏，也不会删除安装清单之外的文件。",
-            9F,
-            AppVisuals.MutedInk);
-        note.Location = new Point(22, 28);
-
-        var clear = AppVisuals.CreateButton("清空导入主题");
-        clear.Size = new Size(126, 36);
-        clear.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        clear.Click += (_, _) => RemoveAllImported();
-
-        var uninstall = AppVisuals.CreateButton("完整卸载", danger: true);
-        uninstall.Size = new Size(108, 36);
-        uninstall.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        uninstall.Click += (_, _) => CompleteUninstall();
-
-        bar.Controls.AddRange(new Control[] { note, clear, uninstall });
-        void PlaceButtons()
-        {
-            uninstall.Location = new Point(bar.ClientSize.Width - 130, 18);
-            clear.Location = new Point(uninstall.Left - 138, 18);
-        }
-        bar.Resize += (_, _) => PlaceButtons();
-        PlaceButtons();
-        return bar;
-    }
-
     private void RefreshThemes(string? selectKey = null)
     {
         var active = library.GetActiveTheme();
@@ -344,46 +38,39 @@ internal sealed class ThemeManagerForm : Form
         themeList.Items.Clear();
         foreach (var item in items)
         {
-            var activeMark = string.Equals(
-                active, item.Key, StringComparison.OrdinalIgnoreCase)
-                ? "● "
-                : "";
-            var listItem = new ListViewItem(activeMark + item.DisplayName)
-            {
-                Tag = item,
-                ForeColor = item.IsValid ? AppVisuals.Ink : AppVisuals.Danger
-            };
-            listItem.SubItems.Add(item.Info?.Manifest.Version ?? "无效");
-            themeList.Items.Add(listItem);
-            if (string.Equals(
-                    item.Key, selectKey, StringComparison.OrdinalIgnoreCase))
-            {
-                listItem.Selected = true;
-            }
+            if (!string.IsNullOrWhiteSpace(searchBox.Text)
+                && !(item.DisplayName + " " + item.Info?.Manifest.Author + " " + item.Key).Contains(searchBox.Text.Trim(), StringComparison.CurrentCultureIgnoreCase)) continue;
+            var index = themeList.Items.Add(item);
+            if (string.Equals(item.Key, selectKey, StringComparison.OrdinalIgnoreCase))
+                themeList.SelectedIndex = index;
         }
         themeList.EndUpdate();
 
-        statusLabel.Text = $"{items.Count} 个主题  ·  当前：{active}";
-        if (themeList.SelectedItems.Count == 0 && themeList.Items.Count > 0)
+        listState.Text = $"{themeList.Items.Count} 个主题";
+        ShowStatus($"当前主题：{active}。支持拖入 ZIP 主题包。文本框中可搜索名称和作者。");
+        if (themeList.SelectedIndex < 0 && themeList.Items.Count > 0)
         {
-            themeList.Items[0].Selected = true;
+            var activeIndex = themeList.Items.Cast<ThemeItem>().ToList()
+                .FindIndex(item => string.Equals(item.Key, active, StringComparison.OrdinalIgnoreCase));
+            themeList.SelectedIndex = Math.Max(0, activeIndex);
         }
-        UpdateCommandState();
+        ShowSelection();
     }
 
     private void ShowSelection()
     {
         var item = SelectedTheme;
+        SetPreview(item);
         if (item?.Info == null)
         {
-            nameValue.Text = item?.DisplayName ?? "未选择";
+            nameValue.Text = item?.DisplayName ?? "没有匹配的主题";
             versionValue.Text = "—";
             authorValue.Text = "—";
             gameVersionValue.Text = "—";
             sizeValue.Text = "—";
-            activeValue.Text = item?.Error ?? "—";
+            activeValue.Text = item?.Error ?? "";
             activeValue.ForeColor = AppVisuals.Danger;
-            descriptionValue.Text = "主题包未通过校验。";
+            descriptionValue.Text = item == null ? "试试其他搜索词，或导入一个 ZIP 主题包。" : "主题包未通过校验，请检查 theme.json。";
             jsonBox.Text = item?.Error ?? "";
             UpdateCommandState();
             return;
@@ -407,7 +94,7 @@ internal sealed class ThemeManagerForm : Form
             : item.IsVirtual
                 ? "游戏原始外观"
             : item.IsLegacyDirectory
-                ? "旧式目录，可导出为 Theme Pack"
+                ? "文件夹主题，可导出为 ZIP"
                 : "已安装";
         activeValue.ForeColor = active ? AppVisuals.Accent : AppVisuals.Ink;
         descriptionValue.Text = string.IsNullOrWhiteSpace(manifest.Description)
@@ -417,12 +104,13 @@ internal sealed class ThemeManagerForm : Form
         UpdateCommandState();
     }
 
-    private void ImportFromDialog()
+    private async void ImportFromDialog()
     {
+        if (themeOperationBusy) return;
         using var dialog = new OpenFileDialog
         {
-            Title = "导入 Theme Pack",
-            Filter = "Theme Pack (*.mtp)|*.mtp",
+            Title = "导入主题包",
+            Filter = "ZIP 主题包 (*.zip)|*.zip|旧版主题包 (*.mtp)|*.mtp",
             Multiselect = true,
             CheckFileExists = true
         };
@@ -433,18 +121,20 @@ internal sealed class ThemeManagerForm : Form
 
         foreach (var path in dialog.FileNames)
         {
-            ImportPackage(path);
+            await ImportPackageAsync(path);
         }
     }
 
-    private void ImportPackage(string path)
+    private async Task ImportPackageAsync(string path)
     {
+        if (themeOperationBusy) return;
+        SetThemeBusy(true, "正在导入主题…");
         try
         {
             ThemeItem imported;
             try
             {
-                imported = library.Import(path, false);
+                imported = await Task.Run(() => library.Import(path, false));
             }
             catch (ThemeAlreadyExistsException exception)
             {
@@ -458,7 +148,7 @@ internal sealed class ThemeManagerForm : Form
                 {
                     return;
                 }
-                imported = library.Import(path, true);
+                imported = await Task.Run(() => library.Import(path, true));
             }
 
             RefreshThemes(imported.Key);
@@ -468,10 +158,12 @@ internal sealed class ThemeManagerForm : Form
         {
             ShowError($"导入失败：{exception.Message}");
         }
+        finally { SetThemeBusy(false); }
     }
 
-    private void ExportSelected()
+    private async void ExportSelected()
     {
+        if (themeOperationBusy) return;
         var item = SelectedTheme;
         if (item?.Info == null)
         {
@@ -480,11 +172,11 @@ internal sealed class ThemeManagerForm : Form
 
         using var dialog = new SaveFileDialog
         {
-            Title = "导出 Theme Pack",
-            Filter = "Theme Pack (*.mtp)|*.mtp",
+            Title = "导出 ZIP 主题包",
+            Filter = "ZIP 主题包 (*.zip)|*.zip",
             FileName = item.Info.Manifest.Id + ThemePackage.Extension,
             AddExtension = true,
-            DefaultExt = "mtp"
+            DefaultExt = "zip"
         };
         if (dialog.ShowDialog(this) != DialogResult.OK)
         {
@@ -493,13 +185,16 @@ internal sealed class ThemeManagerForm : Form
 
         try
         {
-            library.Export(item, dialog.FileName);
+            SetThemeBusy(true, "正在导出 ZIP…");
+            var destination = dialog.FileName;
+            await Task.Run(() => library.Export(item, destination));
             ShowStatus($"已导出到 {dialog.FileName}");
         }
         catch (Exception exception)
         {
             ShowError($"导出失败：{exception.Message}");
         }
+        finally { SetThemeBusy(false); }
     }
 
     private void ActivateSelected()
@@ -527,7 +222,7 @@ internal sealed class ThemeManagerForm : Form
     private void RemoveSelected()
     {
         var item = SelectedTheme;
-        if (item == null || item.IsDefault)
+        if (item == null || item.IsVirtual)
         {
             return;
         }
@@ -582,10 +277,10 @@ internal sealed class ThemeManagerForm : Form
     {
         if (MessageBox.Show(
                 this,
-                "这会删除全部主题，并按安装清单卸载 ThemeLoader、桌面快捷方式和管理器。"
+                "按安装清单卸载 ThemeLoader、桌面快捷方式和管理器？"
                 + Environment.NewLine
-                + "被修改或不再归安装器所有的文件会保留。是否继续？",
-                "完整卸载",
+                + "自定义主题、修改过的文件和原有 BepInEx 会保留。",
+                "卸载 ThemeLoader",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Stop) != DialogResult.Yes)
         {
@@ -594,7 +289,6 @@ internal sealed class ThemeManagerForm : Form
 
         try
         {
-            library.RemoveEveryThemeForUninstall();
             var message = UninstallCoordinator.Uninstall(
                 gameRoot, new Progress<string>(ShowStatus));
             MessageBox.Show(
@@ -613,18 +307,15 @@ internal sealed class ThemeManagerForm : Form
 
     private void OnDragEnter(object? sender, DragEventArgs eventArgs)
     {
-        if (eventArgs.Data?.GetDataPresent(DataFormats.FileDrop) == true
+        if (!themeOperationBusy && eventArgs.Data?.GetDataPresent(DataFormats.FileDrop) == true
             && eventArgs.Data.GetData(DataFormats.FileDrop) is string[] files
-            && files.All(file => string.Equals(
-                Path.GetExtension(file),
-                ThemePackage.Extension,
-                StringComparison.OrdinalIgnoreCase)))
+            && files.All(ThemePackage.IsPackagePath))
         {
             eventArgs.Effect = DragDropEffects.Copy;
         }
     }
 
-    private void OnDragDrop(object? sender, DragEventArgs eventArgs)
+    private async void OnDragDrop(object? sender, DragEventArgs eventArgs)
     {
         if (eventArgs.Data?.GetData(DataFormats.FileDrop) is not string[] files)
         {
@@ -632,17 +323,21 @@ internal sealed class ThemeManagerForm : Form
         }
         foreach (var file in files)
         {
-            ImportPackage(file);
+            await ImportPackageAsync(file);
         }
     }
 
     private void UpdateCommandState()
     {
         var item = SelectedTheme;
-        var valid = item?.IsValid == true;
-        exportButton.Enabled = valid && item?.IsVirtual == false;
-        activateButton.Enabled = valid;
-        removeButton.Enabled = valid && item?.IsDefault == false;
+        var valid = !themeOperationBusy && item?.IsValid == true;
+        emptyHint.Visible = item is null;
+        if (metadataPanel is not null) metadataPanel.Visible = item?.Info is not null;
+        manifestButton.Enabled = valid;
+        exportButton.Enabled = valid;
+        activateButton.Enabled = valid && !string.Equals(item?.Key, library.GetActiveTheme(), StringComparison.OrdinalIgnoreCase);
+        activateButton.Text = valid && !activateButton.Enabled ? "正在使用" : "应用主题";
+        removeButton.Enabled = valid && item?.IsVirtual == false;
     }
 
     private void RefreshRealtimeMode()
@@ -664,8 +359,8 @@ internal sealed class ThemeManagerForm : Form
         try
         {
             controlModeToggle.Checked = library.GetSettings().ControlMode;
-            controlBackgroundButton.Visible = controlModeToggle.Checked;
-            controlTopButton.Visible = controlModeToggle.Checked;
+            controlBackgroundButton.Enabled = controlModeToggle.Checked;
+            controlTopButton.Enabled = controlModeToggle.Checked;
         }
         finally
         {
@@ -704,8 +399,8 @@ internal sealed class ThemeManagerForm : Form
         try
         {
             library.SetControlMode(controlModeToggle.Checked);
-            controlBackgroundButton.Visible = controlModeToggle.Checked;
-            controlTopButton.Visible = controlModeToggle.Checked;
+            controlBackgroundButton.Enabled = controlModeToggle.Checked;
+            controlTopButton.Enabled = controlModeToggle.Checked;
             ShowStatus(controlModeToggle.Checked
                 ? "控制模式已启用；按住 Ctrl 后用 WASD、鼠标和滚轮控制相机。"
                 : "控制模式已关闭；游戏会恢复原始完整画面。");
@@ -767,10 +462,7 @@ internal sealed class ThemeManagerForm : Form
         }
     }
 
-    private ThemeItem? SelectedTheme =>
-        themeList.SelectedItems.Count == 0
-            ? null
-            : themeList.SelectedItems[0].Tag as ThemeItem;
+    private ThemeItem? SelectedTheme => themeList.SelectedItem as ThemeItem;
 
     private void ShowStatus(string message)
     {
@@ -796,25 +488,9 @@ internal sealed class ThemeManagerForm : Form
             Font = AppVisuals.UiFont(9.5F),
             ForeColor = AppVisuals.Ink,
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true
+            AutoEllipsis = true,
+            UseMnemonic = false
         };
-    }
-
-    private static void AddDetailRow(
-        TableLayoutPanel table,
-        int row,
-        string label,
-        Control value,
-        int height = 42)
-    {
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
-        var key = AppVisuals.CreateLabel(
-            label, 9F, AppVisuals.MutedInk, FontStyle.Bold);
-        key.Dock = DockStyle.Fill;
-        key.TextAlign = ContentAlignment.MiddleLeft;
-        value.Margin = new Padding(0, 3, 0, 3);
-        table.Controls.Add(key, 0, row);
-        table.Controls.Add(value, 1, row);
     }
 
     private static string FormatBytes(long bytes)

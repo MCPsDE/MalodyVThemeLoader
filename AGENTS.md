@@ -1,5 +1,8 @@
 # Malody V ThemeLoader Repository Rules
 
+Read `docs/PITFALLS.md` before making changes and update it when encountering a
+repeatable issue. Desktop design conventions live in `DESIGN.md`.
+
 ## Objective
 
 Build and ship a Windows x64 ThemeLoader for the IL2CPP release of Malody V.

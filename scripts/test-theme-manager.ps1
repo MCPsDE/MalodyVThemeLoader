@@ -44,8 +44,8 @@ if (Test-Path $testRoot) {
 $gameRoot = Join-Path $testRoot 'MalodyV'
 $desktopRoot = Join-Path $testRoot 'Desktop'
 $authoringRoot = Join-Path $testRoot 'Authoring\Minimal'
-    $packagePath = Join-Path $testRoot 'minimal.mtp'
-    $exportPath = Join-Path $testRoot 'minimal-exported.mtp'
+    $packagePath = Join-Path $testRoot 'minimal.zip'
+    $exportPath = Join-Path $testRoot 'minimal-exported.zip'
     $topImagePath = Join-Path $testRoot 'top.png'
 
 New-Item -ItemType Directory -Path `
@@ -100,7 +100,7 @@ try {
             [string]$authoringRoot,
             [string]$packagePath))
 
-    $maliciousPath = Join-Path $testRoot 'path-traversal.mtp'
+    $maliciousPath = Join-Path $testRoot 'path-traversal.zip'
     $maliciousStream = [IO.File]::Open(
         $maliciousPath,
         [IO.FileMode]::Create,
@@ -111,6 +111,10 @@ try {
             [IO.Compression.ZipArchiveMode]::Create,
             $true)
         try {
+            $manifestEntry = $maliciousArchive.CreateEntry('theme.json')
+            $manifestWriter = [IO.StreamWriter]::new($manifestEntry.Open())
+            try { $manifestWriter.Write(($manifest | ConvertTo-Json -Depth 8)) }
+            finally { $manifestWriter.Dispose() }
             $entry = $maliciousArchive.CreateEntry('../escape.txt')
             $writer = [IO.StreamWriter]::new($entry.Open())
             try {
@@ -135,7 +139,7 @@ try {
             [object[]]@([string]$maliciousPath)) | Out-Null
     }
     catch {
-        $rejectedTraversal = $true
+        $rejectedTraversal = $_.Exception.ToString().Contains('不安全路径')
     }
     if (-not $rejectedTraversal) {
         throw 'Theme package path traversal was not rejected.'
@@ -150,9 +154,28 @@ try {
         $null,
         [object[]]@([string]$gameRoot),
         $null)
+    $defaultTheme = @($libraryType.GetMethod('GetThemes').Invoke($library, [object[]]@())) | Where-Object { $_.IsDefault } | Select-Object -First 1
+    if (!$defaultTheme -or $defaultTheme.IsVirtual) { throw 'Full Default ZIP is missing from the payload.' }
+    $defaultExport = Join-Path $testRoot 'Default-exported.zip'
+    $libraryType.GetMethod('Export').Invoke($library, [object[]]@($defaultTheme.PSObject.BaseObject,[string]$defaultExport))
+    $defaultInfo = $packageType.GetMethod('Inspect').Invoke($null,[object[]]@([string]$defaultExport))
+    if ($defaultInfo.FileCount -lt 100) { throw 'Default export does not contain original resources.' }
+    $reimportedDefault = $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$defaultExport,[bool]$true))
+    if (!$reimportedDefault.IsDefault) { throw 'Default ZIP re-import was rejected.' }
+    $libraryType.GetMethod('Remove').Invoke($library,[object[]]@($reimportedDefault))
+    $fallback = @($libraryType.GetMethod('GetThemes').Invoke($library,[object[]]@())) | Where-Object { $_.IsDefault } | Select-Object -First 1
+    if (!$fallback.IsVirtual) { throw 'Removing Default did not restore original-assets fallback.' }
+    $templatePath = Join-Path $testRoot 'Default-template.zip'
+    $libraryType.GetMethod('Export').Invoke($library,[object[]]@($fallback.PSObject.BaseObject,[string]$templatePath))
+    if (!(Test-Path $templatePath)) { throw 'Virtual Default template was not exportable.' }
+    $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$defaultExport,[bool]$true)) | Out-Null
+    # Legacy packages can still be imported, but storage and export use standard ZIP.
+    $legacyPath = Join-Path $testRoot 'minimal-legacy.mtp'
+    Copy-Item -LiteralPath $packagePath -Destination $legacyPath
     $imported = $libraryType.GetMethod('Import').Invoke(
         $library,
-        [object[]]@([string]$packagePath, [bool]$false))
+        [object[]]@([string]$legacyPath, [bool]$false))
+    if (!([string]$imported.SourcePath).EndsWith('.zip')) { throw 'Legacy import was not stored as ZIP.' }
     $libraryType.GetMethod('Activate').Invoke(
         $library,
         [object[]]@($imported))
@@ -199,10 +222,6 @@ try {
     $libraryType.GetMethod('Import').Invoke(
         $library,
         [object[]]@([string]$packagePath, [bool]$false)) | Out-Null
-    $libraryType.GetMethod('RemoveEveryThemeForUninstall').Invoke(
-        $library,
-        [object[]]@())
-
     $uninstallType = $managerAssembly.GetType(
         'MalodyVThemeLoader.ThemeManager.UninstallCoordinator',
         $true)
@@ -218,6 +237,9 @@ try {
     }
     if (Test-Path (Join-Path $gameRoot 'ThemeLoader\install-manifest.json')) {
         throw 'Manager uninstall left the install manifest behind.'
+    }
+    if (!(Test-Path (Join-Path $gameRoot 'ThemeLoader\themes\integration-minimal.zip'))) {
+        throw 'Manager uninstall removed a user theme.'
     }
 
     Write-Output $message

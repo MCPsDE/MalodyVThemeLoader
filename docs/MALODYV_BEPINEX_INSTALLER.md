@@ -88,11 +88,13 @@ The user can still select a directory manually.
 
 The installer:
 
+- requests administrator approval through Windows UAC because Steam commonly
+  installs the game under `Program Files (x86)`;
 - stages the embedded payload in a temporary directory;
-- refuses to overwrite an unowned `winhttp.dll`;
-- refuses to overwrite other unowned bootstrap files;
-- preserves existing `BepInEx/config`, `BepInEx/plugins`, `BepInEx/interop`,
-  and `BepInEx/unity-libs` files;
+- replaces the existing BepInEx runtime, configuration, cache, and Doorstop
+  files, including files installed by another BepInEx installer;
+- preserves only the existing `BepInEx/plugins` tree and copies it back after
+  the clean runtime has been installed;
 - records owned files and hashes in
   `BepInEx/MalodyV-BepInEx.install.json`;
 - uses atomic temporary-file moves for copied files;
@@ -113,17 +115,17 @@ Prepare the pinned BepInEx vendor payload:
   -GameRoot 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV'
 ```
 
-Build the standalone installer:
+Build the standalone installer (it requests elevation when launched):
 
 ```powershell
-.\scripts\build-bepinex-installer.ps1 -Version 1.0.0
+.\scripts\build-bepinex-installer.ps1 -Version 1.0.3
 ```
 
 Output:
 
 ```text
-artifacts/release-bepinex/MalodyV-BepInEx-Installer-1.0.0.exe
-artifacts/release-bepinex/SHA256SUMS-BepInEx-1.0.0.txt
+artifacts/release-bepinex/MalodyV-BepInEx-Installer-1.0.4.exe
+artifacts/release-bepinex/SHA256SUMS-BepInEx-1.0.4.txt
 ```
 
 The payload is embedded in the EXE. The release machine does not need to

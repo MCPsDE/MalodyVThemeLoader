@@ -10,7 +10,10 @@ namespace MalodyVThemeLoader.Shared;
 
 public static class ThemePackage
 {
-    public const string Extension = ".mtp";
+    public const string Extension = ".zip";
+    public static bool IsPackagePath(string path) =>
+        string.Equals(Path.GetExtension(path), Extension, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Path.GetExtension(path), ".mtp", StringComparison.OrdinalIgnoreCase);
     private const long MaximumExpandedSize = 1024L * 1024L * 1024L;
     private const int MaximumEntries = 20_000;
 
@@ -213,7 +216,7 @@ public static class ThemePackage
 
     private static string NormalizeEntryName(string path)
     {
-        return path.Replace('\\', '/').TrimStart('/');
+        return path.Replace('\\', '/');
     }
 }
 

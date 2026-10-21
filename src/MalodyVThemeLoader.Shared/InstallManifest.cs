@@ -9,6 +9,7 @@ public sealed class InstallManifest
     public string ProductVersion { get; set; } = "";
     public DateTimeOffset InstalledAt { get; set; }
     public string GameDirectory { get; set; } = "";
+    public bool ReusedBepInEx { get; set; }
     public List<InstalledFile> Files { get; set; } = new();
     public List<InstalledExternalFile> ExternalFiles { get; set; } = new();
 }

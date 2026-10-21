@@ -28,6 +28,7 @@ internal sealed class InstallService
         var staging = Path.Combine(
             Path.GetTempPath(), "MalodyVBepInEx-" + Guid.NewGuid().ToString("N"));
         var rollback = new List<RollbackEntry>();
+        RuntimeReplacement? runtimeReplacement = null;
 
         try
         {
@@ -41,6 +42,9 @@ internal sealed class InstallService
                         Path.GetRelativePath(staging, path))))
                 .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
                 .ToList();
+            runtimeReplacement = new RuntimeReplacement(Path.Combine(
+                gameDirectory, ".malody-bepinex-old-" + Guid.NewGuid().ToString("N")));
+            PrepareCleanRuntime(gameDirectory, staging, runtimeReplacement, progress);
             ValidateOwnership(gameDirectory, payloadFiles, previousFiles);
 
             var installed = new List<BepInExInstalledFile>(payloadFiles.Count);
@@ -101,6 +105,11 @@ internal sealed class InstallService
                 });
             }
 
+            RestorePlugins(
+                runtimeReplacement.PreservedPluginsPath,
+                Path.Combine(gameDirectory, "BepInEx", "plugins"));
+            MarkPluginFilesPreserved(gameDirectory, installed);
+
             RemoveObsoleteOwnedFiles(
                 gameDirectory,
                 staging,
@@ -118,6 +127,7 @@ internal sealed class InstallService
                 Files = installed
             };
             WriteManifestAtomic(manifestPath, manifest);
+            DeleteDirectoryTreeWithoutFollowingLinks(runtimeReplacement.BackupDirectory);
             progress?.Report(
                 installConfigurationManager
                     ? "BepInEx 与官方 ConfigurationManager 安装完成。"
@@ -132,6 +142,10 @@ internal sealed class InstallService
         catch (Exception exception)
         {
             RollBack(rollback);
+            if (runtimeReplacement is not null)
+            {
+                RestorePreviousRuntime(gameDirectory, runtimeReplacement);
+            }
             return OperationResult.Fail(exception.Message);
         }
         finally
@@ -192,6 +206,11 @@ internal sealed class InstallService
                      .Where(file => !file.Preserved)
                      .OrderByDescending(file => file.RelativePath.Length))
         {
+            if (IsPluginPath(file.RelativePath))
+            {
+                continue;
+            }
+
             var target = PathRules.GetSafeCombinedPath(
                 gameDirectory, file.RelativePath);
             if (!File.Exists(target))
@@ -217,7 +236,7 @@ internal sealed class InstallService
         File.Delete(manifestPath);
         RemoveEmptyTree(PathRules.GetSafeCombinedPath(
             gameDirectory, ProductInfo.BackupRootRelativePath));
-        RemoveEmptyTree(PathRules.GetSafeCombinedPath(
+        RemoveEmptyTreeExceptPlugins(PathRules.GetSafeCombinedPath(
             gameDirectory, "BepInEx"));
         return OperationResult.Ok(
             preserved == 0
@@ -242,6 +261,197 @@ internal sealed class InstallService
         using var configurationManagerArchive = new ZipArchive(
             configurationManagerPayload, ZipArchiveMode.Read);
         ExtractArchiveEntries(configurationManagerArchive, staging);
+    }
+
+    private static void PrepareCleanRuntime(
+        string gameDirectory,
+        string staging,
+        RuntimeReplacement replacement,
+        IProgress<string>? progress)
+    {
+        var bepinex = Path.Combine(gameDirectory, "BepInEx");
+        var plugins = Path.Combine(bepinex, "plugins");
+
+        if (Directory.Exists(bepinex)
+            && (File.GetAttributes(bepinex) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new IOException("BepInEx 是重解析点，拒绝清理不明确的目录。");
+        }
+        if (Directory.Exists(plugins)
+            && (File.GetAttributes(plugins) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new IOException("BepInEx\\plugins 是重解析点，拒绝迁移不明确的目录。");
+        }
+
+        Directory.CreateDirectory(replacement.BackupDirectory);
+        if (Directory.Exists(bepinex))
+        {
+            replacement.BepInExBackupPath = Path.Combine(
+                replacement.BackupDirectory, "BepInEx");
+            Directory.Move(bepinex, replacement.BepInExBackupPath);
+            replacement.BepInExMoved = true;
+        }
+
+        if (replacement.BepInExBackupPath is not null)
+        {
+            var oldPlugins = Path.Combine(replacement.BepInExBackupPath, "plugins");
+            if (Directory.Exists(oldPlugins))
+            {
+                replacement.PreservedPluginsPath = Path.Combine(staging, "preserved-plugins");
+                CopyDirectoryWithoutLinks(oldPlugins, replacement.PreservedPluginsPath);
+                progress?.Report("已临时保留 BepInEx\\plugins。");
+            }
+        }
+
+        foreach (var rootFile in new[] { "winhttp.dll", "doorstop_config.ini", ".doorstop_version" })
+        {
+            var path = Path.Combine(gameDirectory, rootFile);
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            var backupPath = Path.Combine(replacement.BackupDirectory, rootFile);
+            File.Move(path, backupPath);
+            replacement.RootFileBackups.Add((path, backupPath));
+            progress?.Report($"已暂存旧 Doorstop 文件 {rootFile}。");
+        }
+    }
+
+    private static void RestorePlugins(string? preservedPlugins, string target)
+    {
+        if (preservedPlugins is null || !Directory.Exists(preservedPlugins))
+        {
+            return;
+        }
+
+        CopyDirectoryWithoutLinks(preservedPlugins, target);
+    }
+
+    private static void CopyDirectoryWithoutLinks(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (var entry in Directory.EnumerateFileSystemEntries(source))
+        {
+            var attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new IOException($"插件目录包含重解析点，拒绝迁移：{entry}");
+            }
+
+            var target = Path.Combine(destination, Path.GetFileName(entry));
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                CopyDirectoryWithoutLinks(entry, target);
+            }
+            else
+            {
+                File.Copy(entry, target, true);
+            }
+        }
+    }
+
+    private static void MarkPluginFilesPreserved(
+        string gameDirectory,
+        IEnumerable<BepInExInstalledFile> installed)
+    {
+        foreach (var file in installed.Where(file => IsPluginPath(file.RelativePath)))
+        {
+            var path = PathRules.GetSafeCombinedPath(gameDirectory, file.RelativePath);
+            if (File.Exists(path))
+            {
+                file.Sha256 = ComputeSha256(path);
+                file.Preserved = true;
+            }
+        }
+    }
+
+    private static bool IsPluginPath(string relativePath) =>
+        PathRules.NormalizeLogicalPath(relativePath).StartsWith(
+            "BepInEx/plugins/", StringComparison.OrdinalIgnoreCase);
+
+    private static void RestorePreviousRuntime(
+        string gameDirectory,
+        RuntimeReplacement replacement)
+    {
+        var bepinex = Path.Combine(gameDirectory, "BepInEx");
+        if (replacement.BepInExMoved && Directory.Exists(bepinex))
+        {
+            DeleteDirectoryTreeWithoutFollowingLinks(bepinex);
+        }
+
+        if (replacement.BepInExMoved
+            && replacement.BepInExBackupPath is not null
+            && Directory.Exists(replacement.BepInExBackupPath))
+        {
+            Directory.Move(replacement.BepInExBackupPath, bepinex);
+        }
+
+        foreach (var (originalPath, backupPath) in replacement.RootFileBackups)
+        {
+            if (File.Exists(originalPath))
+            {
+                File.Delete(originalPath);
+            }
+            if (File.Exists(backupPath))
+            {
+                File.Move(backupPath, originalPath);
+            }
+        }
+
+        DeleteDirectoryTreeWithoutFollowingLinks(replacement.BackupDirectory);
+    }
+
+    private static void DeleteDirectoryTreeWithoutFollowingLinks(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+        {
+            var attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    Directory.Delete(entry, false);
+                }
+                else
+                {
+                    DeleteDirectoryTreeWithoutFollowingLinks(entry);
+                }
+            }
+            else
+            {
+                File.Delete(entry);
+            }
+        }
+
+        Directory.Delete(directory, false);
+    }
+
+    private static void RemoveEmptyTreeExceptPlugins(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var child in Directory.GetDirectories(directory))
+        {
+            if (Path.GetFileName(child).Equals("plugins", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            RemoveEmptyTree(child);
+        }
+
+        if (!Directory.EnumerateFileSystemEntries(directory).Any())
+        {
+            Directory.Delete(directory);
+        }
     }
 
     private static void ExtractArchiveEntries(
@@ -335,6 +545,7 @@ internal sealed class InstallService
         foreach (var previous in previousFiles.Values)
         {
             if (current.Contains(previous.RelativePath)
+                || IsPluginPath(previous.RelativePath)
                 || previous.Preserved)
             {
                 continue;
@@ -470,6 +681,20 @@ internal sealed class InstallService
 }
 
 internal sealed record PayloadFile(string SourcePath, string RelativePath);
+
+internal sealed class RuntimeReplacement
+{
+    public RuntimeReplacement(string backupDirectory)
+    {
+        BackupDirectory = backupDirectory;
+    }
+
+    public string BackupDirectory { get; }
+    public string? BepInExBackupPath { get; set; }
+    public bool BepInExMoved { get; set; }
+    public string? PreservedPluginsPath { get; set; }
+    public List<(string OriginalPath, string BackupPath)> RootFileBackups { get; } = new();
+}
 
 internal sealed record RollbackEntry(
     string TargetPath,

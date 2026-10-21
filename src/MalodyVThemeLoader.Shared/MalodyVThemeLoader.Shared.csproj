@@ -13,9 +13,4 @@
     <PackageReference Include="System.Text.Json" Version="6.0.10" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="allowed-devices.json"
-                      LogicalName="MalodyVThemeLoader.Shared.allowed-devices.json" />
-  </ItemGroup>
-
 </Project>

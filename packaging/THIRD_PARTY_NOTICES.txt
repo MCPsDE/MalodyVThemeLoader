@@ -20,6 +20,5 @@ Copyright Cpp2IL contributors.
 Licensed under the MIT License.
 https://github.com/SamboyCoding/Cpp2IL
 
-The release installer does not contain target game artwork, fonts, or Live2D
-resources. Locally authored theme packs remain subject to the rights and
-distribution terms of their respective owners.
+Default theme resources are copied unchanged from the Malody V source tree.
+Adjacent attribution and license files are retained where available.

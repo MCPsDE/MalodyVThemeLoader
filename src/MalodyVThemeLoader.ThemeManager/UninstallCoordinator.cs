@@ -155,7 +155,6 @@ internal static class UninstallCoordinator
         var themeLoader = PathRules.GetSafeCombinedPath(gameRoot, "ThemeLoader");
         var command = $"/d /c ping 127.0.0.1 -n 3 > nul & "
                       + $"del /f /q \"{Escape(executable)}\" & "
-                      + $"rmdir \"{Escape(Path.Combine(themeLoader, "authorization"))}\" & "
                       + $"rmdir \"{Escape(themeLoader)}\"";
         Process.Start(new ProcessStartInfo
         {

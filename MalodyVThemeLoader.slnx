@@ -6,7 +6,6 @@
     <Project Path="src/MalodyVThemeLoader.ThemeManager/MalodyVThemeLoader.ThemeManager.csproj" />
     <Project Path="src/MalodyVThemeLoader.ThemeBuilder/MalodyVThemeLoader.ThemeBuilder.csproj" />
     <Project Path="src/MalodyVThemeLoader.Windows/MalodyVThemeLoader.Windows.csproj" />
-    <Project Path="src/MalodyVThemeLoader.Authorizer/MalodyVThemeLoader.Authorizer.csproj" />
     <Project Path="src/MalodyVBepInExInstaller/MalodyVBepInExInstaller.csproj" />
   </Folder>
 </Solution>

@@ -50,10 +50,24 @@ internal sealed class InstallService
                 .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
                 .ToList();
 
+            var environment = BepInExEnvironment.Inspect(gameDirectory, staging);
+            var ownsRuntime = previousOwned.ContainsKey("winhttp.dll");
+            if (environment.Present && !environment.Compatible && !ownsRuntime)
+                throw new InvalidOperationException(environment.Message);
+            var reuseRuntime = environment.Compatible;
+            progress?.Report(environment.Message);
+            var retainedRuntime = reuseRuntime
+                ? previousOwned.Values.Where(file => BepInExEnvironment.IsRuntimeFile(file.RelativePath)
+                    && File.Exists(PathRules.GetSafeCombinedPath(gameDirectory, file.RelativePath))).ToList()
+                : new List<InstalledFile>();
+            if (reuseRuntime)
+                payloadFiles.RemoveAll(file => BepInExEnvironment.IsRuntimeFile(file.RelativePath)
+                    && (!ownsRuntime || File.Exists(PathRules.GetSafeCombinedPath(gameDirectory, file.RelativePath))));
+
             ValidateOwnership(gameDirectory, payloadFiles, previousOwned);
             ValidateExternalOwnership(previousExternal);
 
-            var installedFiles = new List<InstalledFile>(payloadFiles.Count);
+            var installedFiles = new List<InstalledFile>(retainedRuntime);
             foreach (var payloadFile in payloadFiles)
             {
                 progress?.Report($"Installing {payloadFile.RelativePath}");
@@ -102,8 +116,9 @@ internal sealed class InstallService
 
             var currentOwnedPaths = payloadFiles
                 .Select(file => file.RelativePath)
-                .Append(ConsentReceipt.RelativePath)
+                .Concat(retainedRuntime.Select(file => file.RelativePath))
                 .ToList();
+            // Keep existing ownership for our own runtime; never acquire ownership of external BepInEx.
             RemoveObsoleteOwnedFiles(
                 gameDirectory,
                 staging,
@@ -111,20 +126,6 @@ internal sealed class InstallService
                 currentOwnedPaths,
                 changedFiles,
                 progress);
-
-            progress?.Report("Recording agreement receipt...");
-            var consentPath = PathRules.GetSafeCombinedPath(
-                gameDirectory, ConsentReceipt.RelativePath);
-            TrackExistingForRollback(
-                consentPath,
-                Path.Combine(staging, "rollback-consent"),
-                changedFiles);
-            ConsentReceipt.Write(gameDirectory, "installer");
-            installedFiles.Add(new InstalledFile
-            {
-                RelativePath = ConsentReceipt.RelativePath,
-                Sha256 = ComputeSha256(consentPath)
-            });
 
             progress?.Report("Creating desktop theme manager shortcut...");
             var externalFiles = InstallDesktopShortcut(
@@ -138,6 +139,7 @@ internal sealed class InstallService
                 ProductVersion = ProductInfo.Version,
                 InstalledAt = DateTimeOffset.Now,
                 GameDirectory = gameDirectory,
+                ReusedBepInEx = reuseRuntime,
                 Files = installedFiles,
                 ExternalFiles = externalFiles
             };
@@ -258,6 +260,8 @@ internal sealed class InstallService
                 ComputeSha256(file.FullPath),
                 file.Sha256,
                 StringComparison.OrdinalIgnoreCase));
+        if (manifest.ReusedBepInEx && !BepInExEnvironment.Inspect(gameDirectory).Compatible)
+            return OperationResult.Fail("主题加载器文件存在，但复用的 BepInEx 环境需要修复。");
 
         return invalid == 0
             ? OperationResult.Ok("All installed files match the manifest.")
@@ -293,9 +297,9 @@ internal sealed class InstallService
                || normalized.Equals(
                    ThemeLoaderSettings.RelativePath, StringComparison.OrdinalIgnoreCase)
                || normalized.StartsWith(
-                   "ThemeLoader/themes/", StringComparison.OrdinalIgnoreCase)
-               || normalized.Equals(
-                   ConsentReceipt.RelativePath, StringComparison.OrdinalIgnoreCase);
+                   "BepInEx/config/", StringComparison.OrdinalIgnoreCase)
+               || normalized.StartsWith(
+                   "ThemeLoader/themes/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ValidateExternalOwnership(

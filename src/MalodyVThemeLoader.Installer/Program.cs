@@ -13,22 +13,6 @@ internal static class Program
         }
 
         ApplicationConfiguration.Initialize();
-        if (!StartupGate.EnsureAuthorized(ProductInfo.Name))
-        {
-            return 3;
-        }
-
-        using (var agreement = new AgreementDialog(
-                   "安装或维护 ThemeLoader",
-                   minimumReadSeconds: 5,
-                   requireScroll: true))
-        {
-            if (agreement.ShowDialog() != DialogResult.OK)
-            {
-                return 1;
-            }
-        }
-
         Application.Run(new InstallerForm());
         return 0;
     }

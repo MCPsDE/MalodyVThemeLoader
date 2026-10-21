@@ -51,6 +51,11 @@ internal sealed class ThemeRuntime
         var themesRoot = Path.Combine(loaderRoot, "themes");
         var packagePath = PathRules.GetSafeCombinedPath(
             themesRoot, activeTheme + ThemePackage.Extension);
+        if (!File.Exists(packagePath))
+        {
+            var legacy = PathRules.GetSafeCombinedPath(themesRoot, activeTheme + ".mtp");
+            if (File.Exists(legacy)) packagePath = legacy;
+        }
         string themeDirectory;
         string sourceDisplay;
         string sourcePath;

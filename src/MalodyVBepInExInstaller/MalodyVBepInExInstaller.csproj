@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -15,6 +16,7 @@
     <Deterministic>true</Deterministic>
     <AssemblyName>MalodyVBepInExInstaller</AssemblyName>
     <RootNamespace>MalodyVBepInExInstaller</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <FileVersion>1.0.0</FileVersion>
@@ -22,6 +24,7 @@
     <ApplicationIcon>..\MalodyVThemeLoader.Windows\Assets\mtp.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MalodyVThemeLoader.Windows\MalodyVThemeLoader.Windows.csproj" />
     <ProjectReference Include="..\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj" />
   </ItemGroup>
   <ItemGroup Condition="Exists('..\..\artifacts\malody-bepinex-payload.zip')">

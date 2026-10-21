@@ -12,31 +12,28 @@ public static class AppVisuals
 
     private static readonly Lazy<string> UiFontFamily = new(() =>
         ResolveFontFamily(
-            "HarmonyOS Sans SC",
-            "Noto Sans CJK SC",
-            "Source Han Sans SC",
             "Microsoft YaHei UI",
             "Segoe UI Variable Text",
             "Segoe UI"));
     private static readonly Lazy<string> MonoFontFamily = new(() =>
         ResolveFontFamily("Cascadia Mono", "Consolas", "Courier New"));
 
-    public static readonly Color Ink = Color.FromArgb(25, 27, 31);
-    public static readonly Color MutedInk = Color.FromArgb(102, 108, 117);
-    public static readonly Color Canvas = Color.FromArgb(246, 247, 249);
+    public static readonly Color Ink = Color.FromArgb(24, 43, 41);
+    public static readonly Color MutedInk = Color.FromArgb(88, 107, 103);
+    public static readonly Color Canvas = Color.FromArgb(244, 246, 245);
     public static readonly Color Surface = Color.White;
-    public static readonly Color SurfaceAlt = Color.FromArgb(240, 243, 246);
-    public static readonly Color Line = Color.FromArgb(219, 224, 230);
-    public static readonly Color Accent = Color.FromArgb(36, 109, 132);
-    public static readonly Color AccentHover = Color.FromArgb(24, 86, 107);
-    public static readonly Color AccentSoft = Color.FromArgb(226, 242, 246);
-    public static readonly Color Danger = Color.FromArgb(184, 63, 74);
+    public static readonly Color SurfaceAlt = Color.FromArgb(237, 242, 240);
+    public static readonly Color Line = Color.FromArgb(221, 229, 226);
+    public static readonly Color Accent = Color.FromArgb(23, 107, 88);
+    public static readonly Color AccentHover = Color.FromArgb(17, 84, 68);
+    public static readonly Color AccentSoft = Color.FromArgb(229, 241, 236);
+    public static readonly Color Danger = Color.FromArgb(173, 53, 68);
     public static readonly Color Sidebar = Color.FromArgb(27, 32, 39);
     public static readonly Color SidebarMuted = Color.FromArgb(183, 191, 201);
     public static readonly Color SidebarSoft = Color.FromArgb(42, 49, 59);
-    public static readonly Color Success = Color.FromArgb(91, 176, 151);
+    public static readonly Color Success = Accent;
 
-    public static Font UiFont(float size = 9F, FontStyle style = FontStyle.Regular)
+    public static Font UiFont(float size = 10F, FontStyle style = FontStyle.Regular)
     {
         return new Font(UiFontFamily.Value, size, style, GraphicsUnit.Point);
     }
@@ -94,12 +91,14 @@ public static class AppVisuals
         bool primary = false,
         bool danger = false)
     {
-        var button = new Button
+        var button = new ActionButton
         {
+            Primary = primary,
+            Danger = danger,
             AutoSize = false,
-            Height = 36,
+            Height = 42,
             Text = text,
-            Font = UiFont(9.25F, FontStyle.Bold),
+            Font = UiFont(10F),
             FlatStyle = FlatStyle.Flat,
             Cursor = Cursors.Hand,
             UseVisualStyleBackColor = false,
@@ -111,6 +110,7 @@ public static class AppVisuals
                     : Surface,
             ForeColor = primary || danger ? Color.White : Ink
         };
+        button.AccessibleName = text.Replace("&", "");
         button.FlatAppearance.BorderSize = primary || danger ? 0 : 1;
         button.FlatAppearance.BorderColor = Line;
         button.FlatAppearance.MouseOverBackColor = primary
@@ -124,6 +124,33 @@ public static class AppVisuals
                 ? Color.FromArgb(132, 36, 43)
                 : Color.FromArgb(232, 237, 242);
         return button;
+    }
+
+    public static TableLayoutPanel Stack(int padding = 0)
+    {
+        var table = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1,
+            Padding = new Padding(padding), BackColor = Color.Transparent,
+            Margin = Padding.Empty
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        return table;
+    }
+
+    public static Label TextBlock(string text, float size = 10F, bool bold = false) => new()
+    {
+        Text = text, AutoSize = true, Dock = DockStyle.Top,
+        Font = UiFont(size, bold ? FontStyle.Bold : FontStyle.Regular),
+        ForeColor = bold ? Ink : MutedInk, Margin = new Padding(0, 0, 0, 12),
+        UseMnemonic = false
+    };
+
+    public static void AddRow(TableLayoutPanel table, Control control)
+    {
+        var row = table.RowCount++;
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.Controls.Add(control, 0, row);
     }
 
     public static Label CreateLabel(

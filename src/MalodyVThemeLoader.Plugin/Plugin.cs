@@ -17,21 +17,6 @@ public sealed class Plugin : BasePlugin
 
         try
         {
-            var authorization = DeviceAuthorization.CheckCurrentDevice();
-            if (!authorization.Authorized)
-            {
-                Log.LogError(
-                    $"ThemeLoader device authorization denied. Device code: "
-                    + authorization.DeviceCode);
-                return;
-            }
-
-            if (!ConsentReceipt.IsValid(Paths.GameRootPath, out var consentError))
-            {
-                Log.LogError($"ThemeLoader agreement check failed: {consentError}");
-                return;
-            }
-
             var runtime = ThemeRuntime.Create(Log);
             ThemeRuntime.Current = runtime;
 

@@ -104,8 +104,7 @@ $themeBuilderDll = Join-Path $themeBuilderBuildRoot `
 dotnet $themeBuilderDll `
     --source $SourceRoot `
     --output $payloadRoot `
-    --version $Version `
-    --catalog-only
+    --version $Version
 if ($LASTEXITCODE -ne 0) { throw 'Runtime catalog generation failed.' }
 
 $pluginOutput = Join-Path $pluginBuildRoot `
@@ -122,8 +121,6 @@ New-Item -ItemType Directory -Force -Path $docsTarget | Out-Null
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\README.txt') `
     -Destination $docsTarget -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\THIRD_PARTY_NOTICES.txt') `
-    -Destination $docsTarget -Force
-Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\TERMS.txt') `
     -Destination $docsTarget -Force
 
 dotnet publish (Join-Path $repoRoot 'src\MalodyVThemeLoader.ThemeManager') `
@@ -166,9 +163,13 @@ $installerTarget = Join-Path $releaseRoot "MalodyVThemeLoader-Setup-$Version.exe
 Copy-Item -LiteralPath $installerSource -Destination $installerTarget -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\README.txt') `
     -Destination $releaseRoot -Force
+Copy-Item -LiteralPath (Join-Path $payloadRoot 'ThemeLoader\themes\Default.zip') `
+    -Destination $releaseRoot -Force
 
-$hash = Get-FileHash -LiteralPath $installerTarget -Algorithm SHA256
-"$($hash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($installerTarget))" |
+Get-ChildItem -LiteralPath $releaseRoot -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
+    $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+    "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+} |
     Set-Content -LiteralPath (Join-Path $releaseRoot 'SHA256SUMS.txt') -Encoding ASCII
 
 Get-ChildItem $releaseRoot | Select-Object Name, Length

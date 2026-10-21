@@ -6,27 +6,10 @@ internal static class InstallerCommand
     {
         try
         {
-            if (Environment.GetEnvironmentVariable(
-                    "MALODY_THEMELOADER_TEST_MODE") != "integration")
-            {
-                Console.Error.WriteLine(
-                    "Interactive agreement is required. Command mode is reserved for integration tests.");
-                return 3;
-            }
-
-            var authorization =
-                MalodyVThemeLoader.Shared.DeviceAuthorization.CheckCurrentDevice();
-            if (!authorization.Authorized)
-            {
-                Console.Error.WriteLine(
-                    $"{authorization.Error} Device code: {authorization.DeviceCode}");
-                return 3;
-            }
-
             if (args.Length != 2)
             {
                 Console.Error.WriteLine(
-                    "Usage: --install <game-dir> | --uninstall <game-dir> | --verify <game-dir>");
+                    "Usage: --check <game-dir> | --install <game-dir> | --uninstall <game-dir> | --verify <game-dir>");
                 return 2;
             }
 
@@ -37,6 +20,7 @@ internal static class InstallerCommand
             var service = new InstallService();
             var result = args[0].ToLowerInvariant() switch
             {
+                "--check" => Check(args[1]),
                 "--install" => service.InstallOrRepair(args[1], progress),
                 "--uninstall" => service.Uninstall(args[1], progress),
                 "--verify" => service.Verify(args[1]),
@@ -52,5 +36,14 @@ internal static class InstallerCommand
             Console.Error.WriteLine(exception);
             return 1;
         }
+    }
+
+    private static OperationResult Check(string gameRoot)
+    {
+        if (!GameLocator.IsGameDirectory(gameRoot, out var error)) return OperationResult.Fail(error);
+        var environment = BepInExEnvironment.Inspect(gameRoot);
+        return environment.Present && !environment.Compatible
+            ? OperationResult.Fail(environment.Message)
+            : OperationResult.Ok(environment.Message);
     }
 }

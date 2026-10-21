@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T12:09:32.766Z",
+  "title": "Design System: Malody V ThemeLoader",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Action Green",
+        "tonalRamp": [
+          "oklch(15.00% 0.08300 173.52)",
+          "oklch(26.43% 0.08300 173.52)",
+          "oklch(37.86% 0.08300 173.52)",
+          "oklch(49.29% 0.08300 173.52)",
+          "oklch(60.71% 0.08300 173.52)",
+          "oklch(72.14% 0.08300 173.52)",
+          "oklch(83.57% 0.08300 173.52)",
+          "oklch(95.00% 0.08300 173.52)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Deep Action Green",
+        "tonalRamp": [
+          "oklch(15.00% 0.07015 172.67)",
+          "oklch(26.43% 0.07015 172.67)",
+          "oklch(37.86% 0.07015 172.67)",
+          "oklch(49.29% 0.07015 172.67)",
+          "oklch(60.71% 0.07015 172.67)",
+          "oklch(72.14% 0.07015 172.67)",
+          "oklch(83.57% 0.07015 172.67)",
+          "oklch(95.00% 0.07015 172.67)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Soft Green",
+        "tonalRamp": [
+          "oklch(15.00% 0.01434 169.24)",
+          "oklch(26.43% 0.01434 169.24)",
+          "oklch(37.86% 0.01434 169.24)",
+          "oklch(49.29% 0.01434 169.24)",
+          "oklch(60.71% 0.01434 169.24)",
+          "oklch(72.14% 0.01434 169.24)",
+          "oklch(83.57% 0.01434 169.24)",
+          "oklch(95.00% 0.01434 169.24)"
+        ]
+      },
+      "danger": {
+        "role": "primary",
+        "displayName": "Removal Red",
+        "tonalRamp": [
+          "oklch(15.00% 0.15522 17.54)",
+          "oklch(26.43% 0.15522 17.54)",
+          "oklch(37.86% 0.15522 17.54)",
+          "oklch(49.29% 0.15522 17.54)",
+          "oklch(60.71% 0.15522 17.54)",
+          "oklch(72.14% 0.15522 17.54)",
+          "oklch(83.57% 0.15522 17.54)",
+          "oklch(95.00% 0.15522 17.54)"
+        ]
+      },
+      "danger-hover": {
+        "role": "primary",
+        "displayName": "Deep Removal Red",
+        "tonalRamp": [
+          "oklch(15.00% 0.13962 18.35)",
+          "oklch(26.43% 0.13962 18.35)",
+          "oklch(37.86% 0.13962 18.35)",
+          "oklch(49.29% 0.13962 18.35)",
+          "oklch(60.71% 0.13962 18.35)",
+          "oklch(72.14% 0.13962 18.35)",
+          "oklch(83.57% 0.13962 18.35)",
+          "oklch(95.00% 0.13962 18.35)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Quiet Canvas",
+        "tonalRamp": [
+          "oklch(15.00% 0.00250 165.08)",
+          "oklch(26.43% 0.00250 165.08)",
+          "oklch(37.86% 0.00250 165.08)",
+          "oklch(49.29% 0.00250 165.08)",
+          "oklch(60.71% 0.00250 165.08)",
+          "oklch(72.14% 0.00250 165.08)",
+          "oklch(83.57% 0.00250 165.08)",
+          "oklch(95.00% 0.00250 165.08)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Working White",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95.00% 0.00000 89.88)"
+        ]
+      },
+      "surface-alt": {
+        "role": "neutral",
+        "displayName": "Inset Neutral",
+        "tonalRamp": [
+          "oklch(15.00% 0.00593 170.45)",
+          "oklch(26.43% 0.00593 170.45)",
+          "oklch(37.86% 0.00593 170.45)",
+          "oklch(49.29% 0.00593 170.45)",
+          "oklch(60.71% 0.00593 170.45)",
+          "oklch(72.14% 0.00593 170.45)",
+          "oklch(83.57% 0.00593 170.45)",
+          "oklch(95.00% 0.00593 170.45)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.02518 187.39)",
+          "oklch(26.43% 0.02518 187.39)",
+          "oklch(37.86% 0.02518 187.39)",
+          "oklch(49.29% 0.02518 187.39)",
+          "oklch(60.71% 0.02518 187.39)",
+          "oklch(72.14% 0.02518 187.39)",
+          "oklch(83.57% 0.02518 187.39)",
+          "oklch(95.00% 0.02518 187.39)"
+        ]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Secondary Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.02364 181.14)",
+          "oklch(26.43% 0.02364 181.14)",
+          "oklch(37.86% 0.02364 181.14)",
+          "oklch(49.29% 0.02364 181.14)",
+          "oklch(60.71% 0.02364 181.14)",
+          "oklch(72.14% 0.02364 181.14)",
+          "oklch(83.57% 0.02364 181.14)",
+          "oklch(95.00% 0.02364 181.14)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Fine Rule",
+        "tonalRamp": [
+          "oklch(15.00% 0.00947 171.78)",
+          "oklch(26.43% 0.00947 171.78)",
+          "oklch(37.86% 0.00947 171.78)",
+          "oklch(49.29% 0.00947 171.78)",
+          "oklch(60.71% 0.00947 171.78)",
+          "oklch(72.14% 0.00947 171.78)",
+          "oklch(83.57% 0.00947 171.78)",
+          "oklch(95.00% 0.00947 171.78)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "page-title": {
+        "displayName": "Page title",
+        "purpose": "Native UI page headings, in points."
+      },
+      "selected-title": {
+        "displayName": "Selected theme title",
+        "purpose": "The selected theme name in the detail pane."
+      },
+      "section-title": {
+        "displayName": "Section title",
+        "purpose": "Native section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Chinese interface copy and button labels."
+      },
+      "label": {
+        "displayName": "Secondary label",
+        "purpose": "Metadata, version and compact labels; search label can be bold."
+      },
+      "diagnostic": {
+        "displayName": "Diagnostic",
+        "purpose": "Read-only installation logs and raw JSON."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Documentation rendering of the native ActionButton; WinForms source defines actual painting and DPI behavior.",
+      "html": "<button class=\"ds-button-primary\">应用主题</button>",
+      "css": ".ds-button-primary{height:42px;padding:0 12px;border:0;border-radius:6px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#176B58;color:#FFFFFF;}.ds-button-primary:hover{background:#115444;}.ds-button-primary:active{background:#E5F1EC;color:#182B29;}.ds-button-primary:focus-visible{outline:1px dotted #182B29;outline-offset:-4px;}.ds-button-primary:disabled{background:#EDF2F0;color:#586B67;cursor:default;}"
+    },
+    {
+      "name": "Secondary action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Documentation rendering of the native ActionButton; WinForms source defines actual painting and DPI behavior.",
+      "html": "<button class=\"ds-button-secondary\">导出 ZIP</button>",
+      "css": ".ds-button-secondary{height:42px;padding:0 12px;border:0;border-radius:6px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#FFFFFF;color:#182B29;border:1px solid #DDE5E2;}.ds-button-secondary:hover{background:#EDF2F0;}.ds-button-secondary:active{background:#E5F1EC;color:#182B29;}.ds-button-secondary:focus-visible{outline:1px dotted #182B29;outline-offset:-4px;}.ds-button-secondary:disabled{background:#EDF2F0;color:#586B67;cursor:default;}"
+    },
+    {
+      "name": "Destructive action",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Documentation rendering of the native ActionButton; WinForms source defines actual painting and DPI behavior.",
+      "html": "<button class=\"ds-button-danger\">卸载 ThemeLoader</button>",
+      "css": ".ds-button-danger{height:42px;padding:0 12px;border:0;border-radius:6px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#AD3544;color:#FFFFFF;}.ds-button-danger:hover{background:#8F2633;}.ds-button-danger:active{background:#E5F1EC;color:#182B29;}.ds-button-danger:focus-visible{outline:1px dotted #182B29;outline-offset:-4px;}.ds-button-danger:disabled{background:#EDF2F0;color:#586B67;cursor:default;}"
+    },
+    {
+      "name": "Native search field",
+      "kind": "input",
+      "description": "Persistent label and cue from the native search TextBox. Browser sample is illustrative; native border, caret and focus remain platform-owned.",
+      "html": "<label class=\"ds-search\"><span>搜索主题</span><input aria-label=\"搜索主题名称或作者\" placeholder=\"搜索名称或作者\"></label>",
+      "css": ".ds-search{display:grid;gap:12px;color:#182B29;font:700 9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-search input{font:400 10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;min-width:0;}.ds-search input:hover{border-color:#586B67;}.ds-search input:focus-visible{outline:1px dotted #182B29;outline-offset:2px;}"
+    },
+    {
+      "name": "Task navigation",
+      "kind": "nav",
+      "refersTo": "navigation-item",
+      "description": "Native left navigation with soft-green selected state. The sample represents existing control states without a browser runtime.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"任务\"><button aria-current=\"page\">主题库</button><button>设置</button><button>维护</button></nav>",
+      "css": ".ds-nav{display:grid;gap:8px;background:#FFFFFF;width:140px;}.ds-nav button{height:46px;padding:0 12px;border:0;border-radius:6px;text-align:left;background:#FFFFFF;color:#586B67;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-nav button[aria-current]{background:#E5F1EC;color:#176B58;font-weight:700;}.ds-nav button:hover{background:#EDF2F0;}.ds-nav button:active{background:#E5F1EC;color:#182B29;}.ds-nav button:focus-visible{outline:1px dotted #182B29;outline-offset:-4px;}"
+    },
+    {
+      "name": "Selected theme row",
+      "kind": "custom",
+      "refersTo": "theme-row",
+      "description": "Two-line fixed-height owner-drawn native ListBox row with name, active/author line, single selection and keyboard focus; horizontal scrolling is disabled.",
+      "html": "<div class=\"ds-theme-row\" tabindex=\"0\" role=\"option\" aria-selected=\"true\"><strong>Default</strong><span>正在使用</span></div>",
+      "css": ".ds-theme-row{display:flex;flex-direction:column;height:64px;padding:9px 10px 0;background:#E5F1EC;color:#182B29;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-theme-row strong{font-weight:700;}.ds-theme-row span{margin-top:5px;font-size:9pt;color:#176B58;}.ds-theme-row:focus-visible{outline:1px dotted #176B58;outline-offset:-2px;}"
+    },
+    {
+      "name": "Preview empty state",
+      "kind": "custom",
+      "refersTo": "preview",
+      "description": "Text-only documentation sample of ThemePreviewSurface's genuine missing-preview state. Real previews use source or imported theme artwork with aspect ratio preserved.",
+      "html": "<div class=\"ds-preview\" role=\"img\" aria-label=\"所选主题预览\">此主题未提供预览图</div>",
+      "css": ".ds-preview{display:flex;align-items:center;justify-content:center;min-height:184px;background:#EDF2F0;color:#586B67;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}"
+    },
+    {
+      "name": "Diagnostic log",
+      "kind": "custom",
+      "refersTo": "diagnostic-log",
+      "description": "Documentation sample of the read-only native log TextBox. Actual scrollbars and selection use Windows controls.",
+      "html": "<textarea class=\"ds-log\" readonly aria-label=\"安装详细记录\">准备就绪。安装过程中可在这里查看详细进度。</textarea>",
+      "css": ".ds-log{height:100px;width:100%;padding:0;border:0;resize:none;background:#FFFFFF;color:#586B67;font:9pt \"Cascadia Mono\",Consolas,\"Courier New\",monospace;}.ds-log:focus-visible{outline:1px dotted #182B29;outline-offset:2px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Quiet Windows utility",
+    "overview": "The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral surfaces, restrained green actions and familiar Windows controls keep attention on the next task. Brand appears through the existing logo and real theme artwork.\n\nThe native Windows typography, frame, dialogs, scrollbars and focus cues are intentional. This system records the implemented WinForms application; the surface brief owns its workflow composition and the disclosed concept-workflow deviation.",
+    "keyCharacteristics": [
+      "Quiet light surfaces with a restrained green accent.",
+      "Native Chinese typography and keyboard affordances.",
+      "Persistent task labels and truthful operation states.",
+      "Real source artwork with proportion-preserving previews."
+    ],
+    "rules": [
+      {
+        "name": "The State Rule",
+        "body": "Pair status color with words or an enabled, disabled or selected control state; color alone does not explain the result.",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Type Rule",
+        "body": "Keep Chinese interface text on the native UI family chain and retain point-based font sizes. System typography is the deliberate choice for this task workspace.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do keep the shared palette, native type chain and point-based text sizing consistent.",
+      "Do keep labels visible and provide distinct empty, invalid, busy and disabled states.",
+      "Do keep theme rows within the list width and retain vertical scrolling at supported minimum sizes.",
+      "Do preserve keyboard focus, accessible names and Ctrl+F, Ctrl+O and F5 shortcuts.",
+      "Do use real theme artwork and preserve its aspect ratio."
+    ],
+    "donts": [
+      "Don't add gradients, decorative cards or an oversized empty branding panel to this working utility.",
+      "Don't use generated or substituted artwork for the Default theme.",
+      "Don't style unavailable actions as enabled or expose empty metadata as a selected theme.",
+      "Don't treat synthetic 150% captures as physical DPI verification."
+    ]
+  }
+}

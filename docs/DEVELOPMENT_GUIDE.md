@@ -56,7 +56,6 @@ src/
   MalodyVThemeLoader.ThemeBuilder/
   MalodyVThemeLoader.Installer/
   MalodyVThemeLoader.ThemeManager/
-  MalodyVThemeLoader.Authorizer/
   MalodyVThemeLoader.Windows/
 vendor/
   bepinex/
@@ -88,19 +87,16 @@ Malody V/
     settings.json
     install-manifest.json
     MalodyVThemeManager.exe
-    authorization/
-      consent.json
     logs/
     themes/
-      CustomTheme.mtp
+      CustomTheme.zip
 ```
 
-The active theme defaults to the virtual `Default`, which means "use original
-game assets" and does not require or install a theme package.
+The active theme defaults to `Default.zip`, generated unchanged from the source resources. If the package is removed, virtual Default falls back to original game assets. Default can be exported or replaced through the manager.
 
 ## 6. Theme Format
 
-Themes are ZIP archives with the `.mtp` extension. `theme.json` is stored at
+Themes are standard `.zip` archives. Legacy `.mtp` archives remain readable for migration. `theme.json` is stored at
 the archive root:
 
 ```json
@@ -148,7 +144,7 @@ Missing files are not errors. The original game asset remains assigned.
 The desktop theme manager validates archive paths, duplicate entries, entry
 count, expanded size, manifest format, and theme ID before import. It can show
 the parsed metadata and raw `theme.json`, activate a theme, export legacy
-directories as `.mtp`, remove imported themes, or perform a manifest-owned
+directories as `.zip`, remove imported themes, or perform a manifest-owned
 uninstall.
 
 The manager also owns `ThemeLoader/settings.json`. Its realtime-mode flag is a
@@ -160,7 +156,7 @@ mutable user setting and must not be overwritten by repair installs.
 2. BepInEx loads `MalodyVThemeLoader.Plugin.dll`.
 3. The plugin validates the supported Unity/game environment.
 4. The active theme and catalog are loaded.
-   `.mtp` packages are extracted to a hash-addressed system temporary cache.
+   ZIP packages are extracted to a hash-addressed system temporary cache.
 5. Atlas lookup patches return a replacement Sprite when one exists.
 6. After each allowed scene load, static UI components are scanned and
    replaced.
@@ -223,9 +219,9 @@ The robust path is a theme-specific AssetBundle created by the ThemeBuilder
 with a compatible Unity editor. The runtime maps original font asset names to
 replacement `TMP_FontAsset` objects.
 
-Default font sources may be generated locally for authoring and validation,
-but are not included in the release payload. Until a compiled replacement font
-bundle is present, the runtime keeps original fonts.
+Default font sources are included in the source-derived Default ZIP for
+authoring. Until a compiled replacement font bundle is present, the runtime
+keeps original fonts.
 
 ## 10. Live2D
 
@@ -245,15 +241,10 @@ Newer Cubism Maid/Chris models are imported Unity Prefabs. The first runtime
 implementation replaces their textures only. Full model and Animator
 replacement uses a compatible AssetBundle and must not bypass ownership.
 
-## 11. Anti-Cheat Boundary
+## 11. Visual Scope
 
-The inspected source uses `GuardianImpl` for score submission signing. No
-explicit module blacklist or ban-reporting path was identified, but an
-in-process loader is detectable in principle.
-
-ThemeLoader must never patch score, judgement, replay, input, ownership, login,
-or networking code. Version mismatches fail closed. The project cannot promise
-zero account risk without explicit approval from the game developer.
+ThemeLoader only replaces visual resources. Never patch score, judgement, replay,
+input, ownership, login or network logic. Unsupported versions fail closed.
 
 ## 12. Building
 
@@ -275,38 +266,25 @@ generate the real IL2CPP interop assemblies, and copies compile-time references
 into `generated/game-libs`. It does not modify the real game directory.
 
 The release script generates only the lightweight runtime catalog, assembles
-the offline payload, publishes the self-contained theme manager, embeds
-everything in the installer, and writes release hashes. It does not package
-the local Default authoring theme or original game resources.
+the offline payload and source-derived Default ZIP, publishes the self-contained theme manager, embeds everything in the installer, and writes release hashes.
 
-## 13. Device Authorization And Agreement
+## 13. Existing BepInEx and unrestricted startup
 
-The installer, theme manager, and runtime plugin all validate the current
-device against the allow list embedded from
-`src/MalodyVThemeLoader.Shared/allowed-devices.json`.
+The installer, manager and plugin have no agreement, device-code, allow-list or
+consent checks. The CLI is available without a test-mode environment variable.
 
-The disposable CLI authorizer is rebuilt with:
+The installer checks an existing Doorstop x64 bootstrap, enabled IL2CPP entry,
+CoreCLR and BepInEx 6 assemblies. It checks the plugin's assembly references and
+required API types against the installed assemblies without executing them.
+Compatible externally installed runtimes are reused; only ThemeLoader files
+enter its install manifest. Repair retains that separation. An incompatible
+unowned environment is diagnosed and left untouched. Environments previously
+owned by ThemeLoader are also reused when compatible: their ownership is retained,
+existing runtime files and configuration stay untouched, and missing owned files
+are restored. Incompatible owned environments can be repaired from the pinned payload.
 
-```powershell
-.\scripts\build-authorizer.ps1
-```
-
-It writes the device code, authorization value, and a salted PBKDF2 allow-list
-entry to `authorization-value.txt`, then schedules deletion of only its own
-executable. See `docs/AUTHORIZATION.md`.
-
-The installer requires three agreement passes. Each installer pass waits
-60 seconds and requires scrolling to the end. Every theme-manager launch also
-shows three agreement passes, but those passes have no delay and can be
-advanced immediately. There is no separate checkbox confirmation. A signed
-device-bound consent receipt is written into the installation. The plugin fails
-closed before installing any patches if either device authorization or consent
-validation fails.
-
-This is a local deterrent against casual copying. A determined user who
-controls the machine can patch client-side checks; the mechanism must never be
-described as unbreakable or as a substitute for permission from rights
-holders.
+`--check <game-dir>` performs a dry-run environment check. `--install`,
+`--verify` and `--uninstall` operate on the same explicit directory.
 
 ## 14. Installer Testing
 
@@ -336,8 +314,27 @@ The final release contains:
 - SHA-256 checksum file
 - User-facing `README.txt`, including required third-party notices
 
-The installer payload contains BepInEx, the plugin, catalog, self-contained
-theme manager, terms, notices, and install metadata. It does not contain a
-Default theme package, original game resources, the authorizer, repository
-instructions, development documentation, debug symbols, build-machine paths,
-or compiler-generated XML API documentation.
+The installer payload contains the pinned BepInEx, plugin, catalog, self-contained
+theme manager, source-derived Default.zip, third-party notices and install metadata.
+It excludes device authorization, agreements, repository instructions, development
+documentation, debug symbols and compiler-generated XML API documentation.
+
+## 16. Desktop design and regression checks
+
+`PRODUCT.md` and `DESIGN.md` describe the native Windows interface. Shared colors,
+typography, buttons and layout helpers live in `MalodyVThemeLoader.Windows`.
+Theme previews read bounded images from ZIPs, release streams immediately, and
+release old bitmaps when the selection changes. Theme switching, import/export,
+search, settings and maintenance remain independent flows.
+
+Run release scripts with PowerShell 7:
+
+```powershell
+pwsh -NoProfile -File scripts/build-release.ps1
+pwsh -NoProfile -File scripts/test-installer.ps1 -InstallerDll artifacts/installer-build/bin/MalodyVThemeLoader.Installer/release_win-x64/MalodyVThemeLoader.Installer.dll
+pwsh -NoProfile -File scripts/test-theme-manager.ps1
+pwsh -NoProfile -File scripts/test-runtime-reuse.ps1
+pwsh -NoProfile -File scripts/inspect-ui.ps1
+```
+
+See `docs/PITFALLS.md` before changing install, theme or UI code.

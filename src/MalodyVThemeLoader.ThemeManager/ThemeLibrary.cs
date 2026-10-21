@@ -26,7 +26,7 @@ internal sealed class ThemeLibrary
     {
         var items = new List<ThemeItem>();
         foreach (var package in Directory.EnumerateFiles(
-                     themesRoot, "*" + ThemePackage.Extension, SearchOption.TopDirectoryOnly))
+                     themesRoot, "*", SearchOption.TopDirectoryOnly).Where(ThemePackage.IsPackagePath))
         {
             try
             {
@@ -88,6 +88,9 @@ internal sealed class ThemeLibrary
         }
 
         return items
+            .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderBy(item => item.IsLegacyDirectory)
+                .ThenBy(item => Path.GetExtension(item.SourcePath).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? 0 : 1).First())
             .OrderByDescending(item => item.IsDefault)
             .ThenBy(item => item.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -127,7 +130,7 @@ internal sealed class ThemeLibrary
         var settings = GetSettings();
         settings.RealtimeMode = enabled;
         WriteSettings(settings);
-        ConsentReceipt.Write(gameRoot, "theme-realtime-mode");
+
     }
 
     public void SetControlMode(bool enabled)
@@ -135,7 +138,7 @@ internal sealed class ThemeLibrary
         var settings = GetSettings();
         settings.ControlMode = enabled;
         WriteSettings(settings);
-        ConsentReceipt.Write(gameRoot, "theme-control-mode");
+
     }
 
     public string SetControlBackgroundImage(string sourcePath)
@@ -172,7 +175,7 @@ internal sealed class ThemeLibrary
         var settings = GetSettings();
         settings.ControlBackgroundImage = relativePath;
         WriteSettings(settings);
-        ConsentReceipt.Write(gameRoot, "theme-control-background");
+
         return target;
     }
 
@@ -210,25 +213,15 @@ internal sealed class ThemeLibrary
         var settings = GetSettings();
         settings.ControlTopImage = relativePath;
         WriteSettings(settings);
-        ConsentReceipt.Write(gameRoot, "theme-control-top");
+
         return target;
     }
 
     public ThemeItem Import(string sourcePath, bool overwrite)
     {
-        if (!string.Equals(
-                Path.GetExtension(sourcePath),
-                ThemePackage.Extension,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException("只能导入 Theme Pack (.mtp)。");
-        }
-
+        if (!ThemePackage.IsPackagePath(sourcePath))
+            throw new InvalidDataException("请选择 ZIP 主题包。");
         var info = ThemePackage.Inspect(sourcePath);
-        if (string.Equals(info.Manifest.Id, "default", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException("不允许通过导入覆盖内置 Default 主题。");
-        }
 
         var target = PathRules.GetSafeCombinedPath(
             themesRoot, ThemePackage.GetPackageFileName(info.Manifest));
@@ -264,8 +257,15 @@ internal sealed class ThemeLibrary
         EnsureValid(item);
         if (item.IsVirtual)
         {
-            throw new InvalidOperationException(
-                "虚拟 Default 仅代表游戏原始外观，不包含可导出的资源文件。");
+            var temporaryDirectory = Path.Combine(Path.GetTempPath(), "MalodyVDefault-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(temporaryDirectory);
+                File.WriteAllText(Path.Combine(temporaryDirectory, "theme.json"), item.Info!.RawManifestJson);
+                ThemePackage.CreateFromDirectory(temporaryDirectory, destinationPath);
+            }
+            finally { Directory.Delete(temporaryDirectory, true); }
+            return;
         }
         if (item.IsLegacyDirectory)
         {
@@ -293,16 +293,13 @@ internal sealed class ThemeLibrary
     {
         EnsureValid(item);
         File.WriteAllText(activeThemePath, item.Key + Environment.NewLine);
-        ConsentReceipt.Write(gameRoot, "theme-activation");
+
     }
 
     public void Remove(ThemeItem item)
     {
         EnsureValid(item);
-        if (item.IsDefault)
-        {
-            throw new InvalidOperationException("内置 Default 主题不能单独移除。");
-        }
+        if (item.IsVirtual) return;
 
         if (item.IsLegacyDirectory)
         {
@@ -338,36 +335,6 @@ internal sealed class ThemeLibrary
 
         File.WriteAllText(activeThemePath, "Default" + Environment.NewLine);
         return removed;
-    }
-
-    public void RemoveEveryThemeForUninstall()
-    {
-        var fullRoot = Path.GetFullPath(themesRoot);
-        var expected = PathRules.GetSafeCombinedPath(
-            gameRoot, "ThemeLoader/themes");
-        if (!string.Equals(fullRoot, expected, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("主题目录安全校验失败。");
-        }
-
-        if (Directory.Exists(fullRoot))
-        {
-            Directory.Delete(fullRoot, true);
-        }
-
-        foreach (var relativePath in new[]
-                 {
-                     "ThemeLoader/active-theme.txt",
-                     ThemeLoaderSettings.RelativePath,
-                     ConsentReceipt.RelativePath
-                 })
-        {
-            var path = PathRules.GetSafeCombinedPath(gameRoot, relativePath);
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
     }
 
     private static void EnsureValid(ThemeItem item)
@@ -462,7 +429,7 @@ internal sealed class ThemeItem
             Name = "Default",
             Version = "built-in",
             Author = "Default",
-            Description = "原始外观，不包含可导出的主题包文件。",
+            Description = "原始外观，可导出 ZIP 模板，完整原始资源随安装器提供。",
             GameVersion = "current"
         };
         var rawJson = JsonSerializer.Serialize(manifest, JsonDefaults.Options);

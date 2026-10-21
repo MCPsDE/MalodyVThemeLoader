@@ -9,41 +9,11 @@ internal static class Program
     private static int Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
-        if (!StartupGate.EnsureAuthorized("主题管理器"))
-        {
-            return 3;
-        }
-
         var gameRoot = ResolveGameRoot(args);
         if (!GameRootValidator.IsInstalledGameRoot(gameRoot, out var error))
         {
             MessageBox.Show(
                 error,
-                "主题管理器",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-            return 2;
-        }
-
-        using (var agreement = new AgreementDialog(
-                   "打开主题管理器",
-                   minimumReadSeconds: 0,
-                   requireScroll: false))
-        {
-            if (agreement.ShowDialog() != DialogResult.OK)
-            {
-                return 1;
-            }
-        }
-
-        try
-        {
-            ConsentReceipt.Write(gameRoot, "theme-manager");
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(
-                $"无法写入条款凭据：{exception.Message}",
                 "主题管理器",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);

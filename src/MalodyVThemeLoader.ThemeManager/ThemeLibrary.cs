@@ -56,22 +56,12 @@ internal sealed class ThemeLibrary
 
             try
             {
-                var raw = File.ReadAllText(manifestPath);
-                var manifest = JsonSerializer.Deserialize<ThemeManifest>(
-                    raw, JsonDefaults.Options)
-                    ?? throw new InvalidDataException("theme.json 为空。");
-                ThemePackage.ValidateManifest(manifest);
-                var fileCount = Directory.EnumerateFiles(
-                    directory, "*", SearchOption.AllDirectories).Count();
-                var expandedSize = Directory.EnumerateFiles(
-                        directory, "*", SearchOption.AllDirectories)
-                    .Sum(path => new FileInfo(path).Length);
+                var info = ThemePackage.InspectDirectory(directory);
                 items.Add(new ThemeItem(
                     Path.GetFileName(directory),
                     directory,
                     true,
-                    new ThemePackageInfo(
-                        directory, manifest, raw, fileCount, expandedSize)));
+                    info));
             }
             catch (Exception exception)
             {
@@ -89,7 +79,7 @@ internal sealed class ThemeLibrary
 
         return items
             .GroupBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.OrderBy(item => item.IsLegacyDirectory)
+            .Select(group => group.OrderByDescending(item => item.IsLegacyDirectory)
                 .ThenBy(item => Path.GetExtension(item.SourcePath).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? 0 : 1).First())
             .OrderByDescending(item => item.IsDefault)
             .ThenBy(item => item.DisplayName, StringComparer.CurrentCultureIgnoreCase)
@@ -223,33 +213,59 @@ internal sealed class ThemeLibrary
             throw new InvalidDataException("请选择 ZIP 主题包。");
         var info = ThemePackage.Inspect(sourcePath);
 
-        var target = PathRules.GetSafeCombinedPath(
+        var target = PathRules.GetSafeCombinedPath(themesRoot, info.Manifest.Id);
+        var legacyZipTarget = PathRules.GetSafeCombinedPath(
             themesRoot, ThemePackage.GetPackageFileName(info.Manifest));
-        if (File.Exists(target) && !overwrite)
+        if ((Directory.Exists(target) || File.Exists(legacyZipTarget)) && !overwrite)
         {
             throw new ThemeAlreadyExistsException(info.Manifest.Name);
         }
 
         var temporary = target + ".new-" + Guid.NewGuid().ToString("N");
+        var backupDirectory = target + ".old-" + Guid.NewGuid().ToString("N");
+        var backupZip = legacyZipTarget + ".old-" + Guid.NewGuid().ToString("N");
+        var movedDirectory = false;
+        var movedZip = false;
         try
         {
-            File.Copy(sourcePath, temporary, true);
-            ThemePackage.Inspect(temporary);
-            File.Move(temporary, target, true);
+            ThemePackage.ExtractToDirectory(sourcePath, temporary);
+            ThemePackage.InspectDirectory(temporary);
+            if (Directory.Exists(target))
+            {
+                Directory.Move(target, backupDirectory);
+                movedDirectory = true;
+            }
+            if (File.Exists(legacyZipTarget))
+            {
+                File.Move(legacyZipTarget, backupZip);
+                movedZip = true;
+            }
+            Directory.Move(temporary, target);
+            DeleteDirectoryIfPresent(backupDirectory);
+            DeleteFileIfPresent(backupZip);
+        }
+        catch
+        {
+            DeleteDirectoryIfPresent(target);
+            DeleteDirectoryIfPresent(temporary);
+            if (movedDirectory && Directory.Exists(backupDirectory))
+                Directory.Move(backupDirectory, target);
+            if (movedZip && File.Exists(backupZip))
+                File.Move(backupZip, legacyZipTarget);
+            throw;
         }
         finally
         {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
+            DeleteDirectoryIfPresent(temporary);
+            DeleteDirectoryIfPresent(backupDirectory);
+            DeleteFileIfPresent(backupZip);
         }
 
         return new ThemeItem(
             info.Manifest.Id,
             target,
-            false,
-            ThemePackage.Inspect(target));
+            true,
+            ThemePackage.InspectDirectory(target));
     }
 
     public void Export(ThemeItem item, string destinationPath)
@@ -363,6 +379,16 @@ internal sealed class ThemeLibrary
                 File.Delete(temporary);
             }
         }
+    }
+
+    private static void DeleteDirectoryIfPresent(string path)
+    {
+        if (Directory.Exists(path)) Directory.Delete(path, true);
+    }
+
+    private static void DeleteFileIfPresent(string path)
+    {
+        if (File.Exists(path)) File.Delete(path);
     }
 }
 

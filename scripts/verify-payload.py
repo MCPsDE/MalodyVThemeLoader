@@ -26,7 +26,7 @@ required = ['winhttp.dll', 'doorstop_config.ini', '.doorstop_version',
     'BepInEx/plugins/MalodyVThemeLoader/MalodyVThemeLoader.Plugin.dll',
     'BepInEx/plugins/MalodyVThemeLoader/MalodyVThemeLoader.Shared.dll',
     'BepInEx/plugins/MalodyVThemeLoader/catalog.json', 'ThemeLoader/MalodyVThemeManager.exe',
-    'ThemeLoader/themes/Default.zip', 'ThemeLoader/active-theme.txt', 'ThemeLoader/settings.json']
+    'ThemeLoader/themes/Default/theme.json', 'ThemeLoader/active-theme.txt', 'ThemeLoader/settings.json']
 for name in required:
     assert (payload / name).is_file(), f'Missing offline file: {name}'
 for file in (repo / 'vendor/bepinex').rglob('*'):
@@ -36,31 +36,31 @@ for file in (repo / 'vendor/bepinex').rglob('*'):
 
 catalog = json.loads((payload / required[18]).read_text(encoding='utf-8-sig'))
 assert catalog['unityVersion'] == '2022.3.62f2'
-with zipfile.ZipFile(payload / 'ThemeLoader/themes/Default.zip') as theme:
-    names = set(theme.namelist())
-    manifest = json.loads(theme.read('theme.json'))
-    assert manifest['id'] == 'default' and manifest['formatVersion'] == 1
-    resources = 0
-    for name in names:
-        safe(name)
-        if name.endswith('/') or name == 'theme.json':
-            continue
-        prefix, _, logical = name.partition('/')
-        root = {'images': source, 'fonts': source / 'Fonts', 'live2d': source / 'Resources/Live2d'}.get(prefix)
-        assert root is not None, f'Unrelated Default entry: {name}'
-        original = root / logical
-        assert original.is_file(), f'No source resource: {name}'
-        assert digest(theme.read(name)) == digest(original.read_bytes()), f'Default was altered: {name}'
-        resources += 1
-    for entry in catalog['images']:
-        safe(entry['logicalId'])
-        name = 'images/' + entry['logicalId']
-        assert name in names, f'Catalog image absent: {name}'
-        assert digest(theme.read(name)) == entry['sha256']
-    for entry in catalog['live2dFiles']:
-        safe(entry['logicalId'])
-        name = 'live2d/' + entry['logicalId']
-        assert name in names and digest(theme.read(name)) == entry['sha256']
+default_root = payload / 'ThemeLoader/themes/Default'
+names = {file.relative_to(default_root).as_posix() for file in default_root.rglob('*') if file.is_file()}
+manifest = json.loads((default_root / 'theme.json').read_text(encoding='utf-8-sig'))
+assert manifest['id'] == 'default' and manifest['formatVersion'] == 1
+resources = 0
+for name in names:
+    safe(name)
+    if name == 'theme.json':
+        continue
+    prefix, _, logical = name.partition('/')
+    root = {'images': source, 'fonts': source / 'Fonts', 'live2d': source / 'Resources/Live2d'}.get(prefix)
+    assert root is not None, f'Unrelated Default entry: {name}'
+    original = root / logical
+    assert original.is_file(), f'No source resource: {name}'
+    assert digest((default_root / name).read_bytes()) == digest(original.read_bytes()), f'Default was altered: {name}'
+    resources += 1
+for entry in catalog['images']:
+    safe(entry['logicalId'])
+    name = 'images/' + entry['logicalId']
+    assert name in names, f'Catalog image absent: {name}'
+    assert digest((default_root / name).read_bytes()) == entry['sha256']
+for entry in catalog['live2dFiles']:
+    safe(entry['logicalId'])
+    name = 'live2d/' + entry['logicalId']
+    assert name in names and digest((default_root / name).read_bytes()) == entry['sha256']
 
 with zipfile.ZipFile(repo / 'artifacts/payload.zip') as archive:
     for name in archive.namelist():

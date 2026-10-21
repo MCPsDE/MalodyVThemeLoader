@@ -49,6 +49,52 @@ public static class ThemePackage
             archive.Entries.Sum(entry => entry.Length));
     }
 
+    public static ThemePackageInfo InspectDirectory(string directoryPath)
+    {
+        var directory = Path.GetFullPath(directoryPath);
+        if (!Directory.Exists(directory))
+        {
+            throw new DirectoryNotFoundException($"主题目录不存在：{directory}");
+        }
+
+        var manifestPath = Path.Combine(directory, "theme.json");
+        if (!File.Exists(manifestPath))
+        {
+            throw new InvalidDataException("主题目录根目录缺少 theme.json。");
+        }
+
+        var rawJson = File.ReadAllText(manifestPath);
+        var manifest = JsonSerializer.Deserialize<ThemeManifest>(
+            rawJson, JsonDefaults.Options)
+            ?? throw new InvalidDataException("theme.json 为空。");
+        ValidateManifest(manifest);
+
+        long expandedSize = 0;
+        var count = 0;
+        foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        {
+            var relative = NormalizeEntryName(Path.GetRelativePath(directory, file));
+            if (Path.IsPathRooted(relative) || HasUnsafeSegments(relative))
+            {
+                throw new InvalidDataException($"主题目录包含不安全路径：{relative}");
+            }
+
+            expandedSize = checked(expandedSize + new FileInfo(file).Length);
+            if (expandedSize > MaximumExpandedSize)
+            {
+                throw new InvalidDataException("主题目录超过 1 GiB 安全限制。");
+            }
+            count++;
+        }
+
+        return new ThemePackageInfo(
+            directory,
+            manifest,
+            rawJson,
+            count,
+            expandedSize);
+    }
+
     public static void CreateFromDirectory(
         string sourceDirectory,
         string destinationPath)

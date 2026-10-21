@@ -155,13 +155,13 @@ try {
         [object[]]@([string]$gameRoot),
         $null)
     $defaultTheme = @($libraryType.GetMethod('GetThemes').Invoke($library, [object[]]@())) | Where-Object { $_.IsDefault } | Select-Object -First 1
-    if (!$defaultTheme -or $defaultTheme.IsVirtual) { throw 'Full Default ZIP is missing from the payload.' }
+    if (!$defaultTheme -or $defaultTheme.IsVirtual) { throw 'Full editable Default directory is missing from the payload.' }
     $defaultExport = Join-Path $testRoot 'Default-exported.zip'
     $libraryType.GetMethod('Export').Invoke($library, [object[]]@($defaultTheme.PSObject.BaseObject,[string]$defaultExport))
     $defaultInfo = $packageType.GetMethod('Inspect').Invoke($null,[object[]]@([string]$defaultExport))
     if ($defaultInfo.FileCount -lt 100) { throw 'Default export does not contain original resources.' }
     $reimportedDefault = $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$defaultExport,[bool]$true))
-    if (!$reimportedDefault.IsDefault) { throw 'Default ZIP re-import was rejected.' }
+    if (!$reimportedDefault.IsDefault) { throw 'Default import was rejected.' }
     $libraryType.GetMethod('Remove').Invoke($library,[object[]]@($reimportedDefault))
     $fallback = @($libraryType.GetMethod('GetThemes').Invoke($library,[object[]]@())) | Where-Object { $_.IsDefault } | Select-Object -First 1
     if (!$fallback.IsVirtual) { throw 'Removing Default did not restore original-assets fallback.' }
@@ -169,13 +169,18 @@ try {
     $libraryType.GetMethod('Export').Invoke($library,[object[]]@($fallback.PSObject.BaseObject,[string]$templatePath))
     if (!(Test-Path $templatePath)) { throw 'Virtual Default template was not exportable.' }
     $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$defaultExport,[bool]$true)) | Out-Null
-    # Legacy packages can still be imported, but storage and export use standard ZIP.
+    # Legacy packages can still be imported, but storage becomes an editable directory.
     $legacyPath = Join-Path $testRoot 'minimal-legacy.mtp'
     Copy-Item -LiteralPath $packagePath -Destination $legacyPath
     $imported = $libraryType.GetMethod('Import').Invoke(
         $library,
         [object[]]@([string]$legacyPath, [bool]$false))
-    if (!([string]$imported.SourcePath).EndsWith('.zip')) { throw 'Legacy import was not stored as ZIP.' }
+    if ((-not [IO.Directory]::Exists([string]$imported.SourcePath)) -or (-not ([string]$imported.SourcePath).EndsWith('integration-minimal'))) {
+        throw 'Imported theme was not stored as an editable directory.'
+    }
+    [IO.File]::AppendAllText(
+        (Join-Path ([string]$imported.SourcePath) 'theme.json'),
+        "`n")
     $libraryType.GetMethod('Activate').Invoke(
         $library,
         [object[]]@($imported))
@@ -238,7 +243,7 @@ try {
     if (Test-Path (Join-Path $gameRoot 'ThemeLoader\install-manifest.json')) {
         throw 'Manager uninstall left the install manifest behind.'
     }
-    if (!(Test-Path (Join-Path $gameRoot 'ThemeLoader\themes\integration-minimal.zip'))) {
+    if (!(Test-Path (Join-Path $gameRoot 'ThemeLoader\themes\integration-minimal\theme.json'))) {
         throw 'Manager uninstall removed a user theme.'
     }
 

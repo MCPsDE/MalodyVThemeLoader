@@ -89,14 +89,15 @@ Malody V/
     MalodyVThemeManager.exe
     logs/
     themes/
-      CustomTheme.zip
+      CustomTheme/
+        theme.json
 ```
 
-The active theme defaults to `Default.zip`, generated unchanged from the source resources. If the package is removed, virtual Default falls back to original game assets. Default can be exported or replaced through the manager.
+The active theme defaults to the editable `Default/` directory, generated unchanged from the source resources. If the directory is removed, virtual Default falls back to original game assets. Default can be exported as ZIP or replaced through the manager.
 
 ## 6. Theme Format
 
-Themes are standard `.zip` archives. Legacy `.mtp` archives remain readable for migration. `theme.json` is stored at
+Themes are stored as directories under `ThemeLoader/themes/<id>/` for direct editing and realtime reload. ZIP is the interchange format for import and export; legacy `.mtp` archives remain readable for migration. `theme.json` is stored at
 the archive root:
 
 ```json
@@ -142,7 +143,7 @@ static image replacement unless it has been verified in game.
 Missing files are not errors. The original game asset remains assigned.
 
 The desktop theme manager validates archive paths, duplicate entries, entry
-count, expanded size, manifest format, and theme ID before import. It can show
+count, expanded size, manifest format, and theme ID before extracting an import into an editable directory. It can show
 the parsed metadata and raw `theme.json`, activate a theme, export legacy
 directories as `.zip`, remove imported themes, or perform a manifest-owned
 uninstall.
@@ -156,14 +157,14 @@ mutable user setting and must not be overwritten by repair installs.
 2. BepInEx loads `MalodyVThemeLoader.Plugin.dll`.
 3. The plugin validates the supported Unity/game environment.
 4. The active theme and catalog are loaded.
-   ZIP packages are extracted to a hash-addressed system temporary cache.
+   Editable theme directories are read directly from `ThemeLoader/themes/<id>/`. Legacy ZIP files are extracted to a hash-addressed system temporary cache only when a directory is not present.
 5. Atlas lookup patches return a replacement Sprite when one exists.
 6. After each allowed scene load, static UI components are scanned and
    replaced.
 7. A short bounded delayed rescan catches UI instantiated immediately after
    scene start.
 8. If realtime mode is enabled, the scheduler watches `ThemeLoader/settings.json`,
-   `ThemeLoader/active-theme.txt`, and `ThemeLoader/themes`. File changes are
+   `ThemeLoader/active-theme.txt`, and `ThemeLoader/themes` recursively. File changes are
    debounced, the current visual replacements are restored, and the active theme
    is rebuilt on the Unity main thread before the current allowed scene is
    rescanned.
@@ -219,7 +220,7 @@ The robust path is a theme-specific AssetBundle created by the ThemeBuilder
 with a compatible Unity editor. The runtime maps original font asset names to
 replacement `TMP_FontAsset` objects.
 
-Default font sources are included in the source-derived Default ZIP for
+Default font sources are included in the source-derived Default directory for
 authoring. Until a compiled replacement font bundle is present, the runtime
 keeps original fonts.
 
@@ -266,7 +267,7 @@ generate the real IL2CPP interop assemblies, and copies compile-time references
 into `generated/game-libs`. It does not modify the real game directory.
 
 The release script generates only the lightweight runtime catalog, assembles
-the offline payload and source-derived Default ZIP, publishes the self-contained theme manager, embeds everything in the installer, and writes release hashes.
+the offline payload and source-derived Default directory, publishes the self-contained theme manager, embeds everything in the installer, and writes release hashes.
 
 ## 13. Existing BepInEx and unrestricted startup
 
@@ -315,7 +316,7 @@ The final release contains:
 - User-facing `README.txt`, including required third-party notices
 
 The installer payload contains the pinned BepInEx, plugin, catalog, self-contained
-theme manager, source-derived Default.zip, third-party notices and install metadata.
+theme manager, source-derived Default directory, third-party notices and install metadata.
 It excludes device authorization, agreements, repository instructions, development
 documentation, debug symbols and compiler-generated XML API documentation.
 

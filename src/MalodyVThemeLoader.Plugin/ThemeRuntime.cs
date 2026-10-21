@@ -49,20 +49,26 @@ internal sealed class ThemeRuntime
         }
 
         var themesRoot = Path.Combine(loaderRoot, "themes");
+        var themeDirectoryCandidate = PathRules.GetSafeCombinedPath(themesRoot, activeTheme);
         var packagePath = PathRules.GetSafeCombinedPath(
             themesRoot, activeTheme + ThemePackage.Extension);
-        if (!File.Exists(packagePath))
-        {
-            var legacy = PathRules.GetSafeCombinedPath(themesRoot, activeTheme + ".mtp");
-            if (File.Exists(legacy)) packagePath = legacy;
-        }
+        var legacyPackagePath = PathRules.GetSafeCombinedPath(themesRoot, activeTheme + ".mtp");
         string themeDirectory;
         string sourceDisplay;
         string sourcePath;
         ThemeSourceKind sourceKind;
         ThemeManifest manifest;
-        if (File.Exists(packagePath))
+        if (Directory.Exists(themeDirectoryCandidate))
         {
+            themeDirectory = themeDirectoryCandidate;
+            sourceDisplay = themeDirectory;
+            sourcePath = themeDirectory;
+            sourceKind = ThemeSourceKind.Directory;
+            manifest = ReadManifest(themeDirectory);
+        }
+        else if (File.Exists(packagePath) || File.Exists(legacyPackagePath))
+        {
+            if (!File.Exists(packagePath)) packagePath = legacyPackagePath;
             themeDirectory = ThemeCache.Prepare(packagePath);
             sourceDisplay = packagePath;
             sourcePath = packagePath;
@@ -71,16 +77,9 @@ internal sealed class ThemeRuntime
         }
         else
         {
-            themeDirectory = PathRules.GetSafeCombinedPath(
-                themesRoot, activeTheme);
+            themeDirectory = themeDirectoryCandidate;
             sourceDisplay = themeDirectory;
-            if (Directory.Exists(themeDirectory))
-            {
-                sourcePath = themeDirectory;
-                sourceKind = ThemeSourceKind.Directory;
-                manifest = ReadManifest(themeDirectory);
-            }
-            else if (string.Equals(
+            if (string.Equals(
                          activeTheme, "Default", StringComparison.OrdinalIgnoreCase))
             {
                 themeDirectory = ThemeCache.PrepareVirtualDefault();

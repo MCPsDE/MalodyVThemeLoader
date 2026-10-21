@@ -8,9 +8,9 @@ Malody V ThemeLoader 2.0
 4. 打开桌面“主题管理器”，或照常从 Steam 启动游戏。
 
 主题
-主题为标准 ZIP 压缩包，根目录包含 theme.json。可以直接拖入管理器，
+主题在 ThemeLoader\themes\<id>\ 中以文件夹直接存储，根目录包含 theme.json；实时模式会监听目录内的文件变化。ZIP 是导入导出格式，可以直接拖入管理器，
 搜索、预览、应用、导出和移除。旧 .mtp 包仍可导入，导出统一使用 .zip。
-安装器附带由源工程原始资源生成的 Default.zip，可以导出作为制作起点。
+安装器附带由源工程原始资源生成的 Default\ 目录，可以导出为 ZIP 作为制作起点。
 缺少的主题文件继续使用游戏原始资源。预览读取 preview.png / preview.jpg、
 cover.png / cover.jpg，或主题内的 mainlist_bg2.png。
 

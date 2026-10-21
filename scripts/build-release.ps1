@@ -163,8 +163,8 @@ $installerTarget = Join-Path $releaseRoot "MalodyVThemeLoader-Setup-$Version.exe
 Copy-Item -LiteralPath $installerSource -Destination $installerTarget -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\README.txt') `
     -Destination $releaseRoot -Force
-Copy-Item -LiteralPath (Join-Path $payloadRoot 'ThemeLoader\themes\Default.zip') `
-    -Destination $releaseRoot -Force
+Copy-Item -LiteralPath (Join-Path $payloadRoot 'ThemeLoader\themes\Default') `
+    -Destination (Join-Path $releaseRoot 'Default') -Recurse -Force
 
 Get-ChildItem -LiteralPath $releaseRoot -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
     $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256

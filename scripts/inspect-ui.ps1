@@ -9,10 +9,10 @@ New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $fakeGame = Join-Path $repo 'artifacts\ui-fixture\MalodyV'
 New-Item -ItemType Directory -Path (Join-Path $fakeGame 'ThemeLoader\themes'),(Join-Path $fakeGame 'Malody V_Data\il2cpp_data') -Force | Out-Null
 foreach($name in @('Malody V.exe','UnityPlayer.dll','GameAssembly.dll')) { [IO.File]::WriteAllBytes((Join-Path $fakeGame $name),[byte[]](1,2,3)) }
-if (Test-Path (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default.zip')) {
-    Copy-Item -LiteralPath (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default.zip') -Destination (Join-Path $fakeGame 'ThemeLoader\themes\Default.zip') -Force
+if (Test-Path (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default')) {
+    Copy-Item -LiteralPath (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default') -Destination (Join-Path $fakeGame 'ThemeLoader\themes\Default') -Recurse -Force
 } elseif (Test-Path (Join-Path $repo 'Default.mtp')) {
-    Copy-Item -LiteralPath (Join-Path $repo 'Default.mtp') -Destination (Join-Path $fakeGame 'ThemeLoader\themes\Default.zip') -Force
+    Copy-Item -LiteralPath (Join-Path $repo 'Default.mtp') -Destination (Join-Path $fakeGame 'ThemeLoader\themes\Default.mtp') -Force
 }
 $assemblies = @{}
 foreach ($name in @('MalodyVThemeLoader.ThemeManager','MalodyVThemeLoader.Installer','MalodyVBepInExInstaller')) {

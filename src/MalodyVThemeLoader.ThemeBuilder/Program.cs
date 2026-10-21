@@ -56,7 +56,7 @@ internal static class Program
         CopyImages(assetsRoot, imageRoot, catalog);
         CopyLive2d(assetsRoot, live2dRoot, catalog);
 
-        string? packagePath = null;
+        string? defaultDirectory = null;
         if (options.IncludeDefaultTheme && themeRoot != null)
         {
             CopyFonts(assetsRoot, Path.Combine(themeRoot, "fonts"));
@@ -76,14 +76,12 @@ internal static class Program
             var themesRoot = Path.Combine(
                 options.OutputRoot, "ThemeLoader", "themes");
             Directory.CreateDirectory(themesRoot);
-            packagePath = Path.Combine(
-                themesRoot, "Default" + ThemePackage.Extension);
-            if (File.Exists(packagePath))
+            defaultDirectory = Path.Combine(themesRoot, "Default");
+            if (Directory.Exists(defaultDirectory))
             {
-                File.Delete(packagePath);
+                Directory.Delete(defaultDirectory, true);
             }
-            ThemePackage.CreateFromDirectory(themeRoot, packagePath);
-            Directory.Delete(themeRoot, true);
+            Directory.Move(themeRoot, defaultDirectory);
         }
 
         var pluginDirectory = Path.Combine(
@@ -99,9 +97,9 @@ internal static class Program
             new ThemeLoaderSettings());
 
         Console.WriteLine($"Catalog images: {catalog.Images.Count}");
-        Console.WriteLine(packagePath == null
+        Console.WriteLine(defaultDirectory == null
             ? "Default theme: not packaged"
-            : $"Default theme: {packagePath}");
+            : $"Default theme directory: {defaultDirectory}");
     }
 
     private static void CopyImages(

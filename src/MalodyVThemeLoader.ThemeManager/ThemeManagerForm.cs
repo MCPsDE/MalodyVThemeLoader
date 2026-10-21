@@ -94,7 +94,7 @@ internal sealed partial class ThemeManagerForm : Form
             : item.IsVirtual
                 ? "游戏原始外观"
             : item.IsLegacyDirectory
-                ? "文件夹主题，可导出为 ZIP"
+                ? "目录主题，可实时编辑并导出 ZIP"
                 : "已安装";
         activeValue.ForeColor = active ? AppVisuals.Accent : AppVisuals.Ink;
         descriptionValue.Text = string.IsNullOrWhiteSpace(manifest.Description)

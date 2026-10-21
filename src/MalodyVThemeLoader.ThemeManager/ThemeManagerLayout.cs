@@ -61,7 +61,13 @@ internal sealed partial class ThemeManagerForm
         Navigate("themes");
         DragEnter += OnDragEnter;
         DragDrop += OnDragDrop;
-        Shown += (_, _) => { RefreshRealtimeMode(); RefreshControlMode(); RefreshThemes(); };
+        Shown += async (_, _) =>
+        {
+            RefreshRealtimeMode();
+            RefreshControlMode();
+            RefreshThemes();
+            await CheckForUpdatesAsync();
+        };
         FormClosed += (_, _) => { preview.Image?.Dispose(); };
         FormClosing += (_,e) => { if (themeOperationBusy) e.Cancel = true; };
         KeyPreview = true;
@@ -122,6 +128,21 @@ internal sealed partial class ThemeManagerForm
         UseWaitCursor = value;
         if (message is not null) ShowStatus(message);
         UpdateCommandState();
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        var result = await UpdateService.CheckAndStartAsync(
+            gameRoot,
+            new Progress<string>(ShowStatus));
+        if (result.State == UpdateState.Started)
+        {
+            BeginInvoke(Close);
+        }
+        else if (result.State == UpdateState.Failed)
+        {
+            ShowStatus(result.Message);
+        }
     }
 
     private Control BuildThemePage()

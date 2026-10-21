@@ -7,8 +7,8 @@
 - 全部保留的项目使用 Release 构建；设备授权工具已删除。编译为零警告、零错误。
 - 发布自包含 x64 单文件安装器和主题管理器，使用固定 BepInEx `6.0.0-be.785`。
 - `verify-plugin.ps1` 检查实际插件程序集：引用 BepInEx IL2CPP、Il2CppInterop 和游戏互操作程序集，没有 UnityEditor 或已删除的授权类型。
-- `verify-payload.py` 检查离线 ZIP 的完整性和路径，逐一校验固定运行库文件。Default 的 1,617 个资源文件与源工程逐字节哈希一致，包含 1,428 张目录图片；另有主题清单。
-- 最终 EXE、Default.zip、README 的 SHA-256 由发布脚本写入 `artifacts/release/SHA256SUMS.txt`。
+- `verify-payload.py` 检查离线 ZIP 的完整性和路径，逐一校验固定运行库文件。Default 目录中的 1,617 个资源文件与源工程逐字节哈希一致，包含 1,428 张目录图片；另有主题清单。
+- 最终 EXE、Default 目录、README 的 SHA-256 由发布脚本写入 `artifacts/release/SHA256SUMS.txt`。
 
 ## 安装与主题回归
 
@@ -22,13 +22,21 @@
 | 卸载后外部 BepInEx、原有插件和配置逐文件哈希保持一致 | 通过 |
 | 目标文件被锁时，中途失败并恢复安装前文件树 | 通过 |
 | Doorstop 禁用、Mono 入口、核心 DLL 缺失的环境保持不变并给出诊断 | 通过 |
-| ZIP 导入、旧 MTP 迁移为 ZIP、导出、激活、设置持久化 | 通过 |
-| Default 完整导出、重新导入、移除后虚拟原始外观回退、模板导出 | 通过 |
+| ZIP 导入后提取为可编辑目录、旧 MTP 迁移、导出、激活、设置持久化 | 通过 |
+| Default 目录完整导出、重新导入、移除后虚拟原始外观回退、模板导出 | 通过 |
 | 有效 manifest 配合路径穿越条目的压缩包被拒绝 | 通过 |
 | 主题管理器卸载保留用户导入主题 | 通过 |
 | 独立 BepInEx 安装器的离线 EXE 回归 | 通过 |
 
 对应脚本：`test-installer.ps1`、`test-runtime-reuse.ps1`、`test-theme-manager.ps1` 和 `test-bepinex-installer.ps1`。完整运行输出位于本地 `artifacts`。
+
+## 目录主题实时编辑验证
+
+主题管理器导入 ZIP 后会写入 `ThemeLoader/themes/<id>/`，而不是把 ZIP 作为工作副本。运行时目录优先于同名 ZIP，并且 realtime watcher 递归监听 `theme.json`、图片、字体和 Live2D 文件变化；同名旧 ZIP 仅作为兼容回退。
+
+## GitHub 自动更新验证
+
+管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
 ## Fluent 2 视觉复核
 

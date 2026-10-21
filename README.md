@@ -8,6 +8,7 @@
 - 支持图片、字体、Live2D 纹理和循环背景视频；缺少资源时使用游戏原始外观。
 - Default 由源工程原始资源生成，可导出作为主题制作起点。
 - 主题搜索与预览、实时更新、画面控制，以及按清单修复和卸载。
+- 界面基于 Microsoft Fluent 2 和 Windows 11 Mica 规范，旧系统自动回退到中性背景。
 
 安装器与管理器无需协议阅读、设备授权或机器码校验。
 
@@ -26,4 +27,4 @@ python scripts/verify-payload.py
 ```
 
 离线 EXE、Default.zip 和 SHA-256 校验文件输出到 `artifacts/release`。
-详见 [开发指南](docs/DEVELOPMENT_GUIDE.md)、[踩坑记录](docs/PITFALLS.md)和[桌面设计约定](DESIGN.md)。
+详见 [开发指南](docs/DEVELOPMENT_GUIDE.md)、[踩坑记录](docs/PITFALLS.md)、[Fluent 2 视觉基准](docs/FLUENT_2.md)和[桌面设计约定](DESIGN.md)。

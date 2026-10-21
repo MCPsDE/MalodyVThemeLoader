@@ -4,7 +4,7 @@ Mode: Operate. Chinese Windows x64 utility for Malody V players and theme author
 
 THESIS: Make installation and choosing a theme immediate. Keep configuration and removal separate from normal theme selection.
 
-OWN-WORLD: Light neutral working surfaces, dark green text and one restrained green action color; native window frame and dialogs, consistent Chinese typography, source-derived theme imagery, flat sections and fine rules.
+OWN-WORLD: Fluent 2 neutral layers, Windows 11 Mica where available, dark neutral text and one restrained brand-blue action color; native window frame and dialogs, consistent Chinese typography, source-derived theme imagery, flat sections and fine rules.
 
 STORY: The installer recognizes the game, explains whether BepInEx will be reused and installs offline. The manager shows a real theme preview, lets the user apply/import/export ZIPs, and offers settings and maintenance on separate pages. No agreement or device restrictions.
 

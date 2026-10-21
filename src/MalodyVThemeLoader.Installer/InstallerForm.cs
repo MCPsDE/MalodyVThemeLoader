@@ -29,6 +29,7 @@ internal sealed class InstallerForm : Form
         BackColor = AppVisuals.Canvas;
         Font = AppVisuals.UiFont();
         Icon = AppVisuals.CreateAppIcon();
+        Shown += (_, _) => WindowsBackdrop.TryApplyMica(this);
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3,

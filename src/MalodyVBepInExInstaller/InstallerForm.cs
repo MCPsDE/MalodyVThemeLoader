@@ -25,6 +25,7 @@ internal sealed class InstallerForm : Form
         BackColor = AppVisuals.Canvas;
         Font = AppVisuals.UiFont();
         Icon = AppVisuals.CreateAppIcon();
+        Shown += (_, _) => WindowsBackdrop.TryApplyMica(this);
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(32) };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
         shell.RowStyles.Add(new RowStyle(SizeType.Percent,100));
@@ -97,7 +98,7 @@ internal sealed class InstallerForm : Form
     {
         var valid = GameLocator.IsGameDirectory(pathBox.Text, out var error);
         pathState.Text = valid ? "已找到有效的 Malody V IL2CPP 目录。" : error;
-        pathState.ForeColor = valid ? Color.DarkGreen : Color.DarkRed;
+        pathState.ForeColor = valid ? AppVisuals.Success : AppVisuals.Danger;
         installButton.Enabled = valid && !busy;
         uninstallButton.Enabled = !busy && File.Exists(Path.Combine(pathBox.Text, ProductInfo.ManifestRelativePath));
     }

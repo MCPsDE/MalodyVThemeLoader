@@ -27,6 +27,7 @@ internal sealed partial class ThemeManagerForm
         BackColor = AppVisuals.Canvas;
         Font = AppVisuals.UiFont();
         Icon = AppVisuals.CreateAppIcon();
+        Shown += (_, _) => WindowsBackdrop.TryApplyMica(this);
         AllowDrop = true;
 
         exportButton = AppVisuals.CreateButton("导出 ZIP");

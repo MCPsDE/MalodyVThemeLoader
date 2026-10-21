@@ -18,20 +18,26 @@ public static class AppVisuals
     private static readonly Lazy<string> MonoFontFamily = new(() =>
         ResolveFontFamily("Cascadia Mono", "Consolas", "Courier New"));
 
-    public static readonly Color Ink = Color.FromArgb(24, 43, 41);
-    public static readonly Color MutedInk = Color.FromArgb(88, 107, 103);
-    public static readonly Color Canvas = Color.FromArgb(244, 246, 245);
-    public static readonly Color Surface = Color.White;
-    public static readonly Color SurfaceAlt = Color.FromArgb(237, 242, 240);
-    public static readonly Color Line = Color.FromArgb(221, 229, 226);
-    public static readonly Color Accent = Color.FromArgb(23, 107, 88);
-    public static readonly Color AccentHover = Color.FromArgb(17, 84, 68);
-    public static readonly Color AccentSoft = Color.FromArgb(229, 241, 236);
-    public static readonly Color Danger = Color.FromArgb(173, 53, 68);
-    public static readonly Color Sidebar = Color.FromArgb(27, 32, 39);
-    public static readonly Color SidebarMuted = Color.FromArgb(183, 191, 201);
-    public static readonly Color SidebarSoft = Color.FromArgb(42, 49, 59);
-    public static readonly Color Success = Accent;
+    // Fluent 2 light theme roles. These are deliberately neutral and blue;
+    // green/teal is reserved for theme artwork and never acts as product chrome.
+    public static readonly Color Ink = Color.FromArgb(36, 36, 36);
+    public static readonly Color MutedInk = Color.FromArgb(97, 97, 97);
+    public static readonly Color Canvas = Color.FromArgb(245, 245, 245);
+    public static readonly Color Surface = Color.FromArgb(255, 255, 255);
+    public static readonly Color SurfaceAlt = Color.FromArgb(250, 250, 250);
+    public static readonly Color SurfaceRaised = Color.FromArgb(255, 255, 255);
+    public static readonly Color Line = Color.FromArgb(225, 225, 225);
+    public static readonly Color Accent = Color.FromArgb(15, 108, 189);
+    public static readonly Color AccentHover = Color.FromArgb(17, 94, 163);
+    public static readonly Color AccentPressed = Color.FromArgb(0, 84, 147);
+    public static readonly Color AccentSoft = Color.FromArgb(229, 241, 251);
+    public static readonly Color Danger = Color.FromArgb(196, 49, 36);
+    public static readonly Color DangerHover = Color.FromArgb(164, 38, 28);
+    public static readonly Color DangerPressed = Color.FromArgb(139, 31, 23);
+    public static readonly Color Sidebar = Color.FromArgb(248, 248, 248);
+    public static readonly Color SidebarMuted = Color.FromArgb(97, 97, 97);
+    public static readonly Color SidebarSoft = Color.FromArgb(243, 243, 243);
+    public static readonly Color Success = Color.FromArgb(16, 124, 16);
 
     public static Font UiFont(float size = 10F, FontStyle style = FontStyle.Regular)
     {
@@ -96,7 +102,7 @@ public static class AppVisuals
             Primary = primary,
             Danger = danger,
             AutoSize = false,
-            Height = 42,
+            Height = 36,
             Text = text,
             Font = UiFont(10F),
             FlatStyle = FlatStyle.Flat,
@@ -116,13 +122,13 @@ public static class AppVisuals
         button.FlatAppearance.MouseOverBackColor = primary
             ? AccentHover
             : danger
-                ? Color.FromArgb(148, 41, 48)
+                ? DangerHover
                 : SurfaceAlt;
         button.FlatAppearance.MouseDownBackColor = primary
-            ? Color.FromArgb(13, 72, 87)
+            ? AccentPressed
             : danger
-                ? Color.FromArgb(132, 36, 43)
-                : Color.FromArgb(232, 237, 242);
+                ? DangerPressed
+                : Color.FromArgb(237, 237, 237);
         return button;
     }
 

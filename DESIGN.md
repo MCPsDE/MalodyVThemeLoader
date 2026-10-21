@@ -1,18 +1,21 @@
 ---
 name: Malody V ThemeLoader
-description: A quiet native Windows workspace for installing and managing Malody V themes.
+description: A focused Fluent 2 native Windows workspace for installing and managing Malody V themes.
 colors:
-  accent: "#176B58"
-  accent-hover: "#115444"
-  accent-soft: "#E5F1EC"
-  danger: "#AD3544"
-  danger-hover: "#8F2633"
-  canvas: "#F4F6F5"
+  accent: "#0F6CBD"
+  accent-hover: "#115EA3"
+  accent-pressed: "#005493"
+  accent-soft: "#E5F1FB"
+  danger: "#C43124"
+  danger-hover: "#A4261C"
+  danger-pressed: "#8B1F17"
+  success: "#107C10"
+  canvas: "#F5F5F5"
   surface: "#FFFFFF"
-  surface-alt: "#EDF2F0"
-  ink: "#182B29"
-  muted-ink: "#586B67"
-  line: "#DDE5E2"
+  surface-alt: "#FAFAFA"
+  ink: "#242424"
+  muted-ink: "#616161"
+  line: "#E1E1E1"
 typography:
   page-title:
     fontFamily: "Microsoft YaHei UI, Segoe UI Variable Text, Segoe UI, sans-serif"
@@ -39,7 +42,7 @@ typography:
     fontSize: "9pt"
     fontWeight: 400
 rounded:
-  action: "6px"
+  action: "4px"
 spacing:
   compact: "8px"
   control: "12px"
@@ -54,7 +57,7 @@ components:
     textColor: "{colors.surface}"
     typography: "{typography.body}"
     rounded: "{rounded.action}"
-    height: "42px"
+    height: "36px"
   button-primary-hover:
     backgroundColor: "{colors.accent-hover}"
   button-secondary:
@@ -62,7 +65,7 @@ components:
     textColor: "{colors.ink}"
     typography: "{typography.body}"
     rounded: "{rounded.action}"
-    height: "42px"
+    height: "36px"
   button-secondary-hover:
     backgroundColor: "{colors.surface-alt}"
   button-danger:
@@ -70,7 +73,7 @@ components:
     textColor: "{colors.surface}"
     typography: "{typography.body}"
     rounded: "{rounded.action}"
-    height: "42px"
+    height: "36px"
   button-danger-hover:
     backgroundColor: "{colors.danger-hover}"
   button-pressed:
@@ -107,28 +110,28 @@ components:
 
 ## Overview
 
-**Creative North Star: "Quiet Windows utility"**
+**Creative North Star: "Fluent 2 Windows utility"**
 
-The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral surfaces, restrained green actions and familiar Windows controls keep attention on the next task. Brand appears through the existing logo and real theme artwork.
+The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral surfaces, restrained brand blue actions and familiar Windows controls keep attention on the next task. Brand appears through the existing logo and real theme artwork.
 
 The native Windows typography, frame, dialogs, scrollbars and focus cues are intentional. This system records the implemented WinForms application; the surface brief owns its workflow composition and the disclosed concept-workflow deviation.
 
 **Key Characteristics:**
 
-- Quiet light surfaces with a restrained green accent.
+- Quiet light surfaces with a restrained brand blue accent.
 - Native Chinese typography and keyboard affordances.
 - Persistent task labels and truthful operation states.
 - Real source artwork with proportion-preserving previews.
 
 ## Colors
 
-Deep green provides action and selection within a pale neutral workspace. The frontmatter is the token record extracted from `AppVisuals` and `ActionButton`.
+Fluent brand blue provides action and selection within a pale neutral workspace. The frontmatter is the token record extracted from `AppVisuals` and `ActionButton`.
 
 ### Primary
 
-- **Action Green** (`accent`): primary actions, active-theme text and successful ThemeLoader operations.
-- **Deep Action Green** (`accent-hover`): primary-button hover.
-- **Soft Green** (`accent-soft`): selected navigation and list rows; pressed buttons.
+- **Brand Blue** (`accent`): primary actions, active-theme text and successful ThemeLoader operations.
+- **Deep Brand Blue** (`accent-hover`): primary-button hover.
+- **Soft Brand Blue** (`accent-soft`): selected navigation and list rows; pressed buttons.
 - **Removal Red** (`danger`): destructive ThemeLoader removal and invalid-theme feedback.
 - **Deep Removal Red** (`danger-hover`): destructive-button hover.
 
@@ -165,7 +168,7 @@ The existing evidence covers normal and minimum dimensions plus synthetic 150% l
 
 ## Elevation & Depth
 
-The implemented application has no custom shadows or gradients. White working surfaces, pale inset areas, whitespace and fine rules establish grouping. Native Windows frames and dialogs retain operating-system depth. Hover and pressed feedback changes color immediately; no custom animated transition is implemented.
+The implemented application has no custom shadows or gradients. Windows 11 uses the system Mica backdrop; older systems use the same neutral token fallback. White working surfaces, pale inset areas, whitespace and fine rules establish grouping. Native Windows frames and dialogs retain operating-system depth. Hover and pressed feedback changes color immediately; no custom animated transition is implemented.
 
 ## Shapes
 
@@ -185,11 +188,11 @@ Path and search fields remain native text boxes. A persistent “搜索主题”
 
 ### Navigation
 
-A white navigation column holds the existing logo, product name, three task destinations and version. Rows are left-aligned, with soft-green fill, green text and bold weight when selected. Theme selection, settings and maintenance remain distinct destinations.
+A white navigation column holds the existing logo, product name, three task destinations and version. Rows are left-aligned, with soft brand-blue fill, brand-blue text and bold weight when selected. Theme selection, settings and maintenance remain distinct destinations.
 
 ### Theme library and preview
 
-The native ListBox uses fixed-height owner drawing (64 px), single selection and vertical scrolling, with IntegralHeight disabled so it fills its layout cell. Each two-line row shows the bold theme name, then active-state text or author/version. Long text uses ellipsis. Selection uses soft green; keyboard focus remains visible. A double-click applies the selected theme.
+The native ListBox uses fixed-height owner drawing (64 px), single selection and vertical scrolling, with IntegralHeight disabled so it fills its layout cell. Each two-line row shows the bold theme name, then active-state text or author/version. Long text uses ellipsis. Selection uses soft brand blue; keyboard focus remains visible. A double-click applies the selected theme.
 
 The preview fits real artwork within its available bounds, preserves aspect ratio and uses the inset neutral as its letterbox ground. Missing preview artwork, invalid themes and a search with no results have different messages. With no selection, metadata is suppressed, recovery guidance is visible and theme actions, including “查看 theme.json”, are disabled. The manifest action has a local minimum width (164 px) to retain its full mixed-language label. Raw manifests open in a native read-only, scrollable dialog.
 
@@ -219,3 +222,7 @@ Use the existing embedded logo and icon. Default theme previews and exports come
 - Don't use generated or substituted artwork for the Default theme.
 - Don't style unavailable actions as enabled or expose empty metadata as a selected theme.
 - Don't treat synthetic 150% captures as physical DPI verification.
+
+## External visual reference
+
+The system follows [Microsoft Fluent 2](https://fluent2.microsoft.design/) color roles and [Windows Mica materials](https://learn.microsoft.com/windows/apps/design/signature-experiences/materials). The mapping and implementation boundary are recorded in `docs/FLUENT_2.md`.

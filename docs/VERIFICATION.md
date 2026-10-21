@@ -1,6 +1,6 @@
 # 2.0.0 验证记录
 
-验证日期：2026-10-21。所有安装操作均针对仓库 `artifacts` 内的可丢弃假游戏目录，未启动游戏。
+验证日期：2026-10-22。所有安装操作均针对仓库 `artifacts` 内的可丢弃假游戏目录，未启动游戏。
 
 ## 构建与打包
 
@@ -29,6 +29,10 @@
 | 独立 BepInEx 安装器的离线 EXE 回归 | 通过 |
 
 对应脚本：`test-installer.ps1`、`test-runtime-reuse.ps1`、`test-theme-manager.ps1` 和 `test-bepinex-installer.ps1`。完整运行输出位于本地 `artifacts`。
+
+## Fluent 2 视觉复核
+
+本轮按 Microsoft Fluent 2 公开规范重新检查了安装器、主题管理器和独立 BepInEx 安装器。官方参考见 `docs/FLUENT_2.md`。共享视觉 token 已切换为 Fluent 中性背景、brand blue、成功/危险状态；Windows 11 使用 DWM Mica，截图和旧系统安全回退为纯色背景。截图确认没有青绿色产品 chrome、渐变、发光或大胶囊按钮。
 
 ## 原生界面审查
 

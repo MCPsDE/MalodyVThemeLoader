@@ -26,10 +26,21 @@ internal sealed class ActionButton : Button
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         var scale = DeviceDpi / 96f;
         var rect = new RectangleF(0.5f, 0.5f, Width-1, Height-1);
-        using var path = Rounded(rect, 6*scale);
-        var fill = !Enabled ? AppVisuals.SurfaceAlt : pressed ? AppVisuals.AccentSoft
-            : hovered ? (Primary ? AppVisuals.AccentHover : Danger ? Color.FromArgb(143,38,51) : AppVisuals.SurfaceAlt) : BackColor;
-        var ink = !Enabled ? AppVisuals.MutedInk : pressed ? AppVisuals.Ink : ForeColor;
+        using var path = Rounded(rect, 4*scale);
+        var fill = !Enabled
+            ? AppVisuals.SurfaceAlt
+            : pressed
+                ? (Primary ? AppVisuals.AccentPressed
+                    : Danger ? AppVisuals.DangerPressed
+                    : Color.FromArgb(237, 237, 237))
+                : hovered
+                    ? (Primary ? AppVisuals.AccentHover
+                        : Danger ? AppVisuals.DangerHover
+                        : AppVisuals.SurfaceAlt)
+                    : BackColor;
+        var ink = !Enabled
+            ? AppVisuals.MutedInk
+            : Primary || Danger ? Color.White : ForeColor;
         using var brush = new SolidBrush(fill);
         e.Graphics.FillPath(brush,path);
         if (!Primary && !Danger && FlatAppearance.BorderSize != 0)

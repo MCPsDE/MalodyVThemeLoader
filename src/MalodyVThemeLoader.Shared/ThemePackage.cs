@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace MalodyVThemeLoader.Shared;
 
@@ -27,7 +28,10 @@ public static class ThemePackage
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         ValidateArchive(archive);
 
-        var manifestEntry = archive.Entries.SingleOrDefault(entry =>
+        // Some Windows ZIP writers emit duplicate central-directory entries for
+        // Unicode Live2D paths. The extractor intentionally uses the last entry
+        // (the same overwrite semantics as copying a replacement file).
+        var manifestEntry = archive.Entries.LastOrDefault(entry =>
             string.Equals(
                 NormalizeEntryName(entry.FullName),
                 "theme.json",
@@ -211,11 +215,7 @@ public static class ThemePackage
                 throw new InvalidDataException(
                     $"主题包包含不安全路径：{entry.FullName}");
             }
-            if (!names.Add(normalized))
-            {
-                throw new InvalidDataException(
-                    $"主题包包含重复路径：{entry.FullName}");
-            }
+            names.Add(normalized);
 
             expandedSize = checked(expandedSize + entry.Length);
             if (expandedSize > MaximumExpandedSize)
@@ -262,7 +262,7 @@ public static class ThemePackage
 
     private static string NormalizeEntryName(string path)
     {
-        return path.Replace('\\', '/');
+        return path.Replace('\\', '/').Normalize(NormalizationForm.FormC);
     }
 }
 

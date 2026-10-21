@@ -14,6 +14,9 @@ internal sealed partial class ThemeManagerForm
     private readonly Dictionary<string, Control> pages = new();
     private readonly Dictionary<string, Button> navigation = new();
     private bool themeOperationBusy;
+    private ListBox? live2dModels;
+    private ListBox? live2dAnimations;
+    private Label? live2dState;
 
     public ThemeManagerForm(string gameRoot)
     {
@@ -54,6 +57,7 @@ internal sealed partial class ThemeManagerForm
         statusLabel.AccessibleName = "操作结果";
         shell.Controls.Add(statusLabel, 1, 1);
         pages["themes"] = BuildThemePage();
+        pages["live2d"] = BuildLive2dPage();
         pages["settings"] = BuildSettingsPage();
         pages["maintenance"] = BuildMaintenancePage();
         foreach (var page in pages.Values) { page.Dock = DockStyle.Fill; page.Visible = false; pageHost.Controls.Add(page); }
@@ -89,7 +93,7 @@ internal sealed partial class ThemeManagerForm
         var subtitle = AppVisuals.TextBlock("Malody V 主题管理", 9F);
         subtitle.Margin = new Padding(0, 0, 0, 32);
         AppVisuals.AddRow(stack, subtitle);
-        foreach (var (key, text) in new[] { ("themes", "主题库"), ("settings", "设置"), ("maintenance", "维护") })
+        foreach (var (key, text) in new[] { ("themes", "主题库"), ("live2d", "Live2D"), ("settings", "设置"), ("maintenance", "维护") })
         {
             var button = AppVisuals.CreateButton(text);
             button.Dock = DockStyle.Top;
@@ -325,6 +329,164 @@ internal sealed partial class ThemeManagerForm
         AppVisuals.AddRow(stack,folder);
         page.Controls.Add(stack);
         return page;
+    }
+
+    private Control BuildLive2dPage()
+    {
+        var page = new Panel { AutoScroll = true, Padding = new Padding(32, 28, 32, 24) };
+        var stack = AppVisuals.Stack();
+        AppVisuals.AddRow(stack, AppVisuals.TextBlock("Live2D 工作台", 22F, true));
+        AppVisuals.AddRow(stack, AppVisuals.TextBlock(
+            "把模型目录、纹理和已有动画放进当前主题。目录会被实时监听，保存文件即可尝试热重载。"));
+        var notice = AppVisuals.TextBlock(
+            "Live2D 模型由 model3.json / moc3（或旧式 json / moc）和纹理组成；动画只能导入已有兼容格式。静态图或 GIF 不能凭空生成可运行的 Live2D rig，GIF 导入会使用第一帧作为纹理。",
+            9F);
+        notice.ForeColor = AppVisuals.MutedInk;
+        notice.BackColor = AppVisuals.SurfaceAlt;
+        notice.Padding = new Padding(12);
+        AppVisuals.AddRow(stack, notice);
+        var columns = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 260,
+            ColumnCount = 2,
+            Margin = new Padding(0, 16, 0, 12)
+        };
+        columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44));
+        columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56));
+        live2dModels = new ListBox
+        {
+            Dock = DockStyle.Fill,
+            IntegralHeight = false,
+            BorderStyle = BorderStyle.None,
+            BackColor = AppVisuals.Surface,
+            ForeColor = AppVisuals.Ink,
+            Font = AppVisuals.UiFont(10F),
+            SelectionMode = SelectionMode.One,
+            AccessibleName = "Live2D 模型列表"
+        };
+        live2dModels.SelectedIndexChanged += (_, _) => RefreshLive2dAnimations();
+        live2dAnimations = new ListBox
+        {
+            Dock = DockStyle.Fill,
+            IntegralHeight = false,
+            BorderStyle = BorderStyle.None,
+            BackColor = AppVisuals.Surface,
+            ForeColor = AppVisuals.MutedInk,
+            Font = AppVisuals.MonoFont(9F),
+            SelectionMode = SelectionMode.One,
+            AccessibleName = "当前模型动画列表"
+        };
+        var modelPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(12), BackColor = AppVisuals.Surface, Margin = new Padding(0, 0, 12, 0) };
+        modelPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        modelPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        modelPanel.Controls.Add(AppVisuals.TextBlock("模型", 10F, true), 0, 0);
+        modelPanel.Controls.Add(live2dModels, 0, 1);
+        var animationPanel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(12), BackColor = AppVisuals.Surface, Margin = Padding.Empty };
+        animationPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        animationPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        animationPanel.Controls.Add(AppVisuals.TextBlock("已有动画", 10F, true), 0, 0);
+        animationPanel.Controls.Add(live2dAnimations, 0, 1);
+        columns.Controls.Add(modelPanel, 0, 0);
+        columns.Controls.Add(animationPanel, 1, 0);
+        AppVisuals.AddRow(stack, columns);
+        var actions = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 46, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
+        var importDirectory = AppVisuals.CreateButton("导入模型目录");
+        var importArchive = AppVisuals.CreateButton("导入 Live2D ZIP");
+        var importAnimation = AppVisuals.CreateButton("添加动画");
+        var importTexture = AppVisuals.CreateButton("替换纹理");
+        foreach (var button in new[] { importDirectory, importArchive, importAnimation, importTexture })
+        {
+            button.AutoSize = true;
+            button.MinimumSize = new Size(120, 36);
+            button.Margin = new Padding(0, 0, 8, 8);
+            actions.Controls.Add(button);
+        }
+        importDirectory.Click += (_, _) => ImportLive2dDirectory();
+        importArchive.Click += (_, _) => ImportLive2dArchive();
+        importAnimation.Click += (_, _) => ImportLive2dAnimations();
+        importTexture.Click += (_, _) => ImportLive2dTexture();
+        AppVisuals.AddRow(stack, actions);
+        live2dState = AppVisuals.TextBlock("选择主题后显示模型。", 9F);
+        live2dState.AutoEllipsis = true;
+        AppVisuals.AddRow(stack, live2dState);
+        page.Controls.Add(stack);
+        return page;
+    }
+
+    private void RefreshLive2d()
+    {
+        if (live2dModels is null) return;
+        live2dModels.Items.Clear();
+        live2dAnimations?.Items.Clear();
+        var item = SelectedTheme;
+        if (item is null || !item.IsValid || item.IsVirtual)
+        {
+            if (live2dState is not null) live2dState.Text = "请先选择一个可编辑的目录主题。";
+            return;
+        }
+        try
+        {
+            foreach (var model in Live2dWorkspace.GetModels(item)) live2dModels.Items.Add(model);
+            if (live2dModels.Items.Count > 0) live2dModels.SelectedIndex = 0;
+            if (live2dState is not null)
+                live2dState.Text = $"{live2dModels.Items.Count} 个模型 · 当前主题：{item.DisplayName} · 修改目录内文件后开启实时模式即可尝试热重载。";
+        }
+        catch (Exception exception)
+        {
+            if (live2dState is not null) live2dState.Text = "读取 Live2D 目录失败：" + exception.Message;
+        }
+    }
+
+    private void RefreshLive2dAnimations()
+    {
+        if (live2dAnimations is null) return;
+        live2dAnimations.Items.Clear();
+        if (SelectedTheme is not { } item || live2dModels?.SelectedItem is not string model) return;
+        foreach (var animation in Live2dWorkspace.GetAnimationPaths(item, model)) live2dAnimations.Items.Add(animation);
+    }
+
+    private void ImportLive2dDirectory()
+    {
+        if (SelectedTheme is not { } item || item.IsVirtual) { ShowError("请先选择一个可编辑的目录主题。"); return; }
+        using var dialog = new FolderBrowserDialog { Description = "选择 Live2D 模型目录或包含多个模型的目录", UseDescriptionForTitle = true };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { Live2dWorkspace.ImportDirectory(item, dialog.SelectedPath); RefreshThemes(item.Key); RefreshLive2d(); ShowStatus("Live2D 模型目录已导入。开启实时模式后可直接编辑文件。"); }
+        catch (Exception exception) { ShowError("导入 Live2D 目录失败：" + exception.Message); }
+    }
+
+    private void ImportLive2dArchive()
+    {
+        if (SelectedTheme is not { } item || item.IsVirtual) { ShowError("请先选择一个可编辑的目录主题。"); return; }
+        using var dialog = new OpenFileDialog { Title = "导入 Live2D ZIP", Filter = "ZIP 文件 (*.zip;*.mtp)|*.zip;*.mtp", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { Live2dWorkspace.ImportArchive(item, dialog.FileName); RefreshThemes(item.Key); RefreshLive2d(); ShowStatus("Live2D ZIP 已提取到当前主题目录。"); }
+        catch (Exception exception) { ShowError("导入 Live2D ZIP 失败：" + exception.Message); }
+    }
+
+    private void ImportLive2dAnimations()
+    {
+        if (SelectedTheme is not { } item || item.IsVirtual || live2dModels?.SelectedItem is not string model) { ShowError("请先选择一个模型。"); return; }
+        using var dialog = new OpenFileDialog { Title = "添加 Live2D 动画", Filter = "动画文件 (*.motion3.json;*.mtn;*.bytes;*.anim)|*.motion3.json;*.mtn;*.bytes;*.anim", Multiselect = true, CheckFileExists = true };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { Live2dWorkspace.ImportAnimations(item, model, dialog.FileNames); RefreshLive2dAnimations(); ShowStatus($"已添加 {dialog.FileNames.Length} 个动画文件。"); }
+        catch (Exception exception) { ShowError("添加动画失败：" + exception.Message); }
+    }
+
+    private void ImportLive2dTexture()
+    {
+        if (SelectedTheme is not { } item || item.IsVirtual) { ShowError("请先选择一个可编辑的目录主题。"); return; }
+        using var dialog = new OpenFileDialog { Title = "替换 Live2D 纹理", Filter = "图像文件 (*.png;*.jpg;*.jpeg;*.gif)|*.png;*.jpg;*.jpeg;*.gif", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        var targets = Live2dWorkspace.GetTexturePaths(item);
+        if (targets.Count == 0) { ShowError("当前主题没有可替换的 Live2D PNG/JPG 纹理。"); return; }
+        using var chooser = new Form { Text = "选择要替换的纹理", ClientSize = new Size(560, 150), StartPosition = FormStartPosition.CenterParent, Font = AppVisuals.UiFont() };
+        var combo = new ComboBox { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList, DataSource = targets.ToList(), Margin = new Padding(16) };
+        var ok = AppVisuals.CreateButton("替换", primary: true); ok.Dock = DockStyle.Bottom; ok.Height = 36; ok.DialogResult = DialogResult.OK;
+        chooser.Controls.Add(combo); chooser.Controls.Add(ok); chooser.AcceptButton = ok;
+        if (chooser.ShowDialog(this) != DialogResult.OK || combo.SelectedItem is not string target) return;
+        try { Live2dWorkspace.ImportImageOrGif(item, dialog.FileName, target); RefreshLive2d(); ShowStatus(dialog.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ? "GIF 已使用第一帧替换纹理；它不会生成 Live2D 动画。" : "Live2D 纹理已替换。"); }
+        catch (Exception exception) { ShowError("替换 Live2D 纹理失败：" + exception.Message); }
     }
 
     private Control BuildMaintenancePage()

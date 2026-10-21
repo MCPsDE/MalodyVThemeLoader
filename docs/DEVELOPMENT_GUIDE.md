@@ -242,6 +242,18 @@ Newer Cubism Maid/Chris models are imported Unity Prefabs. The first runtime
 implementation replaces their textures only. Full model and Animator
 replacement uses a compatible AssetBundle and must not bypass ownership.
 
+The desktop manager includes a Live2D workspace. It can import a model directory
+or ZIP into the editable theme `live2d` directory, add existing compatible motion
+files (`.motion3.json`, `.mtn`, `.bytes`, `.anim`), and replace an existing texture.
+Importing a ZIP with duplicate normalized entries uses the last entry, which
+matches ordinary overwrite semantics and handles Unicode Live2D archives.
+
+A PNG/JPG replacement is copied to the selected existing texture path. A GIF is
+decoded to its first frame and copied as PNG. The tool deliberately does not claim
+to generate a Live2D rig: a valid rig requires model JSON, moc data, parameter
+bindings and compatible runtime metadata. Adding or replacing game Animator logic
+is outside the visual-only safety boundary.
+
 ## 11. Visual Scope
 
 ThemeLoader only replaces visual resources. Never patch score, judgement, replay,

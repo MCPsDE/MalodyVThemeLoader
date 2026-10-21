@@ -145,6 +145,32 @@ try {
         throw 'Theme package path traversal was not rejected.'
     }
 
+    $duplicatePath = Join-Path $testRoot 'duplicate-live2d.zip'
+    $duplicateStream = [IO.File]::Open($duplicatePath,[IO.FileMode]::Create,[IO.FileAccess]::ReadWrite)
+    try {
+        $duplicateArchive = [IO.Compression.ZipArchive]::new(
+            $duplicateStream,[IO.Compression.ZipArchiveMode]::Create,$true)
+        try {
+            $manifestEntry = $duplicateArchive.CreateEntry('theme.json')
+            $manifestWriter = [IO.StreamWriter]::new($manifestEntry.Open())
+            try { $manifestWriter.Write(($manifest | ConvertTo-Json -Depth 8)) }
+            finally { $manifestWriter.Dispose() }
+            foreach ($value in @('old','new')) {
+                $entry = $duplicateArchive.CreateEntry('live2d/模型/texture_00.png')
+                $writer = [IO.StreamWriter]::new($entry.Open())
+                try { $writer.Write($value) }
+                finally { $writer.Dispose() }
+            }
+        }
+        finally { $duplicateArchive.Dispose() }
+    }
+    finally { $duplicateStream.Dispose() }
+    $duplicateInfo = $packageType.GetMethod('Inspect').Invoke(
+        $null,[object[]]@([string]$duplicatePath))
+    if ($duplicateInfo.Manifest.Id -ne 'integration-minimal') {
+        throw 'Duplicate Unicode Live2D entries were not accepted.'
+    }
+
     $libraryType = $managerAssembly.GetType(
         'MalodyVThemeLoader.ThemeManager.ThemeLibrary',
         $true)

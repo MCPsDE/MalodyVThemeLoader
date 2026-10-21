@@ -61,6 +61,8 @@ foreach ($name in $assemblies.Keys) {
             if ($isManager) {
                 Invoke-Method $form 'Navigate' @('settings')
                 Capture $form 'manager-settings'
+                Invoke-Method $form 'Navigate' @('live2d')
+                Capture $form 'manager-live2d'
                 Invoke-Method $form 'Navigate' @('maintenance')
                 Capture $form 'manager-maintenance'
                 Invoke-Method $form 'Navigate' @('themes')

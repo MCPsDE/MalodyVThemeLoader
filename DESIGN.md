@@ -125,6 +125,11 @@ components:
   number-field-disabled:
     backgroundColor: "{colors.surface-alt}"
     textColor: "{colors.muted-ink}"
+  text-field:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    height: "34px"
   theme-row:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -237,13 +242,17 @@ The Live2D workbench separates a vertically scrolling editor from a fixed action
 
 The separate animation-and-region editor starts at 1140 × 760 client pixels with a 1000 × 680 minimum window. A two-column layout gives 62% to the model preview and 38% to trigger selection and assignment, separated by a 20 px margin within 24 px outer padding. Motion browsing, “试播” and “重置” sit below the preview. The right column retains a scrolling trigger list above region actions and persistently labeled fields. A fixed footer keeps concise status and the primary “完成绑定” action reachable.
 
-The “资源编辑” page retains the manager shell and puts its labeled theme selector above a three-column work area (24/44/32%). The left column holds labeled search and the image/UI-audio tree; the center holds source/stretch or waveform preview above a source-usage list; the right holds scope, import, playback and slice fields. The right fields scroll independently above a fixed save allocation (54 px), so the primary action remains reachable at minimum size and synthetic scaling. Hierarchy, component and numeric field focus requests scroll-into-view. Native tree scrolling, clipped names with ellipsis and full logical-path tooltips accommodate long resource paths.
+The “资源编辑” page retains the manager shell and its labeled theme selector, then a compact “资源文件” / “在线调试” mode row. Resource-file mode keeps the three-column work area (24/44/32%). The left column holds labeled search and the image/UI-audio tree; the center holds source/stretch or waveform preview above a source-usage list; the right holds scope, import, playback and slice fields. The right fields scroll independently above a fixed save allocation (54 px), so the primary action remains reachable at minimum size and synthetic scaling. Hierarchy, component and numeric field focus requests scroll-into-view. Native tree scrolling, clipped names with ellipsis and full logical-path tooltips accommodate long resource paths.
+
+Online mode places connection, bounds, node-name and hidden-node checkboxes above its concise connection status. The work area splits 40/60 between a labeled searchable live tree and independently scrolling node fields, separated by a 16 px margin. Node title and scene/component/hierarchy precede the resource-location action, background actions and preview, video actions, opacity, fit, size and slice fields. The existing `ButtonRow` and `FieldGrid` provide action and numeric reflow. Save/restore sit below the scrolling fields, followed by a fixed status allocation (46 px). Focus entering editing controls requests scroll-into-view. This extends the existing workspace without changing its palette, type, navigation or footer.
 
 Current editor captures are `editor-desktop.png`, `editor-result.png`, `editor-minimum.png` and `editor-scale150.png` under both `.impeccable/review/editor-dark` and `editor-light`. They show actual model artwork, a manually drawn region, bound audio and a selected M3 result trigger, with controls reachable at normal, minimum and synthetic 150% layouts. The earlier `live2d-dark` and `live2d-light` sets retain evidence for the surrounding manager, scrolled workbench fields and fixed-light installers. Synthetic scaling does not establish physical multi-monitor DPI behavior or assistive-technology results.
 
 Resource-editor captures are `resources-images.png`, `resources-minimum.png`, `resources-audio.png`, `resources-scale150.png` and `resources-control.png` in both `.impeccable/review/resources-dark` and `resources-light`. They show existing source artwork, slice editing, a loaded exact-control scope and silent audio fixtures. The documentation evidence and Unity-versus-installed-game limits are recorded in `.impeccable/review/resources-documentation.md`.
 
 The 2.5.1 correction captures are under `.impeccable/review/controls-dark`, `controls-light`, `controls-animation-dark` and `controls-animation-light`. Shared geometric checks cover all five manager pages and both fixed-light installers at normal/minimum sizes, synthetic 125/150/200% and 125% font size; composed inspection checks real Tab entry and scroll bounds. The exact capture list, logs and evidence limits are in `.impeccable/review/controls-documentation.md`. Synthetic scaling remains layout stress; API-level accessibility checks do not establish screen-reader behavior.
+
+The 2.6 captures under `.impeccable/review/inspector-dark` and `inspector-light` each cover disconnected, node draft, saved media, picked resource, video settings, minimum, minimum-video and synthetic 150% layouts. The isolated Unity `inspector-runtime` pair records functional debug geometry and actual alpha-video layering using synthetic validation art. Native editor, resource-regression, Release build, 311 resolved game/Unity references and 28 runtime checks are recorded in `.impeccable/review/inspector-documentation.md`; physical input delivery, physical DPI, screen-reader use and the installed IL2CPP game remain outside that evidence.
 
 ## Elevation & Depth
 
@@ -265,7 +274,9 @@ Pressed states follow each variant: deeper blue for primary, deeper red for dest
 
 ### Inputs and navigation
 
-Path and search fields remain native text boxes. Persistent “搜索主题” and “搜索资源” labels identify search independently of placeholders. Navigation contains five destinations: 主题库, 资源编辑, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. `SingleLineLabel` measures and paints the rail's wordmark, subtitle and version without wrapping. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
+Text entry retains native text boxes. Resource search, hierarchy entry and online node search use the shared `TextField` frame, which removes the inner native border and paints the working surface, primary ink and fine outer rule. Focus changes that rule to readable accent. Its minimum height starts at 34 logical pixels and grows with the editor's preferred height plus 12 px; the native editor is vertically centered with 7 px horizontal insets. Font and DPI changes recalculate the frame while native typing, selection and keyboard behavior remain in the editor. Other path and theme-search inputs retain their existing native treatment. Persistent “搜索主题”, “搜索资源” and “搜索节点名称或路径” labels identify search independently of placeholders.
+
+Navigation contains five destinations: 主题库, 资源编辑, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. `SingleLineLabel` measures and paints the rail's wordmark, subtitle and version without wrapping. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
 
 `NumberField` is the shared numeric editor for Live2D fitting and resource slice/preview dimensions. Its preferred height starts at 32 logical pixels and grows with the font. It retains native parsing and arrow-key input inside a clipped host, hiding the native spinner buttons and reserving their actual internal width outside the visible input. Two theme-painted horizontal minus/plus buttons use the working surface, hover/pressed neutrals and primary ink; disabled steps use alternate surface and muted ink. Focus changes the outer rule to readable accent. Range, read-only and disabled states govern stepping. The outer Tab stop forwards focus to the editor; named increment/decrement controls and a writable SpinButton accessible value remain available. Layout measures range samples rather than reading `Value`, preserving incomplete input until an explicit commit.
 
@@ -288,6 +299,18 @@ Image previews fit the source and chosen stretch size into their available areas
 Persistently labeled scene, hierarchy and component fields establish the loaded image scope. Double-clicking a source usage reads it directly. Manually changing hierarchy or component exposes “读取此范围” and “取消定位”; import, slice editing and save stay disabled until the requested scope is read. Reading reloads that scope's exact or inherited file, mode, margins and preview after resolving any resource draft. Cancelling returns to the loaded scope while preserving its draft. Source usages are a partial authoring aid, not a full scene preview.
 
 The fixed “保存并实时应用” action is enabled when a selected resource has edits and its scope is loaded. Busy operations disable conflicting controls; save-time validation errors retain edits and give concise corrective feedback. “恢复此范围” is enabled only for an exact saved override and removes that override to restore inheritance. Clean same-theme refreshes reload persisted rules; dirty edits remain local. Applying a materialized ZIP refreshes the library's directory identity. Saved/activated status does not certify that the installed game has rendered or played the replacement.
+
+### Online scene inspector and node media
+
+The mode row reuses shared action buttons; the selected mode uses soft selection blue and readable accent. A disconnected inspector shows the next connection/picking action and disables media editing until a suitable node and editable theme exist. Connection feedback distinguishes waiting, connected theme/node count, competing manager and an incomplete hierarchy. The tree preserves native expansion and selection, marks hidden nodes with “隐藏” and muted ink, and searches names and hierarchy while retaining ancestors. Runtime debug bounds and names are functional solid-color geometry; yellow marks the selected node. Bounds and names can be toggled independently without introducing new application-chrome tokens.
+
+Tree selection and game picking address the same node. Middle-click selects a visible UI region and repeated clicks cycle overlaps; a catalog-matched image opens its resource scope with a saved exact-node address. UI containers without an image can add a background and VP8 alpha WebM. Nodes without a UI region remain in the tree with a concise explanation and disabled decoration controls. Long node names, paths and media names use ellipsis only with full values available in tooltips; commands retain the complete-label rule.
+
+A transparent loader-owned UI hit layer receives inspection middle-clicks and the short release window, keeping game panels from treating a pick as a close action. It becomes transparent to UI raycasts after capture, so ordinary left-click interaction resumes. This adds no visible control or application-chrome token. The isolated Unity validation checks actual `EventSystem.RaycastAll` routing to this layer and subsequent routing to the original UI; physical mouse delivery and installed-game input remain separate verification limits.
+
+The background preview reuses the existing source/stretch and slice-guide language. Opacity, width, height and margins use `NumberField`; fit uses `ChoiceBox`. Persistent labels state percent, pixels and “0 为自动” where relevant. VP9 import reports a VP8 conversion action and preserves the prior draft. Video has no desktop motion preview or audio playback; the inspector reports the game's decoration state. A preparing or failed video keeps the background visible, and saved layers follow the target while preserving its existing foreground content. These are media effects in the game, not animated application chrome.
+
+Save commits a validated node draft and enables live application; restore removes only the selected node decoration. Unchanged state, no selection, invalid UI region and busy work govern action availability. Leaving an unsaved draft requires a discard choice, and failed validation retains edits. Save/activation feedback remains distinct from game-reported applied, preparing or failed status. Closing the leased connection clears debug geometry while saved decorations persist. Exact identity, codec and transport details belong in `docs/SCENE_INSPECTOR.md`, outside the task flow.
 
 ### Manager footer and appearance
 
@@ -325,7 +348,7 @@ The native trigger list contains “待机 · 循环”, “点击未绑定区�
 
 ### Artwork
 
-Use the existing embedded logo and icon. Default theme previews and exports come from read-only source artwork. The editor captures show an external user-supplied Murasame model for validation, not artwork shipped in Default. Appearance changes add no generated or substituted artwork.
+Use the existing embedded logo and icon. Default theme previews and exports come from read-only source artwork. The editor captures show an external user-supplied Murasame model for validation, not artwork shipped in Default. The online-inspector background/video and runtime geometry captures use synthetic validation fixtures only; those images and videos are not new shipping artwork. Appearance changes add no generated or substituted artwork.
 
 ## Do's and Don'ts
 

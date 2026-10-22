@@ -125,6 +125,17 @@ Live2D 长篇格式/边界说明已从界面移除，技术资料留在开发文
 
 这些检查不代表物理显示器 DPI 切换、屏幕阅读器、声卡输出或实际安装游戏的端到端验证。用户在本轮验证期间自行启动了游戏，完整快照保留其日志、缓存和配置差异；稳定资源检查精确排除已观察到的运行文件，不保证配置内容未变，也没有修改或还原玩家文件。
 
+## 2.6 在线调试与节点装饰
+
+- 全解决方案 Release 构建通过，0 警告、0 错误；实际游戏 interop 的 311 个游戏/Unity 引用及现有 Cubism、看板、结算、音频入口校验通过。
+- `test-scene-inspector.ps1` 明暗检查通过：实时层级/搜索/隐藏节点、空 UI 节点底图和 VP8 WebM、视频不透明度与填充、非法编码保留旧规则、中键选取后的精确资源定位、同名兄弟隔离、主题/实时启用、恢复和 ZIP。所有可见命令和数字框通过共享几何断言；正常、最小、合成 150% 捕获各八张。
+- `test-inspector-runtime.ps1` 在仓库独立 Unity 2022.3.62f3 播放工程中通过 28 项断言：真实 VP8 Alpha 解码、45% 视频与底图的实际像素混合、前景保留、裁剪拾取、重叠轮选、双向选择、自有 UI 中键拦截/普通点击穿透、4,000 节点导致的线框分批、投影坐标反变换、租约失效和错误资源清理。实际打开 `hierarchy.png`、`node-video.png`；合成图片和视频只用于验证。
+- 原有资源编辑流程、真实 Unity 切片渲染、五个管理器页面/两个安装器的数字与完整标签矩阵（明暗、正常/最小、合成 125/150/200% 及 125% 字体）、外观新进程恢复和安装器固定亮色回归均通过。
+
+证据在 `.impeccable/review/inspector-dark`、`inspector-light` 和 `inspector-runtime`。独立测试适配 IL2CPP 数组/委托及 Mono 写入重载，没有操作真实安装游戏，亦未验证物理 DPI、屏幕阅读器或实际 IL2CPP 输入事件交付。当前仅对已加载的非游玩界面提供检查及 UI 节点装饰，详细规则和边界见 `docs/SCENE_INSPECTOR.md`。
+
+本轮完整目录审计没有整体通过：期间发生了其他 BetterMalodyV 插件安装、murasame 主题导入和活动主题变更，完整 1,725 条差异记录保留在 `artifacts/reference-changes.json`，没有重录基线或回滚玩家文件。精确复查源工程全树，以及游戏 exe、UnityPlayer、GameAssembly、Data、BepInEx 核心/interop/unity-libs、本加载器插件/管理器/文档和 Default，变化记录均为 0；范围和分类在 `artifacts/reference-scoped-2.6.json`。这不宣称整个游戏目录未变。
+
 ## 美术来源
 
 Default 资源来自只读源工程，逐文件哈希验证；界面预览来自主题内真实图片。应用图标 `src/MalodyVThemeLoader.Windows/Assets/mtp.png` 和 `mtp.ico` 为工作区已有文件，本次未修改。没有生成或替换美术资源。

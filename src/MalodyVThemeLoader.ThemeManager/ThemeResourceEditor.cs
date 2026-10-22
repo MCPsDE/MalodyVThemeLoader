@@ -121,6 +121,7 @@ internal sealed partial class ThemeResourceEditor : UserControl
         settings.Controls.Add(scroll, 0, 0); save.Dock = DockStyle.Fill; save.Margin = new Padding(0, 12, 0, 0); settings.Controls.Add(save, 0, 1);
         body.Controls.Add(browser, 0, 0); body.Controls.Add(viewer, 1, 0); body.Controls.Add(settings, 2, 0);
         Controls.Add(body);
+        BuildInspectorMode();
         tree.BeforeSelect += (_, e) => { if (!selecting && !ConfirmLeave()) e.Cancel = true; };
         tree.AfterSelect += (_, e) => { if (!selecting && e.Node?.Tag != null) SelectResource(e.Node.Tag); };
         tree.AllowDrop = true; tree.DragEnter += (_, e) => e.Effect = e.Data?.GetDataPresent(DataFormats.FileDrop) == true && (image != null || audio != null) ? DragDropEffects.Copy : DragDropEffects.None;
@@ -153,12 +154,7 @@ internal sealed partial class ThemeResourceEditor : UserControl
     private static NumberField Number(int minimum, int maximum, int value) => new() { Minimum = minimum, Maximum = maximum, Value = value, Dock = DockStyle.Top };
     private static Control TextFrame(TextBox text)
     {
-        text.BorderStyle = BorderStyle.None; text.BackColor = AppVisuals.Surface; text.ForeColor = AppVisuals.Ink; text.Dock = DockStyle.Fill;
-        var panel = new Panel { Dock = DockStyle.Top, Height = 34, Padding = new Padding(7, 7, 7, 5), BackColor = AppVisuals.Surface, Margin = new Padding(0, 0, 0, 8) };
-        panel.Controls.Add(text);
-        panel.Paint += (_, e) => { using var pen = new Pen(text.ContainsFocus ? AppVisuals.Accent : AppVisuals.Line); e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1); };
-        text.GotFocus += (_, _) => panel.Invalidate(); text.LostFocus += (_, _) => panel.Invalidate();
-        return panel;
+        return new TextField(text);
     }
     private static Control Row(params Button[] buttons)
     {
@@ -167,6 +163,7 @@ internal sealed partial class ThemeResourceEditor : UserControl
 
     public bool ConfirmLeave()
     {
+        if (inspectorPane != null && !inspectorPane.ConfirmLeave()) return false;
         if (IsBusy) return false;
         if (!dirty) return true;
         return MessageBox.Show(FindForm(), "当前修改尚未保存，是否放弃？", "资源编辑", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;

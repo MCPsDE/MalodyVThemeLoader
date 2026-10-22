@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": 28,
+  "video": "VP8 alpha \u002B 45% opacity rendered",
+  "scope": "isolated Unity play mode; adapted production sources",
+  "screen": [
+    640,
+    480
+  ]
+}

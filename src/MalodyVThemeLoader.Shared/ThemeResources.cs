@@ -12,6 +12,7 @@ public sealed class ThemeResources
     public int FormatVersion { get; set; } = 1;
     public List<ThemeImageRule> Images { get; set; } = new();
     public List<ThemeAudioRule> Audio { get; set; } = new();
+    public List<ThemeNodeRule> Nodes { get; set; } = new();
 
     public static ThemeResources Read(string themeRoot)
     {
@@ -39,9 +40,28 @@ public sealed class ThemeResources
 
     public void Validate()
     {
-        if (FormatVersion != 1 || Images == null || Audio == null || Images.Count + Audio.Count > 10000)
+        if (FormatVersion != 1 || Images == null || Audio == null || Nodes == null || Images.Count + Audio.Count + Nodes.Count > 10000)
             throw new InvalidDataException("资源配置版本或内容无效。");
         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var nodeKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var rule in Nodes)
+        {
+            if (rule == null) throw new InvalidDataException("节点规则无效。");
+            CheckScene(rule.Scene);
+            if (rule.Scene.Length == 0 || !SceneNodeAddress.IsValid(rule.Address) || rule.Hierarchy == null || rule.Hierarchy.Length > 4096)
+                throw new InvalidDataException("节点位置无效，请重新从在线层级中选择。");
+            CheckPath(rule.ImageFile, true); CheckPath(rule.VideoFile, true);
+            if (rule.ImageFile.Length + rule.VideoFile.Length == 0) throw new InvalidDataException("请添加底图或视频。");
+            if (rule.VideoFile.Length > 0 && !rule.VideoFile.EndsWith(".webm", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("节点视频需使用 WebM。");
+            if (!float.IsFinite(rule.VideoOpacity) || rule.VideoOpacity < 0 || rule.VideoOpacity > 1
+                || !float.IsFinite(rule.Width) || !float.IsFinite(rule.Height) || rule.Width < 0 || rule.Height < 0 || rule.Width > 8192 || rule.Height > 8192)
+                throw new InvalidDataException("节点尺寸或透明度超出范围。");
+            if (rule.Fit is not "stretch" and not "contain" and not "cover") throw new InvalidDataException("节点填充方式无效。");
+            if (rule.Border != null && new[] { rule.Border.X, rule.Border.Y, rule.Border.Z, rule.Border.W }.Any(v => !float.IsFinite(v) || v < 0 || v > 16384))
+                throw new InvalidDataException("底图切片边距无效。");
+            if (!nodeKeys.Add(rule.Scene + "|" + rule.Address)) throw new InvalidDataException("存在重复的节点装饰。");
+        }
         foreach (var rule in Images)
         {
             if (rule == null) throw new InvalidDataException("图片规则无效。");
@@ -49,12 +69,14 @@ public sealed class ThemeResources
             if (rule.Hierarchy == null || rule.Hierarchy.Length > 1024 || rule.Hierarchy.Contains('\\') || rule.Hierarchy.StartsWith('/') || rule.Hierarchy.EndsWith('/'))
                 throw new InvalidDataException("控件路径无效，请使用 / 分隔。");
             if (rule.Hierarchy.Length > 0 && rule.Scene.Length == 0) throw new InvalidDataException("指定控件前请先选择场景。");
+            if (rule.NodeAddress == null || rule.NodeAddress.Length > 0 && (!SceneNodeAddress.IsValid(rule.NodeAddress) || rule.Scene.Length == 0 || rule.Hierarchy.Length == 0))
+                throw new InvalidDataException("图片节点位置无效。");
             if (rule.Component is not "" and not "Image" and not "RawImage" and not "SpriteRenderer") throw new InvalidDataException("图片控件类型无效。");
             if (rule.Mode is not "" and not "sliced" and not "simple") throw new InvalidDataException("图片显示模式无效。");
             if (rule.Border != null && new[] { rule.Border.X, rule.Border.Y, rule.Border.Z, rule.Border.W }.Any(v => !float.IsFinite(v) || v < 0 || v > 16384))
                 throw new InvalidDataException("切片边距必须是非负像素值。");
             if (rule.Mode == "sliced" && rule.Border == null) throw new InvalidDataException("九宫格切片缺少边距。");
-            if (!keys.Add("image|" + rule.LogicalId + "|" + rule.Scene + "|" + rule.Hierarchy + "|" + rule.Component)) throw new InvalidDataException("存在重复的图片覆盖范围。");
+            if (!keys.Add("image|" + rule.LogicalId + "|" + rule.Scene + "|" + rule.Hierarchy + "|" + rule.Component + "|" + rule.NodeAddress)) throw new InvalidDataException("存在重复的图片覆盖范围。");
         }
         foreach (var rule in Audio)
         {
@@ -64,13 +86,13 @@ public sealed class ThemeResources
         }
     }
 
-    public ThemeImageRule? ResolveImage(string logicalId, string scene = "", string hierarchy = "", string component = "")
+    public ThemeImageRule? ResolveImage(string logicalId, string scene = "", string hierarchy = "", string component = "", string nodeAddress = "")
     {
         var matches = Images.Where(r => r.LogicalId.Equals(logicalId, StringComparison.OrdinalIgnoreCase)
             && (r.Scene.Length == 0 || r.Scene.Equals(scene, StringComparison.Ordinal))
             && (r.Hierarchy.Length == 0 || MatchHierarchy(r.Hierarchy, hierarchy))
-            && (r.Component.Length == 0 || r.Component == component))
-            .Select(r => new { Rule = r, Priority = (r.Scene.Length > 0 ? 4 : 0) + (r.Hierarchy.Length > 0 ? 2 : 0) + (r.Component.Length > 0 ? 1 : 0) })
+            && (r.Component.Length == 0 || r.Component == component) && (r.NodeAddress.Length == 0 || r.NodeAddress == nodeAddress))
+            .Select(r => new { Rule = r, Priority = (r.NodeAddress.Length > 0 ? 8 : 0) + (r.Scene.Length > 0 ? 4 : 0) + (r.Hierarchy.Length > 0 ? 2 : 0) + (r.Component.Length > 0 ? 1 : 0) })
             .OrderByDescending(r => r.Priority).ToList();
         // An ambiguous match must not pick an arbitrary replacement.
         return matches.Count == 0 || matches.Count > 1 && matches[0].Priority == matches[1].Priority ? null : matches[0].Rule;
@@ -109,6 +131,7 @@ public sealed class ThemeResources
 
 public sealed class ThemeImageRule
 {
+    public string NodeAddress { get; set; } = "";
     public string LogicalId { get; set; } = "";
     public string Scene { get; set; } = "";
     public string Hierarchy { get; set; } = "";

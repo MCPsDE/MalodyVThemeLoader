@@ -6,7 +6,7 @@ using SkiaSharp;
 
 namespace MalodyVThemeLoader.ThemeManager;
 
-internal sealed class ThemeResourceWorkspace
+internal sealed partial class ThemeResourceWorkspace
 {
     public AssetCatalog Catalog { get; }
     public ThemeResources Rules { get; private set; }
@@ -25,9 +25,9 @@ internal sealed class ThemeResourceWorkspace
         defaultRoot = Path.Combine(gameRoot, "ThemeLoader", "themes", "Default");
     }
 
-    public string? ImageFile(ImageCatalogEntry entry, string scene, string hierarchy, string component)
+    public string? ImageFile(ImageCatalogEntry entry, string scene, string hierarchy, string component, string address = "")
     {
-        var rule = Rules.ResolveImage(entry.LogicalId, scene, hierarchy, component);
+        var rule = Rules.ResolveImage(entry.LogicalId, scene, hierarchy, component, address);
         var root = PathRules.GetSafeCombinedPath(Root, Manifest.ImageRoot);
         var path = PathRules.GetSafeCombinedPath(root, string.IsNullOrEmpty(rule?.File) ? entry.LogicalId : rule.File);
         if (File.Exists(path)) return path;
@@ -45,8 +45,8 @@ internal sealed class ThemeResourceWorkspace
         return File.Exists(fallback) ? fallback : null;
     }
 
-    public ThemeImageRule? ExactImage(string id, string scene, string hierarchy, string component) => Rules.Images.FirstOrDefault(r =>
-        r.LogicalId == id && r.Scene == scene && r.Hierarchy == hierarchy && r.Component == component);
+    public ThemeImageRule? ExactImage(string id, string scene, string hierarchy, string component, string address = "") => Rules.Images.FirstOrDefault(r =>
+        r.LogicalId == id && r.Scene == scene && r.Hierarchy == hierarchy && r.Component == component && r.NodeAddress == address);
     public ThemeAudioRule? ExactAudio(string eventName, string scene) => Rules.Audio.FirstOrDefault(r => r.Event == eventName && r.Scene == scene);
 
     public void SaveImage(ThemeImageRule rule, string? importFile)
@@ -64,7 +64,7 @@ internal sealed class ThemeResourceWorkspace
         {
             var entry = Catalog.Images.Single(e => e.LogicalId == rule.LogicalId);
             var path = rule.File.Length > 0 ? PathRules.GetSafeCombinedPath(PathRules.GetSafeCombinedPath(Root, Manifest.ImageRoot), rule.File)
-                : ImageFile(entry, rule.Scene, rule.Hierarchy, rule.Component);
+                : ImageFile(entry, rule.Scene, rule.Hierarchy, rule.Component, rule.NodeAddress);
             if (path == null || !File.Exists(path)) throw new InvalidDataException("请先导入一张图片。");
             using var bitmap = ReadBitmap(path);
             ValidateBorder(rule.Border, bitmap.Width, bitmap.Height);
@@ -77,7 +77,7 @@ internal sealed class ThemeResourceWorkspace
                 rule.File = Store(Manifest.ImageRoot, output.ToArray(), ".png");
             }
         }
-        next.Images.RemoveAll(r => r.LogicalId == rule.LogicalId && r.Scene == rule.Scene && r.Hierarchy == rule.Hierarchy && r.Component == rule.Component);
+        next.Images.RemoveAll(r => r.LogicalId == rule.LogicalId && r.Scene == rule.Scene && r.Hierarchy == rule.Hierarchy && r.Component == rule.Component && r.NodeAddress == rule.NodeAddress);
         next.Images.Add(rule); next.Write(Root); Rules = next;
     }
 
@@ -98,10 +98,10 @@ internal sealed class ThemeResourceWorkspace
         next.Audio.Add(rule); next.Write(Root); Rules = next;
     }
 
-    public void RemoveImage(string id, string scene, string hierarchy, string component)
+    public void RemoveImage(string id, string scene, string hierarchy, string component, string address = "")
     {
         var next = Fresh();
-        next.Images.RemoveAll(r => r.LogicalId == id && r.Scene == scene && r.Hierarchy == hierarchy && r.Component == component);
+        next.Images.RemoveAll(r => r.LogicalId == id && r.Scene == scene && r.Hierarchy == hierarchy && r.Component == component && r.NodeAddress == address);
         next.Write(Root); Rules = next;
     }
 
@@ -124,7 +124,7 @@ internal sealed class ThemeResourceWorkspace
         var relative = "overrides/" + Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() + extension;
         var target = PathRules.GetSafeCombinedPath(PathRules.GetSafeCombinedPath(Root, folder), relative);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        if (File.Exists(target)) return relative;
+        if (File.Exists(target) && SHA256.HashData(File.ReadAllBytes(target)).SequenceEqual(SHA256.HashData(bytes))) return relative;
         var temporary = target + ".new-" + Guid.NewGuid().ToString("N");
         try { File.WriteAllBytes(temporary, bytes); File.Move(temporary, target, true); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }

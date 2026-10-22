@@ -1,5 +1,7 @@
 # Native desktop redesign
 
+2.6 direction contract — incumbent Operate extension, code-led native WinForms. THESIS: select the running game's actual node and edit its appearance without guessing file names. OWN-WORLD: retain Fluent neutrals/blue, native Chinese typography, shared full-label buttons and NumberField, dark default and saved light mode. STORY: choose a theme, open 在线调试, connect, middle-click a game element or select its live tree node, locate the existing image or add a node background/video, save and see the result. FIRST VIEWPORT: a compact mode row in 资源编辑; online mode has a labeled connection switch and frame/name options above a searchable live tree on the left and independently scrolling node details, image preview, image/video actions, opacity, fit and size at right; stable save/restore actions remain below. FORM: extend the current native workspace, without new imagery, identity, concept seed or comp. Runtime debug geometry is functional solid-color bounds/names; app chrome retains the existing system. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+
 Mode: Operate. Chinese Windows x64 utility for Malody V players and theme authors.
 
 THESIS: Make installation and choosing a theme immediate. Keep configuration and removal separate from normal theme selection.

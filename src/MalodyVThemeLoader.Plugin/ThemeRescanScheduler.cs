@@ -77,6 +77,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         CheckActiveScene();
         if (runtime == null) return;
         runtime.Audio.Tick();
+        runtime.Decorations.Tick();
 
         if (scans.Count == 0)
         {
@@ -321,6 +322,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         try
         {
             previous?.Videos.StopAll();
+            previous?.Decorations.Dispose();
             previous?.Live2d.Dispose();
             previous?.Audio.Dispose();
             ThemeReplacementRegistry.RestoreAll(currentLog);
@@ -355,6 +357,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
 
     private void OnDestroy()
     {
+        runtime?.Decorations.Dispose();
         runtime?.Audio.Dispose();
         watcher?.Dispose();
         watcher = null;

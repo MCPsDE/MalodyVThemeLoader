@@ -21,13 +21,13 @@ internal sealed partial class ThemeResourceEditor
         {
             if (!dirty && !ScopePending && !IsBusy)
             {
-                try { workspace.Reload(); if (image != null || audio != null) LoadSelection(); }
+                try { workspace.Reload(); if (image != null || audio != null) LoadSelection(); inspectorPane?.SetWorkspace(workspace, theme); }
                 catch (Exception e) { Notify("无法刷新资源：" + e.Message); }
             }
             return true;
         }
         if (!ConfirmLeave()) return false;
-        StopAudio(); dirty = false; image = null; audio = null; pendingFile = null; theme = null; workspace = null;
+        StopAudio(); dirty = false; image = null; audio = null; pendingFile = null; theme = null; workspace = null; liveNodeAddress = "";
         selecting = true;
         try
         {
@@ -40,7 +40,7 @@ internal sealed partial class ThemeResourceEditor
             Notify("选择资源；保存后会自动启用实时加载并应用此主题。");
         }
         catch (Exception e) { Notify("无法打开资源：" + e.Message); tree.Nodes.Clear(); preview.SetImage(null); }
-        finally { selecting = false; UpdateEnabled(); }
+        finally { selecting = false; UpdateEnabled(); inspectorPane?.SetWorkspace(workspace, theme); }
         return true;
     }
 
@@ -73,6 +73,7 @@ internal sealed partial class ThemeResourceEditor
 
     private void SelectResource(object resource)
     {
+        liveNodeAddress = "";
         StopAudio(); image = resource as ImageCatalogEntry; audio = resource as AudioCatalogEntry; dirty = false; pendingFile = null;
         selecting = true;
         hierarchyBox.Text = ""; componentBox.SelectedIndex = 0;
@@ -93,14 +94,14 @@ internal sealed partial class ThemeResourceEditor
     {
         if (selecting) return;
         if (!ConfirmLeave()) { selecting = true; SetScene(loadedScene); selecting = false; return; }
-        selecting = true; hierarchyBox.Text = ""; componentBox.SelectedIndex = 0; selecting = false;
+        selecting = true; hierarchyBox.Text = ""; componentBox.SelectedIndex = 0; liveNodeAddress = ""; selecting = false;
         LoadSelection();
     }
 
     private void SelectUsage()
     {
         if (usages.SelectedItem is not UsageChoice choice || !ConfirmLeave()) return;
-        selecting = true; SetScene(choice.Usage.Scene); hierarchyBox.Text = choice.Usage.Hierarchy;
+        selecting = true; liveNodeAddress = ""; SetScene(choice.Usage.Scene); hierarchyBox.Text = choice.Usage.Hierarchy;
         componentBox.SelectedItem = choice.Usage.Component; selecting = false; LoadSelection();
     }
 
@@ -130,6 +131,7 @@ internal sealed partial class ThemeResourceEditor
             probe.Images.Add(new ThemeImageRule { LogicalId = image.LogicalId, Scene = SceneName, Hierarchy = Hierarchy, Component = ComponentName });
             probe.Validate();
             if (!ConfirmLeave()) return;
+            if (ScopePending) liveNodeAddress = "";
             workspace.Reload(); LoadSelection(); Notify("已读取此范围，可替换图片或调整切片。");
         }
         catch (Exception e) { Notify("无法读取范围：" + e.Message); }
@@ -154,14 +156,14 @@ internal sealed partial class ThemeResourceEditor
             {
                 resourceName.Text = Path.GetFileName(image.LogicalId);
                 tips.SetToolTip(resourceName, image.LogicalId);
-                var rule = workspace.Rules.ResolveImage(image.LogicalId, SceneName, Hierarchy, ComponentName);
+                var rule = workspace.Rules.ResolveImage(image.LogicalId, SceneName, Hierarchy, ComponentName, liveNodeAddress);
                 currentRuleFile = rule?.File ?? ""; currentFileName = rule?.DisplayName ?? ""; currentMode = rule?.Mode ?? "";
                 SetBorders(rule?.Border ?? image.Border);
                 sliceToggle.Checked = currentMode == "sliced" || currentMode.Length == 0 && image.Usages.Any(u => u.Scene == SceneName && u.Sliced && (Hierarchy.Length == 0 || ThemeResources.MatchHierarchy(u.Hierarchy, Hierarchy)));
-                var path = workspace.ImageFile(image, SceneName, Hierarchy, ComponentName);
+                var path = workspace.ImageFile(image, SceneName, Hierarchy, ComponentName, liveNodeAddress);
                 preview.EmptyText = "暂无图片，导入文件开始编辑";
                 preview.SetImage(path == null ? null : ThemeResourceWorkspace.ReadBitmap(path));
-                fileState.Text = (workspace.ExactImage(image.LogicalId, SceneName, Hierarchy, ComponentName) != null ? "此范围已覆盖" : "继承主题图片")
+                fileState.Text = (workspace.ExactImage(image.LogicalId, SceneName, Hierarchy, ComponentName, liveNodeAddress) != null ? "此范围已覆盖" : "继承主题图片")
                     + Environment.NewLine + (path == null ? "尚无图片" : currentFileName.Length > 0 ? currentFileName : Path.GetFileName(path));
                 tips.SetToolTip(fileState, path ?? "");
             }
@@ -214,7 +216,7 @@ internal sealed partial class ThemeResourceEditor
         play.Enabled = audio != null && decodedAudio != null;
         stop.Enabled = player != null;
         save.Enabled = selected && dirty && !IsBusy && !ScopePending;
-        restore.Enabled = !ScopePending && (image != null ? workspace?.ExactImage(image.LogicalId, SceneName, Hierarchy, ComponentName) != null
+        restore.Enabled = !ScopePending && (image != null ? workspace?.ExactImage(image.LogicalId, SceneName, Hierarchy, ComponentName, liveNodeAddress) != null
             : audio != null && workspace?.ExactAudio(audio.Event, SceneName) != null);
     }
 
@@ -249,6 +251,7 @@ internal sealed partial class ThemeResourceEditor
 
     public async Task SaveAsync()
     {
+        if (inspectorPane?.Visible == true) { await inspectorPane.SaveAsync(); return; }
         if (IsBusy || !dirty || workspace == null || theme == null) return;
         if (ScopePending) { Notify("请先读取控件范围，再保存资源。 "); return; }
         IsBusy = true; UpdateEnabled(); Notify("正在保存资源…");
@@ -256,7 +259,7 @@ internal sealed partial class ThemeResourceEditor
         {
             if (image != null)
             {
-                var rule = new ThemeImageRule { LogicalId = image.LogicalId, Scene = SceneName, Hierarchy = Hierarchy, Component = ComponentName,
+                var rule = new ThemeImageRule { LogicalId = image.LogicalId, Scene = SceneName, Hierarchy = Hierarchy, Component = ComponentName, NodeAddress = liveNodeAddress,
                     File = currentRuleFile, DisplayName = currentFileName, Mode = ComponentName == "RawImage" ? "" : currentMode,
                     Border = sliceToggle.Checked && ComponentName != "RawImage" ? CurrentBorder : null };
                 if (sliceToggle.Checked && ComponentName != "RawImage") rule.Mode = "sliced";
@@ -280,7 +283,7 @@ internal sealed partial class ThemeResourceEditor
         if (IsBusy || workspace == null || theme == null) return;
         try
         {
-            if (image != null) workspace.RemoveImage(image.LogicalId, SceneName, Hierarchy, ComponentName);
+            if (image != null) workspace.RemoveImage(image.LogicalId, SceneName, Hierarchy, ComponentName, liveNodeAddress);
             else if (audio != null) workspace.RemoveAudio(audio.Event, SceneName);
             library.SetRealtimeMode(true); library.Activate(theme); dirty = false;
             LoadSelection(); Applied?.Invoke(); Notify("已移除此范围的覆盖，恢复继承图片或音频。");

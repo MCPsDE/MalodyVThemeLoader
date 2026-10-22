@@ -16,6 +16,7 @@ internal sealed class ThemeRuntime
     public ThemeAssetStore Assets { get; }
     public FontReplacementService Fonts { get; }
     public ThemeVideoService Videos { get; }
+    public NodeDecorationService Decorations { get; }
     public SceneThemeApplier Applier { get; }
     public Live2dReplacementService Live2d { get; }
     public ThemeAudioService Audio { get; }
@@ -33,6 +34,7 @@ internal sealed class ThemeRuntime
         Assets = new ThemeAssetStore(log, theme, catalog);
         Fonts = new FontReplacementService(log, theme);
         Videos = new ThemeVideoService(log, Assets);
+        Decorations = new NodeDecorationService(log, theme, Assets.ResourceRules);
         Applier = new SceneThemeApplier(log, Assets, Fonts, Videos);
         Live2d = new Live2dReplacementService(log, theme);
         Audio = new ThemeAudioService(log, theme, Assets.ResourceRules);

@@ -27,7 +27,7 @@ internal sealed class ThemeVideoService
             return ThemeVideoApplyState.None;
         }
 
-        if (assets.HasImageRule(sprite.name, sprite, null, image.gameObject.scene.name, SceneThemeApplier.GetHierarchy(image.transform), "Image"))
+        if (assets.HasImageRule(sprite.name, sprite, null, image.gameObject.scene.name, SceneThemeApplier.GetHierarchy(image.transform), "Image", SceneNodeLocator.AddressOf(image.transform)))
             return ThemeVideoApplyState.None;
         var replacement = assets.ResolveVideo(sprite.name, sprite);
         if (replacement == null)
@@ -50,15 +50,18 @@ internal sealed class ThemeVideoService
         ThemeReplacementRegistry.TrackImage(image);
 
         var targetTexture = CreateTargetTexture(replacement);
-        var player = CreatePlayer(image.gameObject, replacement, targetTexture);
-        var overlay = image.gameObject.AddComponent<RawImage>();
+        var layer = new GameObject(SceneNodeLocator.OwnPrefix + "LegacyVideo"); layer.layer = image.gameObject.layer;
+        var rect = layer.AddComponent<RectTransform>(); rect.SetParent(image.transform, false); rect.SetAsFirstSibling();
+        rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero;
+        layer.AddComponent<LayoutElement>().ignoreLayout = true;
+        var player = CreatePlayer(layer, replacement, targetTexture);
+        var overlay = layer.AddComponent<RawImage>();
         overlay.texture = targetTexture;
         overlay.color = image.color;
-        overlay.raycastTarget = image.raycastTarget;
+        overlay.raycastTarget = false;
         overlay.maskable = image.maskable;
 
         var originalEnabled = image.enabled;
-        image.enabled = false;
 
         imageBindings[key] = new ImageVideoBinding(
             replacement.FilePath,
@@ -82,7 +85,7 @@ internal sealed class ThemeVideoService
 
     public ThemeVideoApplyState ApplyRawImage(RawImage image, bool logChange)
     {
-        if (image.texture != null && assets.HasImageRule(image.texture.name, null, image.texture, image.gameObject.scene.name, SceneThemeApplier.GetHierarchy(image.transform), "RawImage"))
+        if (image.texture != null && assets.HasImageRule(image.texture.name, null, image.texture, image.gameObject.scene.name, SceneThemeApplier.GetHierarchy(image.transform), "RawImage", SceneNodeLocator.AddressOf(image.transform)))
             return ThemeVideoApplyState.None;
         var replacement = assets.ResolveVideo(image.texture);
         if (replacement == null)
@@ -137,7 +140,7 @@ internal sealed class ThemeVideoService
             return ThemeVideoApplyState.None;
         }
 
-        if (assets.HasImageRule(renderer.sprite.name, renderer.sprite, null, renderer.gameObject.scene.name, SceneThemeApplier.GetHierarchy(renderer.transform), "SpriteRenderer"))
+        if (assets.HasImageRule(renderer.sprite.name, renderer.sprite, null, renderer.gameObject.scene.name, SceneThemeApplier.GetHierarchy(renderer.transform), "SpriteRenderer", SceneNodeLocator.AddressOf(renderer.transform)))
             return ThemeVideoApplyState.None;
         var replacement = assets.ResolveVideo(renderer.sprite.name, renderer.sprite);
         if (replacement == null)
@@ -284,7 +287,7 @@ internal sealed class ThemeVideoService
 
                 if (Overlay != null)
                 {
-                    UnityEngine.Object.Destroy(Overlay);
+                    Overlay.gameObject.SetActive(false); UnityEngine.Object.Destroy(Overlay.gameObject);
                 }
             }
             catch (Exception exception)

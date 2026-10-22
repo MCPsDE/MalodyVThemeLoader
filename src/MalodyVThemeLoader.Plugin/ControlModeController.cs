@@ -11,6 +11,21 @@ namespace MalodyVThemeLoader.Plugin;
 
 internal sealed class ControlModeController : MonoBehaviour
 {
+    private static ControlModeController? instance;
+    internal static bool TryMapInspectorPoint(Vector2 point, out Vector2 mapped)
+    {
+        mapped = point; var current = instance;
+        if (current == null || !current.controlMode || current.displayCamera == null || current.screenQuad == null || !current.screenQuad.activeInHierarchy) return true;
+        var transform = current.screenQuad.transform;
+        var ray = current.displayCamera.ScreenPointToRay(new Vector3(point.x, point.y, 0));
+        var plane = new Plane(transform.forward, transform.position);
+        if (!plane.Raycast(ray, out var distance)) return false;
+        var local = transform.InverseTransformPoint(ray.GetPoint(distance));
+        if (Math.Abs(local.x) > .5f || Math.Abs(local.y) > .5f) return false;
+        // The captured-frame quad is rotated 180 degrees around X to present
+        // the screen capture upright. Undo that flip for source UI coordinates.
+        mapped = new Vector2((local.x + .5f) * Screen.width, (.5f - local.y) * Screen.height); return true;
+    }
     private const int ProjectionLayer = 31;
     private const float SettingsPollInterval = 0.5f;
     private const float ProjectionDistance = 8f;
@@ -67,6 +82,7 @@ internal sealed class ControlModeController : MonoBehaviour
 
     public void Initialize()
     {
+        instance = this;
         loaderRoot = Path.Combine(Paths.GameRootPath, "ThemeLoader");
         controlMode = ReadControlMode();
         UnityEngine.Object.DontDestroyOnLoad(gameObject);
@@ -476,7 +492,7 @@ internal sealed class ControlModeController : MonoBehaviour
             name = "MalodyVThemeLoader Background Material"
         };
 
-        projectionRoot = new GameObject("MalodyVThemeLoader Full Frame Projection");
+        projectionRoot = new GameObject("ThemeLoader.FullFrameProjection");
         UnityEngine.Object.DontDestroyOnLoad(projectionRoot);
         projectionRoot.hideFlags = HideFlags.HideAndDontSave;
 

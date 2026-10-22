@@ -18,6 +18,7 @@ internal sealed partial class ThemeManagerForm
         header.Controls.Add(AppVisuals.TextBlock("编辑主题", 9F), 1, 0); header.Controls.Add(resourceThemes, 1, 1);
         resourceThemes.AccessibleName = "选择要编辑资源的主题";
         resourceEditor = new ThemeResourceEditor(gameRoot, library, ShowStatus) { Dock = DockStyle.Fill, Margin = Padding.Empty };
+        resourceEditor.ResourcePageRequested += () => Navigate("resources");
         resourceEditor.Applied += () => { RefreshRealtimeMode(); RefreshThemes(resourceEditor.ThemeKey); };
         resourceThemes.SelectedIndexChanged += (_, _) =>
         {

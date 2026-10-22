@@ -42,6 +42,13 @@ public sealed class Plugin : BasePlugin
             }
 
             var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+            try
+            {
+                if (!Il2CppInterop.Runtime.Injection.ClassInjector.IsTypeRegisteredInIl2Cpp<InspectorInputFence>())
+                    Il2CppInterop.Runtime.Injection.ClassInjector.RegisterTypeInIl2Cpp<InspectorInputFence>();
+                var inspector = AddComponent<SceneInspectorController>(); inspector.Initialize();
+            }
+            catch (Exception e) { Log.LogWarning("Scene inspector unavailable: " + e.Message); }
             harmony.PatchAll(typeof(Plugin).Assembly);
 
             Log.LogInfo("Theme Harmony patches installed.");

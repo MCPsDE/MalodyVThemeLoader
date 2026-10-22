@@ -13,7 +13,7 @@ internal sealed partial class ThemeAssetStore
     public Sprite? GetOriginalSprite(Sprite? sprite) => sprite != null && spriteOrigins.TryGetValue(sprite.GetInstanceID(), out var origin) ? origin.Sprite : sprite;
     public Texture? GetOriginalTexture(Texture? texture) => texture != null && textureOrigins.TryGetValue(texture.GetInstanceID(), out var origin) ? origin.Texture : texture;
 
-    private ImageCatalogEntry? Identify(string name, Sprite? sprite, Texture? texture, string scene, string hierarchy, string component)
+    internal ImageCatalogEntry? Identify(string name, Sprite? sprite, Texture? texture, string scene, string hierarchy, string component)
     {
         if (sprite != null && spriteOrigins.TryGetValue(sprite.GetInstanceID(), out var source)) return source.Entry;
         if (texture != null && textureOrigins.TryGetValue(texture.GetInstanceID(), out var textureSource)) return textureSource.Entry;
@@ -30,24 +30,24 @@ internal sealed partial class ThemeAssetStore
         return bySize.Count == 1 ? bySize[0] : null;
     }
 
-    public bool HasImageRule(string name, Sprite? sprite, Texture? texture, string scene, string hierarchy, string component)
+    public bool HasImageRule(string name, Sprite? sprite, Texture? texture, string scene, string hierarchy, string component, string nodeAddress = "")
     {
         var entry = Identify(name, sprite, texture, scene, hierarchy, component);
-        return entry != null && ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component) != null;
+        return entry != null && ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component, nodeAddress) != null;
     }
 
-    public string GetImageMode(Sprite sprite, string scene, string hierarchy, string component)
+    public string GetImageMode(Sprite sprite, string scene, string hierarchy, string component, string nodeAddress = "")
     {
         var entry = Identify(sprite.name, sprite, null, scene, hierarchy, component);
-        return entry == null ? "" : ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component)?.Mode ?? "";
+        return entry == null ? "" : ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component, nodeAddress)?.Mode ?? "";
     }
 
-    public Sprite? ResolveSprite(string requestedName, Sprite? original, string scene = "", string hierarchy = "", string component = "")
+    public Sprite? ResolveSprite(string requestedName, Sprite? original, string scene = "", string hierarchy = "", string component = "", string nodeAddress = "")
     {
         if (scene.Length > 0 && !ThemeResources.IsAllowedScene(scene)) return null;
         var entry = Identify(requestedName, original, null, scene, hierarchy, component);
         if (entry == null) return null;
-        var rule = ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component);
+        var rule = ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component, nodeAddress);
         var path = PathRules.GetSafeCombinedPath(theme.ImageDirectory, string.IsNullOrEmpty(rule?.File) ? entry.LogicalId : rule.File);
         if (!File.Exists(path) || rule == null && !IsImageOverride(entry, path)) return null;
         var sourceSprite = GetOriginalSprite(original);
@@ -74,12 +74,12 @@ internal sealed partial class ThemeAssetStore
         return sprite;
     }
 
-    public Texture2D? ResolveTexture(Texture? original, string scene = "", string hierarchy = "", string component = "RawImage")
+    public Texture2D? ResolveTexture(Texture? original, string scene = "", string hierarchy = "", string component = "RawImage", string nodeAddress = "")
     {
         if (original == null || scene.Length > 0 && !ThemeResources.IsAllowedScene(scene)) return null;
         var entry = Identify(original.name, null, original, scene, hierarchy, component);
         if (entry == null) return null;
-        var rule = ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component);
+        var rule = ResourceRules.ResolveImage(entry.LogicalId, scene, hierarchy, component, nodeAddress);
         var path = PathRules.GetSafeCombinedPath(theme.ImageDirectory, string.IsNullOrEmpty(rule?.File) ? entry.LogicalId : rule.File);
         if (!File.Exists(path) || rule == null && !IsImageOverride(entry, path)) return null;
         var texture = LoadTexture(path, entry.TextureName);

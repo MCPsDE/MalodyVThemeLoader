@@ -12,7 +12,7 @@ $projectXml=@'
   <ItemGroup>
     <Compile Include="Store.cs"/><Compile Include="Images.cs"/><Compile Include="Stubs.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/AssetCatalog.cs"/>
-    <Compile Include="Resources.cs"/>
+    <Compile Include="Resources.cs"/><Compile Include="Inspector.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/ThemeManifest.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/PathRules.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/JsonDefaults.cs"/>
@@ -31,6 +31,8 @@ Copy-Item -LiteralPath (Join-Path $repo 'src\MalodyVThemeLoader.Plugin\ThemeReso
 # test-resource-editor; adapt its uncalled overload for Unity's Mono compiler.
 $resourceSource=[IO.File]::ReadAllText((Join-Path $repo 'src\MalodyVThemeLoader.Shared\ThemeResources.cs')).Replace('File.Move(temporary, target, true);','File.Copy(temporary, target, true); File.Delete(temporary);')
 [IO.File]::WriteAllText((Join-Path $build 'Resources.cs'),$resourceSource)
+$inspectorSource=[IO.File]::ReadAllText((Join-Path $repo 'src\MalodyVThemeLoader.Shared\SceneInspector.cs')).Replace('File.Move(temporary, target, true);','File.Copy(temporary, target, true); File.Delete(temporary);')
+[IO.File]::WriteAllText((Join-Path $build 'Inspector.cs'),$inspectorSource)
 $stubs=@'
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Assembly-CSharp-Editor")]
 namespace System.Runtime.CompilerServices { public sealed class IsExternalInit {} }

@@ -30,6 +30,8 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private readonly List<Mesh> meshBatches = new();
     private readonly List<CanvasRenderer> rendererBatches = new();
     private Font? font;
+    private float nextFontRetry;
+    private bool missingFontLogged;
     private readonly List<Text> labels = new();
     private bool failed;
     private bool snapshotTruncated;
@@ -82,7 +84,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
         catch (Exception e)
         {
             failed = true; IsInspecting = false; if (overlay != null) overlay.SetActive(false);
-            Plugin.Log.LogWarning("Scene inspector stopped: " + e.Message);
+            Plugin.Log.LogWarning("Scene inspector stopped: " + e);
         }
     }
     private void Publish(bool truncated)
@@ -125,7 +127,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
     {
         if (!IsInspecting) return;
         try { Draw(); }
-        catch (Exception e) { failed = true; IsInspecting = false; if (overlay != null) overlay.SetActive(false); Plugin.Log.LogWarning("Inspector drawing stopped: " + e.Message); }
+        catch (Exception e) { failed = true; IsInspecting = false; if (overlay != null) overlay.SetActive(false); Plugin.Log.LogWarning("Inspector drawing stopped: " + e); }
     }
     private void EnsureOverlay()
     {
@@ -144,11 +146,34 @@ internal sealed class SceneInspectorController : MonoBehaviour
         // split; using UInt32 produces corrupt triangles in Unity 2022.3.
         mesh = new Mesh { name = SceneNodeLocator.OwnPrefix + "Bounds", indexFormat = IndexFormat.UInt16 };
         meshBatches.Add(mesh); rendererBatches.Add(canvasRenderer);
-        font = Font.CreateDynamicFontFromOSFont("Microsoft YaHei", 13);
+    }
+    private void RefreshLabelFont()
+    {
+        if (font != null || Time.realtimeSinceStartup < nextFontRetry) return;
+        nextFontRetry = Time.realtimeSinceStartup + 1;
+        // CreateDynamicFontFromOSFont exists in the generated assembly but its
+        // body throws in the shipping IL2CPP game. Reuse retained font assets.
+        try
+        {
+            foreach (var text in Resources.FindObjectsOfTypeAll<Text>())
+                if (text != null && text.gameObject.scene.IsValid() && !SceneNodeLocator.IsOwn(text.transform) && text.font != null)
+                { font = text.font; break; }
+            if (font == null) font = Resources.FindObjectsOfTypeAll<Font>().FirstOrDefault(value => value != null);
+        }
+        catch (Exception e) { Plugin.Log.LogDebug("Inspector font lookup: " + e.Message); }
+        if (font == null)
+        {
+            try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
+            if (font == null) { try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
+        }
+        if (font != null) { foreach (var label in labels) label.font = font; missingFontLogged = false; }
+        else if (!missingFontLogged)
+        { missingFontLogged = true; Plugin.Log.LogWarning("Inspector label font unavailable; bounds remain active and font lookup will retry."); }
     }
     private void Draw()
     {
         EnsureOverlay();
+        RefreshLabelFont();
         var vertices = new List<Vector3>(); var colors = new List<Color32>(); var indices = new List<int>(); var used = 0;
         foreach (var node in nodes)
         {
@@ -162,7 +187,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
                 : node.Info.Component == "RawImage" ? new Color32(200, 150, 255, 200) : new Color32(200, 200, 200, 150);
             if (control.ShowFrames || isSelected)
                 for (var i = 0; i < 4; i++) Segment(points[i], points[(i + 1) % 4], clip, color, isSelected ? 2 : 1, vertices, colors, indices);
-            if (!control.ShowNames && !isSelected) continue;
+            if ((!control.ShowNames && !isSelected) || font == null) continue;
             if (used == labels.Count)
             {
                 var item = new GameObject(SceneNodeLocator.OwnPrefix + "Name"); item.transform.SetParent(overlay!.transform, false);
@@ -229,7 +254,8 @@ internal sealed class SceneInspectorController : MonoBehaviour
     {
         IsInspecting = false;
         if (overlay != null) UnityEngine.Object.Destroy(overlay); foreach (var batch in meshBatches) UnityEngine.Object.Destroy(batch);
-        if (material != null) UnityEngine.Object.Destroy(material); if (font != null) UnityEngine.Object.Destroy(font);
+        // The label font belongs to the game or Unity's built-in resources.
+        if (material != null) UnityEngine.Object.Destroy(material);
     }
     [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }

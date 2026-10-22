@@ -136,6 +136,13 @@ Live2D 长篇格式/边界说明已从界面移除，技术资料留在开发文
 
 本轮完整目录审计没有整体通过：期间发生了其他 BetterMalodyV 插件安装、murasame 主题导入和活动主题变更，完整 1,725 条差异记录保留在 `artifacts/reference-changes.json`，没有重录基线或回滚玩家文件。精确复查源工程全树，以及游戏 exe、UnityPlayer、GameAssembly、Data、BepInEx 核心/interop/unity-libs、本加载器插件/管理器/文档和 Default，变化记录均为 0；范围和分类在 `artifacts/reference-scoped-2.6.json`。这不宣称整个游戏目录未变。
 
+## 2.6.1 调试覆盖层修复
+
+- 从当前安装游戏只读日志确认 `Inspector drawing stopped: Method unstripping failed`。实际 interop 的 `Font.CreateDynamicFontFromOSFont(string,int)` 方法体只抛 NotSupportedException；旧 2.6.0 DLL 在新增检查中被拒绝，修复版的 311 个接口引用通过检查。原有可选字体映射的局部失败回退被单独记录，不视为调试绘制的可用接口。
+- 修复复用游戏字体、内置字体回退和无字体重试，保证文字失败不停止边框；清理保留借用字体。全解决方案隔离 Release 构建通过，0 警告、0 错误。
+- `test-inspector-runtime.ps1 -Standalone` 在 Unity 2022.3.62f3 Windows Mono 播放器中通过 33 项断言，包括正常屏幕呈现的边框/名称像素、借用字体、字体缺失后的边框、名称恢复，以及关闭后原字体保留。最终画面在 `.impeccable/review/overlay-2.6.1/overlay-presented.png`，另含离屏对照、视频和 result.json。
+- 播放器在从不切换的独立 Windows desktop 中正常呈现；没有操作用户游戏窗口。该测试适配 IL2CPP 数组/委托包装和 Mono 写入重载，仍不是实际 Malody V 的 IL2CPP 端到端运行。
+
 ## 美术来源
 
 Default 资源来自只读源工程，逐文件哈希验证；界面预览来自主题内真实图片。应用图标 `src/MalodyVThemeLoader.Windows/Assets/mtp.png` 和 `mtp.ico` 为工作区已有文件，本次未修改。没有生成或替换美术资源。

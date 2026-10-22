@@ -33,10 +33,11 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         {
             bool more; object next;
             try { more = test.MoveNext(); next = more ? test.Current : null; }
-            catch (Exception e) { File.WriteAllText(Path.Combine(output, "result.json"), JsonSerializer.Serialize(new { passed = false, checks, error = e.ToString() }, JsonDefaults.Options)); yield break; }
+            catch (Exception e) { File.WriteAllText(Path.Combine(output, "result.json"), JsonSerializer.Serialize(new { passed = false, checks, error = e.ToString() }, JsonDefaults.Options)); if (!Application.isEditor) Application.Quit(1); yield break; }
             if (!more) break; yield return next;
         }
-        File.WriteAllText(Path.Combine(output, "result.json"), JsonSerializer.Serialize(new { passed = true, checks, video = "VP8 alpha + 45% opacity rendered", scope = "isolated Unity play mode; adapted production sources", screen = new[] { Screen.width, Screen.height } }, JsonDefaults.Options));
+        File.WriteAllText(Path.Combine(output, "result.json"), JsonSerializer.Serialize(new { passed = true, checks, video = "VP8 alpha + 45% opacity rendered", scope = Application.isEditor ? "isolated Unity editor play mode; adapted production sources" : "isolated Unity Windows Mono player; automatic ScreenSpaceOverlay presentation", screen = new[] { Screen.width, Screen.height } }, JsonDefaults.Options));
+        if (!Application.isEditor) Application.Quit(0);
     }
     private void Require(bool value, string message) { if (!value) throw new Exception(message); checks++; }
     private static object Call(object owner, string method, params object[] arguments) => owner.GetType().GetMethod(method, Flags).Invoke(owner, arguments);
@@ -130,7 +131,30 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         Require(raycasts.Count > 0 && raycasts[0].gameObject == a.gameObject, "Inspection layer swallowed ordinary game UI clicks.");
         var mesh = inspector.GetType().GetField("mesh", Flags).GetValue(inspector) as Mesh;
         Require(mesh.vertexCount > 16 && overlay.GetComponentsInChildren<Text>().Length > 2, "Inspector did not draw bounds and names.");
+        Require(overlay.GetComponentsInChildren<Text>().All(label => label.font == caption.font), "Inspector did not reuse the game's existing UI font.");
         var emptyPixel = Pixel(target, .1f, .1f); Require(emptyPixel.r < .05f && emptyPixel.g < .05f && emptyPixel.b < .05f, "Debug outlines filled unrelated screen areas.");
+        inspector.GetType().GetField("font", Flags).SetValue(inspector, null); inspector.GetType().GetField("nextFontRetry", Flags).SetValue(inspector, float.PositiveInfinity); Call(inspector, "LateUpdate");
+        Require(SceneInspectorController.IsInspecting && mesh.vertexCount > 16 && overlay.GetComponentsInChildren<Text>().Length == 0, "Missing fonts disabled bounds or left stale labels.");
+        inspector.GetType().GetField("nextFontRetry", Flags).SetValue(inspector, 0f); Call(inspector, "LateUpdate");
+        Require(overlay.GetComponentsInChildren<Text>().Length > 2, "Labels did not recover after font retry.");
+        if (!Application.isEditor)
+        {
+            camera.targetTexture = null; overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay; Canvas.ForceUpdateCanvases();
+            control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
+            yield return null; yield return null;
+            yield return new WaitForEndOfFrame();
+            var presented = ScreenCapture.CaptureScreenshotAsTexture(); File.WriteAllBytes(Path.Combine(output, "overlay-presented.png"), presented.EncodeToPNG());
+            var corners = SceneNodeLocator.Corners(ai); var minX = (int)corners.Min(p => p.x); var maxY = (int)corners.Max(p => p.y);
+            var edgePixels = 0; var glyphPixels = 0;
+            for (var y = maxY - 22; y <= maxY + 2; y++) for (var x = minX - 2; x <= minX + 90; x++)
+            {
+                if (x < 0 || y < 0 || x >= presented.width || y >= presented.height) continue;
+                var pixel = presented.GetPixel(x, y); if (pixel.b < .35f || pixel.r > .85f) continue;
+                if (Math.Abs(y - maxY) <= 2 || Math.Abs(x - minX) <= 2) edgePixels++; else glyphPixels++;
+            }
+            Require(edgePixels > 10 && glyphPixels > 10, $"Bounds/names were not visible on the automatically presented game frame: edges={edgePixels}, glyphs={glyphPixels}, camera={camera.enabled}/{camera.gameObject.activeInHierarchy}, cameras={Camera.allCamerasCount}, display={Display.main.active}, inspecting={SceneInspectorController.IsInspecting}.");
+            Destroy(presented); camera.targetTexture = target; overlayCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+        }
         var stress = Rect("批次测试", canvas.transform, Vector2.one, Vector2.zero);
         for (var i = 0; i < 4000; i++) Rect("N" + i, stress, Vector2.one, Vector2.zero);
         control.ShowNames = false; control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Canvas.ForceUpdateCanvases(); Force(inspector); Call(inspector, "LateUpdate");
@@ -154,7 +178,8 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         var bad = new NodeDecorationService(Plugin.Log, theme, invalid); bad.Tick(); yield return null;
         Require(container.Find("ThemeLoader.Decoration") == null && bad.Status("SceneSong", ci.Info.Address).StartsWith("加载失败"), "Invalid decoration left an orphan or claimed success."); bad.Dispose();
         Require(a.sprite == b.sprite, "Unrelated source images were changed.");
-        store.Dispose(); camera.targetTexture = null; target.Release(); Destroy(target); Destroy(inspector.gameObject);
+        store.Dispose(); camera.targetTexture = null; target.Release(); Destroy(target); Destroy(inspector.gameObject); yield return null;
+        Require(caption.font != null, "Disposing the inspector destroyed the game's borrowed font.");
     }
     private static void Save(RenderTexture target, string name)
     {

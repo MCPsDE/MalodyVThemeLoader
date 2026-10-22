@@ -16,6 +16,9 @@ $module = [Mono.Cecil.ModuleDefinition]::ReadModule([IO.Path]::GetFullPath($Plug
 try {
     if ($module.Assembly.Name.Name -ne 'MalodyVThemeLoader.Plugin') { throw 'Expected the ThemeLoader runtime plugin.' }
     $missing = [Collections.Generic.List[string]]::new()
+    $guardedStubs = [Collections.Generic.HashSet[string]]::new()
+    function All-Types($types) { foreach($type in $types) { $type; All-Types $type.NestedTypes } }
+    $pluginMethods = @(All-Types $module.Types | ForEach-Object Methods | Where-Object HasBody)
     $checked = 0
     foreach ($reference in $module.GetMemberReferences()) {
         $scope = $reference.DeclaringType.GetElementType().Scope
@@ -27,6 +30,36 @@ try {
             if ($null -eq $resolved) { $missing.Add($reference.FullName) }
             elseif (!$resolved.Module.FileName.StartsWith([IO.Path]::GetFullPath($InteropRoot).TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
                 $missing.Add($reference.FullName + ' resolved outside requested interop: ' + $resolved.Module.FileName)
+            }
+            elseif ($resolved -is [Mono.Cecil.MethodDefinition] -and $resolved.HasBody) {
+                # A generated API can resolve and compile while being an
+                # unconditional NotSupportedException stub in the actual game.
+                $unstrippingStub = @($resolved.Body.Instructions | Where-Object {
+                    $_.OpCode.Code -eq 'Ldstr' -and $_.Operand -eq 'Method unstripping failed'
+                }).Count -gt 0
+                if ($unstrippingStub) {
+                    $unguarded = $false; $sites = 0
+                    foreach ($caller in $pluginMethods) {
+                        foreach ($instruction in $caller.Body.Instructions) {
+                            if ($instruction.Operand -isnot [Mono.Cecil.MethodReference] -or $instruction.Operand.FullName -ne $reference.FullName) { continue }
+                            $sites++
+                            $caught = @($caller.Body.ExceptionHandlers | Where-Object {
+                                $handler = $_
+                                $end = if ($handler.TryEnd) { $handler.TryEnd.Offset } else { [int]::MaxValue }
+                                $handlerEnd = if ($handler.HandlerEnd) { $handler.HandlerEnd.Offset } else { [int]::MaxValue }
+                                $throws = @($caller.Body.Instructions | Where-Object { $_.Offset -ge $handler.HandlerStart.Offset -and $_.Offset -lt $handlerEnd -and $_.OpCode.Code -in @('Throw','Rethrow') }).Count
+                                $handler.HandlerType -eq 'Catch' -and $handler.CatchType.FullName -in @('System.Exception','System.SystemException','System.NotSupportedException') -and
+                                    $instruction.Offset -ge $handler.TryStart.Offset -and $instruction.Offset -lt $end -and $throws -eq 0
+                            }).Count -gt 0
+                            if (!$caught -or $instruction.OpCode.Code -notin @('Call','Callvirt','Newobj')) { $unguarded = $true }
+                        }
+                    }
+                    # Optional legacy font mappings already catch this failure
+                    # locally and retain original fonts. An unguarded drawing
+                    # call (2.6.0 EnsureOverlay) must fail the release check.
+                    if ($unguarded -or $sites -eq 0) { $missing.Add($reference.FullName + ' has an unguarded Method unstripping failed call') }
+                    else { [void]$guardedStubs.Add($reference.FullName) }
+                }
             }
         } catch { $missing.Add($reference.FullName + ': ' + $_.Exception.GetBaseException().Message) }
     }
@@ -76,7 +109,7 @@ try {
     }
     if ($missing.Count) {
         $missing | Write-Output
-        throw "Interop incompatibility: $($missing.Count) missing references in $InteropRoot"
+        throw "Interop incompatibility: $($missing.Count) unavailable references in $InteropRoot"
     }
     $resultPanel = $resolver.Resolve([Mono.Cecil.AssemblyNameReference]::Parse('Assembly-CSharp')).MainModule.GetType('Malody.Scene.Panel.PanelResultScore')
     $resultTargets = @($resultPanel.Methods | Where-Object { $_.Name -eq 'Fill' -and ($_.Parameters.Count -eq 2 -or
@@ -101,5 +134,5 @@ try {
         $field = @($enum.Fields | Where-Object Name -eq $effects[$index])
         if ($field.Count -ne 1 -or !$field[0].HasConstant -or $field[0].Constant -ne $index) { throw 'UI effect enum differs from the supported source slots.' }
     }
-    Write-Output "PASS: $checked game/Unity references, 9 Cubism signatures, $lifecycleTargets widget targets, 3 result display and 3 UI audio targets, nine effect slots and the volume adapter resolve against $InteropRoot"
+    Write-Output "PASS: $checked game/Unity references resolve without unguarded unstripping stubs ($($guardedStubs.Count) local fallback); 9 Cubism signatures, $lifecycleTargets widget targets, 3 result display and 3 UI audio targets, nine effect slots and the volume adapter match $InteropRoot"
 } finally { $module.Dispose(); $resolver.Dispose() }

@@ -154,7 +154,7 @@ internal sealed class SceneInspectorPane : UserControl
         WriteControl();
         var next = InspectorFiles.Read<InspectorSnapshot>(loaderRoot, InspectorFiles.SnapshotName);
         if (next == null || next.Client != control.Client || next.UpdatedUtc < DateTime.UtcNow.AddSeconds(-5) || next.UpdatedUtc > DateTime.UtcNow.AddSeconds(5))
-        { connection.Text = "等待游戏连接 · 请使用 2.6.0 或更高版本启动游戏"; return; }
+        { connection.Text = "等待游戏连接 · 请使用 2.6.1 或更高版本启动游戏"; return; }
         AcceptSnapshot(next);
     }
     internal void AcceptSnapshot(InspectorSnapshot next)

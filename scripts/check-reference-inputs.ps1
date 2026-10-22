@@ -28,7 +28,8 @@ if ($Mode -eq 'Record') {
             return !($relative -in @('chart.bin','score.bin','song.bin','config.json',
                 'BepInEx/LogOutput.log','BepInEx/ErrorLog.log',
                 'BepInEx/cache/chainloader_typeloader.dat','BepInEx/config/BepInEx.cfg',
-                'ThemeLoader/live2d-status.json') -or
+                'ThemeLoader/live2d-status.json','ThemeLoader/inspector/control.json','ThemeLoader/inspector/snapshot.json') -or
+                $relative -match '^ThemeLoader/inspector/(control|snapshot)\.json\.new-[a-f0-9]{32}$' -or
                 $relative -match '^log/[^/]+\.log$' -or
                 $relative.StartsWith('cache/') -or $relative.StartsWith('replay/') -or
                 $relative.StartsWith('BepInEx/plugins/MalodyVReworkOverlay/MalodyV.ReworkOverlay.exe.WebView2/'))

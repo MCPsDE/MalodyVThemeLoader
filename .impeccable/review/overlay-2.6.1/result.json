@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": 33,
+  "video": "VP8 alpha \u002B 45% opacity rendered",
+  "scope": "isolated Unity Windows Mono player; automatic ScreenSpaceOverlay presentation",
+  "screen": [
+    640,
+    480
+  ]
+}

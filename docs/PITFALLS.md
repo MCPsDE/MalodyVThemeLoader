@@ -1,5 +1,10 @@
 # 开发踩坑记录（持续维护）
 
+- 生成的 IL2CPP API 能编译、能 Resolve，不代表能调用。2.6.0 的 Font.CreateDynamicFontFromOSFont(string,int) 在真实 interop 中只有“Method unstripping failed”异常体，令整个调试层停绘。调试标签复用已加载字体/内置字体，字体失败只影响文字；接口检查拒绝没有局部失败回退的异常桩调用。不能在清理时 Destroy 借用的游戏字体。
+- 从 Library/ScriptAssemblies 复制的 UnityEngine.UI.dll 含 UNITY_EDITOR 引用，可以做编辑器验证，但不能直接打进独立播放器。播放器测试应从 com.unity.ugui 包编译运行版本，不能为了让构建通过关闭程序集校验。
+- Windows Unity 播放器以 SW_HIDE 隐藏窗口启动时，正常屏幕呈现可能整帧为黑，离屏 Camera.Render 却正常。验证真正的 ScreenSpaceOverlay 时，测试播放器使用从不切换到的独立 Windows desktop，保持其自身窗口正常呈现，既不显示在用户桌面，也不触碰真实游戏。检查原界面和覆盖层像素，不能把隐藏窗口的黑帧直接判成覆盖层缺陷。
+- 全解决方案并行 NuGet 还原可能报“当文件已存在时，无法创建该文件”。用独立 artifacts 输出、`-m:1 -p:RestoreDisableParallel=true` 串行还原/构建可继续；不要清空共享缓存或结束用户的 IDE 进程。
+
 - Unity 2022.3 的 CanvasRenderer.SetMesh 不能直接沿用三维网格的 UInt32 索引；隔离渲染中会出现从原点铺开的巨大三角形。调试线框使用 UInt16，每批最多 60,000 顶点，超出拆批；必须检查实际像素，网格顶点数非零不代表画面对。
 - IL2CPP 的 Il2CppStructArray 不是 IDisposable，GetWorldCorners 需要真实的 IL2CPP 数组缓冲区；不要把 C# 数组隐式复制后当作原位输出，也不要每帧为每个节点重复分配原生角点数组。
 - Unity 的旧输入 API 模块没有 com.unity.modules.inputlegacy 这个内置包名。隔离工程只声明实际存在的模块；反射输入入口不要求凭名称猜一个包。

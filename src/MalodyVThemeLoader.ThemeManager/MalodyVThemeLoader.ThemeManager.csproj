@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>MalodyVThemeLoader.ThemeManager</AssemblyName>
@@ -20,6 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
     <ProjectReference Include="..\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj" />
     <ProjectReference Include="..\MalodyVThemeLoader.Windows\MalodyVThemeLoader.Windows.csproj" />
   </ItemGroup>

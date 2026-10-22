@@ -27,6 +27,10 @@ required = ['winhttp.dll', 'doorstop_config.ini', '.doorstop_version',
     'BepInEx/plugins/MalodyVThemeLoader/MalodyVThemeLoader.Shared.dll',
     'BepInEx/plugins/MalodyVThemeLoader/catalog.json', 'ThemeLoader/MalodyVThemeManager.exe',
     'ThemeLoader/themes/Default/theme.json', 'ThemeLoader/active-theme.txt', 'ThemeLoader/settings.json']
+required.extend(['BepInEx/plugins/MalodyVThemeLoader/NVorbis.dll',
+    'BepInEx/interop/UnityEngine.AudioModule.dll',
+    'ThemeLoader/docs/licenses/SkiaSharp-LICENSE.txt', 'ThemeLoader/docs/licenses/NVorbis-LICENSE.txt',
+    'ThemeLoader/docs/licenses/Skia-THIRD-PARTY-NOTICES.txt'])
 for name in required:
     assert (payload / name).is_file(), f'Missing offline file: {name}'
 for file in (repo / 'vendor/bepinex').rglob('*'):
@@ -34,7 +38,7 @@ for file in (repo / 'vendor/bepinex').rglob('*'):
         installed = payload / file.relative_to(repo / 'vendor/bepinex')
         assert installed.is_file() and digest(installed.read_bytes()) == digest(file.read_bytes()), f'Pinned runtime differs: {file.name}'
 
-catalog = json.loads((payload / required[18]).read_text(encoding='utf-8-sig'))
+catalog = json.loads((payload / 'BepInEx/plugins/MalodyVThemeLoader/catalog.json').read_text(encoding='utf-8-sig'))
 assert catalog['unityVersion'] == '2022.3.62f2'
 default_root = payload / 'ThemeLoader/themes/Default'
 names = {file.relative_to(default_root).as_posix() for file in default_root.rglob('*') if file.is_file()}

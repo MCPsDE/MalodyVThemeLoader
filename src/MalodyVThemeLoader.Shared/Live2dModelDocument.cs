@@ -14,6 +14,9 @@ public sealed class Live2dBinding
     public string Model { get; set; } = "";
     public string IdleMotion { get; set; } = "";
     public string TapMotion { get; set; } = "";
+    public List<Live2dClickRegion> ClickRegions { get; set; } = new();
+    public Dictionary<string, string> ResultMotions { get; set; } = new();
+    public Dictionary<string, string> MotionAudio { get; set; } = new();
     public float Scale { get; set; } = 1;
     public float OffsetX { get; set; }
     public float OffsetY { get; set; }
@@ -28,7 +31,50 @@ public sealed class Live2dBinding
             || !float.IsFinite(OffsetX) || Math.Abs(OffsetX) > 2
             || !float.IsFinite(OffsetY) || Math.Abs(OffsetY) > 2)
             throw new InvalidDataException("模型大小或位置超出范围。");
+        if (ClickRegions == null || ClickRegions.Count > 64 || ResultMotions == null || MotionAudio == null || MotionAudio.Count > 512
+            || MotionAudio.Any(pair => string.IsNullOrEmpty(pair.Key) || pair.Value == null)
+            || ResultMotions.Any(pair => !Live2dEvents.ResultKeys.Contains(pair.Key) || pair.Value == null))
+            throw new InvalidDataException("动画绑定配置无效。");
+        foreach (var region in ClickRegions) region.Validate();
     }
+}
+
+// Coordinates are relative to the fitted model's bind-pose drawable bounds,
+// with top-left origin. The same transform is used by preview and game clicks.
+public sealed class Live2dClickRegion
+{
+    public string Name { get; set; } = "区域";
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public string Motion { get; set; } = "";
+    public bool Contains(float x, float y) => x >= X && x <= X + Width && y >= Y && y <= Y + Height;
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Name) || Name.Length > 60 || Motion == null
+            || new[] { X, Y, Width, Height }.Any(value => !float.IsFinite(value))
+            || X < 0 || Y < 0 || Width <= 0 || Height <= 0 || X + Width > 1.0001f || Y + Height > 1.0001f)
+            throw new InvalidDataException("点击区域无效，请在模型预览内重新框选。");
+    }
+    public override string ToString() => Name;
+}
+
+public static class Live2dEvents
+{
+    public static readonly string[] ResultKeys = { "M1", "M2", "M3", "M4", "M5" };
+    public static string ResultFromSprite(string sprite)
+    {
+        const string prefix = "rank_score_";
+        if (!sprite.StartsWith(prefix, StringComparison.Ordinal) || sprite.Length != prefix.Length + 2
+            || sprite[prefix.Length] < '0' || sprite[prefix.Length] > '4') return "";
+        var rank = sprite[sprite.Length - 1] - '0';
+        return rank >= 1 && rank <= 5 ? "M" + (6 - rank) : "";
+    }
+
+    // Last drawn region wins when the user deliberately overlaps regions.
+    public static string ClickMotion(Live2dBinding binding, float x, float y) =>
+        binding.ClickRegions.LastOrDefault(region => region.Contains(x, y))?.Motion ?? binding.TapMotion;
 }
 
 public sealed class Live2dLoadStatus
@@ -89,8 +135,15 @@ public sealed class Live2dModelDocument
     public void ValidateBinding(string root, Live2dBinding binding)
     {
         binding.Validate();
-        foreach (var motion in new[] { binding.IdleMotion, binding.TapMotion }.Where(value => value.Length > 0))
+        foreach (var motion in new[] { binding.IdleMotion, binding.TapMotion }
+                     .Concat(binding.ClickRegions.Select(region => region.Motion)).Concat(binding.ResultMotions.Values)
+                     .Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
             CubismMotion.Read(Resolve(root, motion));
+        foreach (var pair in binding.MotionAudio)
+        {
+            CubismMotion.Read(Resolve(root, pair.Key));
+            if (pair.Value.Length > 0) Live2dAudio.Decode(Resolve(root, pair.Value));
+        }
     }
 
     public static string Resolve(string root, string relative)

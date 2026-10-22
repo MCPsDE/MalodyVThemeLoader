@@ -36,7 +36,21 @@ internal static class Live2dVisualClickPatch
     private static void Postfix(Malody.Scene.Widget.WidgetLive2dControl __instance, UnityEngine.EventSystems.PointerEventData eventData)
     {
         if (eventData.button == UnityEngine.EventSystems.PointerEventData.InputButton.Left)
-            ThemeRuntime.Current?.Live2d.PlayTap(__instance);
+            ThemeRuntime.Current?.Live2d.PlayTap(__instance, eventData);
+    }
+}
+
+[HarmonyPatch]
+internal static class Live2dResultDisplayPatch
+{
+    private static IEnumerable<MethodBase> TargetMethods() =>
+        typeof(Malody.Scene.Panel.PanelResultScore).GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            .Where(method => method.Name == "Fill" && (method.GetParameters().Length == 2
+                || method.GetParameters().Length == 1 && method.GetParameters()[0].ParameterType.Name is "MPScore" or "ScoreRecord"));
+
+    private static void Postfix(Malody.Scene.Panel.PanelResultScore __instance)
+    {
+        ThemeRuntime.Current?.Live2d.ObserveResult(__instance);
     }
 }
 

@@ -80,3 +80,11 @@
 - 顶层每帧捕获并打印同一个异常会把游戏日志刷到数百 MB，状态却停在 waiting。运行故障应停止该项更新、尝试恢复原模型、写入 error 状态；用户重新应用主题后才重试。
 - 回大厅时原版模型闪现：新看板的 Start 已创建原模型，但加载器还在等 0.4 秒的下一次发现扫描。场景加载回调也可能早于 Start，因此不能只在 SceneLoaded 扫描。对 WidgetLive2dControl.Start / Show 使用定向 postfix，同步应用模型，成功后隐藏原图；扫描仅保留补漏，不在这些回调中检查扫描冷却。
 - Harmony 的字符串目标不一定生成直接 MemberRef；新生命周期钩子必须检查实际 interop 中同名方法的唯一性与签名。接口校验通过仍不等于已实测切场景时的首帧画面。
+- 点击区域不能从部件名、HitAreas 或动画组名自动推断。用户在默认姿态预览中框选区域，统一存储为模型默认网格范围内、左上原点的归一化矩形；游戏点击先投射到替换模型平面，再转换到同一坐标。窗口尺寸或游戏模型缩放不应改变绑定。
+- M1–M5 不是枚举值 1–5 的顺序。Emiria 的 ScoreRank 为 S=1、A=2、B=3、C=4、D=5；PanelResultScore 绘制的 rank_score_<难度><评级> 最后一位 1 对应 M5、5 对应 M1。只观察显示面板，不读取/修改 Score 或补丁结算判定。
+- PanelResultScore.Fill(MaChart) 只填歌曲信息，评级仍可能是 prefab 默认值。结算动画只观察另外三个 Fill 重载完成后的评级图层；还要处理面板先于看板 Start 的情况，按场景暂存结果，并避免补漏扫描重复播放同一结果。
+- PowerShell 的 `-and` 与 `-or` 优先级与 C# 不同；混合筛选重载时为每个分支加括号，否则两个参数的 Fill 会被错误排除。`[single].5` 也会被解释成成员访问，浮点测试显式写 `[single]0.5`。
+- 软件 Skia 绘制可变 4096 纹理时，每次创建 bitmap shader 会导致巨量重复工作。纹理设为 immutable 并缓存 SKImage/shader；可用时用独立隐藏 WGL 上下文加速，按网格边界裁切遮罩层，CPU 模式保留低分辨率回退。不要借用或操作真实游戏窗口。
+- WinForms Timer 的绘制若超过 tick 间隔，持续开启会令 DoEvents 测试被绘制饿死。Tick 先停表，完成一帧后再启表，限制预览分辨率；停止、切换、释放时同步释放图像和绘图上下文。
+- 音频按完整 motion 相对路径绑定，不按动作组/部位名称绑定。同一动作复用时共用音频，新动作停止上一段；游戏播放使用加载器自己的 AudioSource，不能控制游戏 SoundManager 或全局音量。
+- 插件项目默认不会复制所有传递 NuGet 运行依赖；启用 CopyLocalLockFileAssemblies，并将 NVorbis.dll 加进离线 payload 和完整性检查，否则编辑器能解码 OGG，游戏插件却会缺程序集。SkiaSharp 原生依赖随管理器单文件自解压，原游戏 Cubism Core 只从所选游戏目录加载。

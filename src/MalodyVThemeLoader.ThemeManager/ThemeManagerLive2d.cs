@@ -19,6 +19,8 @@ internal sealed partial class ThemeManagerForm
     private bool refreshingLive2d;
     private bool loadingLive2dSelection;
     private bool live2dDirty;
+    private Live2dBinding? live2dEditingBinding;
+    private Button live2dEditor = null!;
 
     private Control BuildLive2dPage()
     {
@@ -89,6 +91,10 @@ internal sealed partial class ThemeManagerForm
         motionFields.Controls.Add(Field("待机动画 · 循环", live2dIdle), 0, 0);
         motionFields.Controls.Add(Field("点击动画 · 播放后回到待机", live2dTap), 1, 0);
         AppVisuals.AddRow(stack, motionFields);
+        live2dEditor = AppVisuals.CreateButton("预览与绑定动画"); live2dEditor.AutoSize = true; live2dEditor.MinimumSize = new Size(180, 38);
+        live2dEditor.Margin = new Padding(0, 8, 0, 8); live2dEditor.Click += (_, _) => EditLive2dAnimations();
+        live2dEditor.Enter += (_, _) => scroll.ScrollControlIntoView(live2dEditor);
+        AppVisuals.AddRow(stack, live2dEditor);
         live2dScale = Adjustment("模型大小（百分比）", 10, 300, 100);
         live2dX = Adjustment("水平位置（百分比）", -200, 200, 0);
         live2dY = Adjustment("垂直位置（百分比）", -200, 200, 0);
@@ -176,7 +182,7 @@ internal sealed partial class ThemeManagerForm
             var editable = item is { IsValid: true, IsVirtual: false };
             live2dImportDirectory!.Enabled = editable; live2dImportArchive!.Enabled = editable;
             live2dImportTexture!.Enabled = editable; live2dImportAnimation!.Enabled = false;
-            live2dApply.Enabled = false; live2dRestore.Enabled = false;
+            live2dApply.Enabled = false; live2dRestore.Enabled = false; live2dEditor.Enabled = false;
             if (!editable) { live2dState!.Text = "请先选择一个主题。"; return; }
             var binding = Live2dWorkspace.GetBinding(item!);
             foreach (var model in Live2dWorkspace.GetModels(item!)) live2dModels.Items.Add(model);
@@ -193,11 +199,13 @@ internal sealed partial class ThemeManagerForm
     private void RefreshLive2dAnimations()
     {
         if (live2dAnimations is null) return;
+        var draft = !refreshingLive2d && live2dDirty ? live2dEditingBinding : null;
         loadingLive2dSelection = true;
         try
         {
             live2dAnimations.Items.Clear(); live2dIdle.Items.Clear(); live2dTap.Items.Clear();
-            live2dApply.Enabled = false; live2dImportAnimation!.Enabled = false;
+            live2dApply.Enabled = false; live2dImportAnimation!.Enabled = false; live2dEditor.Enabled = false;
+            live2dEditingBinding = null;
             foreach (var control in new Control[] { live2dIdle, live2dTap, live2dScale, live2dX, live2dY }) control.Enabled = false;
             if (SelectedTheme is not { } item || live2dModels?.SelectedItem is not string model) return;
             foreach (var animation in Live2dWorkspace.GetAnimationPaths(item, model)) live2dAnimations.Items.Add(animation);
@@ -211,17 +219,18 @@ internal sealed partial class ThemeManagerForm
             live2dIdle.Items.Add(new Live2dMotionReference { Group = "不播放动画" });
             live2dTap.Items.Add(new Live2dMotionReference { Group = "不播放动画" });
             foreach (var motion in motions) { live2dIdle.Items.Add(motion); live2dTap.Items.Add(motion); }
-            var binding = Live2dWorkspace.GetBinding(item);
+            var binding = draft?.Model == model ? draft : Live2dWorkspace.GetBinding(item);
             var matching = binding?.Model == model;
-            var idle = matching ? binding!.IdleMotion : motions.FirstOrDefault(motion => motion.Group.Contains("idle", StringComparison.OrdinalIgnoreCase)
-                || Path.GetFileName(motion.File).Contains("idle", StringComparison.OrdinalIgnoreCase))?.File ?? motions.FirstOrDefault()?.File;
-            var tap = matching ? binding!.TapMotion : motions.FirstOrDefault(motion => motion.File != idle)?.File;
+            live2dEditingBinding = matching ? JsonSerializer.Deserialize<Live2dBinding>(JsonSerializer.Serialize(binding, JsonDefaults.Options), JsonDefaults.Options)
+                : new Live2dBinding { Model = model };
+            var idle = matching ? binding!.IdleMotion : "";
+            var tap = matching ? binding!.TapMotion : "";
             SelectMotion(live2dIdle, idle); SelectMotion(live2dTap, tap);
             live2dScale.Value = matching ? Math.Clamp((decimal)binding!.Scale * 100, 10, 300) : 100;
             live2dX.Value = matching ? Math.Clamp((decimal)binding!.OffsetX * 100, -200, 200) : 0;
             live2dY.Value = matching ? Math.Clamp((decimal)binding!.OffsetY * 100, -200, 200) : 0;
             foreach (var control in new Control[] { live2dIdle, live2dTap, live2dScale, live2dX, live2dY }) control.Enabled = true;
-            live2dApply.Enabled = true;
+            live2dApply.Enabled = true; live2dEditor.Enabled = true;
             live2dModelState.Text = $"{document.Name} · {document.Textures.Count} 张纹理 · {motions.Count} 个动画";
         }
         catch (Exception e) { live2dModelState.Text = e.Message; }
@@ -238,6 +247,7 @@ internal sealed partial class ThemeManagerForm
     private void MarkLive2dDirty()
     {
         if (refreshingLive2d || loadingLive2dSelection || !live2dApply.Enabled) return;
+        if (live2dModels?.SelectedItem is string model) live2dEditingBinding = CurrentLive2dBinding(model);
         live2dDirty = true; live2dState!.Text = "尚未应用 · 确认动画后，点击“保存并应用模型”。";
     }
 
@@ -246,16 +256,37 @@ internal sealed partial class ThemeManagerForm
         if (SelectedTheme is not { } item || live2dModels?.SelectedItem is not string model) return;
         try
         {
-            Live2dWorkspace.SaveBinding(item, new Live2dBinding
-            {
-                Model = model, IdleMotion = (live2dIdle.SelectedItem as Live2dMotionReference)?.File ?? "",
-                TapMotion = (live2dTap.SelectedItem as Live2dMotionReference)?.File ?? "",
-                Scale = (float)live2dScale.Value / 100, OffsetX = (float)live2dX.Value / 100, OffsetY = (float)live2dY.Value / 100
-            });
+            Live2dWorkspace.SaveBinding(item, CurrentLive2dBinding(model));
             library.SetRealtimeMode(true); library.Activate(item); RefreshThemes(item.Key); RefreshRealtimeMode();
             live2dDirty = false; RefreshLive2dStatus(); ShowStatus($"已保存 {Path.GetFileName(model)}，并启用主题“{item.DisplayName}”。");
         }
         catch (Exception e) { ShowError("应用模型失败：" + e.Message); }
+    }
+
+    private Live2dBinding CurrentLive2dBinding(string model)
+    {
+        var binding = live2dEditingBinding ?? new Live2dBinding { Model = model };
+        binding.Model = model; binding.IdleMotion = (live2dIdle.SelectedItem as Live2dMotionReference)?.File ?? "";
+        binding.TapMotion = (live2dTap.SelectedItem as Live2dMotionReference)?.File ?? "";
+        binding.Scale = (float)live2dScale.Value / 100; binding.OffsetX = (float)live2dX.Value / 100; binding.OffsetY = (float)live2dY.Value / 100;
+        return binding;
+    }
+
+    private void EditLive2dAnimations()
+    {
+        if (SelectedTheme is not { } item || live2dModels?.SelectedItem is not string model) return;
+        try
+        {
+            var binding = JsonSerializer.Deserialize<Live2dBinding>(JsonSerializer.Serialize(CurrentLive2dBinding(model), JsonDefaults.Options), JsonDefaults.Options)!;
+            var root = PathRules.GetSafeCombinedPath(Live2dWorkspace.EnsureEditableDirectory(item), item.Info!.Manifest.Live2dRoot);
+            using var editor = new Live2dAnimationEditor(gameRoot, root, binding, Live2dWorkspace.GetMotionChoices(item, model));
+            if (editor.ShowDialog(this) != DialogResult.OK) return;
+            live2dEditingBinding = editor.Binding; loadingLive2dSelection = true;
+            SelectMotion(live2dIdle, editor.Binding.IdleMotion); SelectMotion(live2dTap, editor.Binding.TapMotion);
+            loadingLive2dSelection = false; MarkLive2dDirty(); ShowStatus("动画绑定已保留，点击“保存并应用模型”使其生效。");
+        }
+        catch (Exception e) { ShowError("无法打开模型预览：" + e.Message); }
+        finally { loadingLive2dSelection = false; }
     }
 
     private void RestoreLive2dModel()
@@ -277,11 +308,16 @@ internal sealed partial class ThemeManagerForm
             var binding = Live2dWorkspace.GetBinding(item);
             if (binding == null) { live2dState.Text = "选择模型和动画，然后点击“保存并应用模型”。"; return; }
             var plugin = Path.Combine(gameRoot, "BepInEx", "plugins", "MalodyVThemeLoader", "MalodyVThemeLoader.Plugin.dll");
-            if (!File.Exists(plugin) || new Version(FileVersionInfo.GetVersionInfo(plugin).FileVersion ?? "0.0") < new Version(2, 3, 0))
-            { live2dState.Text = "配置已保存 · 请安装 2.3.0 或更新版加载器，再重新启动游戏一次。"; return; }
+            var required = binding.ClickRegions.Count > 0 || binding.ResultMotions.Values.Any(value => value.Length > 0)
+                || binding.MotionAudio.Count > 0 ? new Version(2, 4, 0) : new Version(2, 3, 0);
+            if (!File.Exists(plugin) || new Version(FileVersionInfo.GetVersionInfo(plugin).FileVersion ?? "0.0") < required)
+            { live2dState.Text = $"配置已保存 · 请安装 {required.ToString(3)} 或更新版加载器，再重新启动游戏一次。"; return; }
             var path = Path.Combine(gameRoot, "ThemeLoader", "live2d-status.json");
             var bindingTime = File.GetLastWriteTimeUtc(Path.Combine(Live2dWorkspace.EnsureEditableDirectory(item), item.Info!.Manifest.Live2dRoot, Live2dModelDocument.BindingFile));
             var status = File.Exists(path) ? JsonSerializer.Deserialize<Live2dLoadStatus>(File.ReadAllText(path), JsonDefaults.Options) : null;
+            if (status is not null && status.Theme == item.Info!.Manifest.Id && status.Model == binding.Model
+                && status.UpdatedAt.UtcDateTime >= bindingTime && Version.TryParse(status.PluginVersion, out var runningVersion) && runningVersion < required)
+            { live2dState.Text = $"配置已保存 · 请重新启动游戏，加载 {required.ToString(3)} 或更新版插件。"; return; }
             live2dState.Text = status is not null && status.Theme == item.Info!.Manifest.Id && status.Model == binding.Model
                 && status.UpdatedAt.UtcDateTime >= bindingTime
                 ? status.State == "error" ? "加载失败 · " + status.Message : status.Message

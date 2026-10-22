@@ -6,6 +6,8 @@ using Live2D.Cubism.Core;
 using Live2D.Cubism.Rendering;
 using Malody.Live2d;
 using Malody.Scene.Widget;
+using Malody.Scene;
+using Malody.Scene.Panel;
 using MalodyVThemeLoader.Shared;
 using UnityEngine;
 
@@ -21,6 +23,7 @@ internal sealed class Live2dReplacementService : IDisposable
     private string lastStatus = "";
     private float nextScan;
     private bool updateFailed;
+    private readonly Dictionary<int, (SceneResult Owner, string Result)> pendingResults = new();
     private static readonly Lazy<bool> CompatibleGame = new(() =>
     {
         // Match the native build that generated this version's obfuscated API.
@@ -64,12 +67,14 @@ internal sealed class Live2dReplacementService : IDisposable
                 replacements.RemoveAt(i);
                 continue;
             }
-            if (!SceneThemeApplier.IsAllowedScene(replacement.Widget.gameObject.scene.name)) continue;
+            if (!SceneThemeApplier.IsAllowedScene(replacement.Widget.gameObject.scene.name) || !replacement.Widget.gameObject.activeInHierarchy)
+            { replacement.StopAudio(); continue; }
             replacement.Animate();
             replacement.KeepOriginalHidden();
         }
         if (Time.unscaledTime < nextScan) return;
         nextScan = Time.unscaledTime + .4f;
+        foreach (var panel in Resources.FindObjectsOfTypeAll<PanelResultScore>()) ObserveResult(panel);
         if (replacements.Count == 0 && failed.Count == 0) Status("waiting", "等待游戏显示看板角色。");
         foreach (var widget in Resources.FindObjectsOfTypeAll<WidgetLive2dControl>())
             ApplyNow(widget);
@@ -100,11 +105,14 @@ internal sealed class Live2dReplacementService : IDisposable
             if (existing != null)
             {
                 existing.KeepOriginalHidden();
+                ApplyPendingResult(existing);
                 return;
             }
             try
             {
-                replacements.Add(Create(widget, original));
+                var replacement = Create(widget, original);
+                replacements.Add(replacement);
+                ApplyPendingResult(replacement);
                 Status("applied", "模型已在游戏中显示。");
                 log.LogInfo($"Live2D model applied: {binding.Model} -> {SceneThemeApplier.GetHierarchy(original.transform)}");
             }
@@ -118,9 +126,64 @@ internal sealed class Live2dReplacementService : IDisposable
         catch (Exception exception) { ReportUpdateFailure(exception); }
     }
 
-    public void PlayTap(WidgetLive2dControl widget)
+    public void PlayTap(WidgetLive2dControl widget, UnityEngine.EventSystems.PointerEventData eventData)
     {
-        foreach (var replacement in replacements.Where(r => r.Widget == widget)) replacement.PlayTap();
+        if (binding == null) return;
+        try
+        {
+            foreach (var replacement in replacements.Where(r => r.Widget == widget))
+            {
+                var file = binding.TapMotion;
+                var camera = eventData.pressEventCamera != null ? eventData.pressEventCamera : Camera.main;
+                if (camera != null)
+                {
+                    var transform = replacement.Visual.Model.transform;
+                    var plane = new Plane(transform.forward, transform.position);
+                    var position = eventData.position;
+                    var ray = camera.ScreenPointToRay(new Vector3(position.x, position.y, 0));
+                    if (plane.Raycast(ray, out var distance))
+                    {
+                        var local = transform.InverseTransformPoint(ray.GetPoint(distance));
+                        var bounds = replacement.Visual.LocalBounds;
+                        file = Live2dEvents.ClickMotion(binding, (local.x - bounds.min.x) / bounds.size.x,
+                            (bounds.max.y - local.y) / bounds.size.y);
+                    }
+                }
+                replacement.Play(file);
+            }
+        }
+        catch (Exception e) { ReportUpdateFailure(e); }
+    }
+
+    // Observe only the completed visual panel. No Score, PlayInfo, submissions,
+    // judgement or result calculation is patched, called or modified here.
+    public void ObserveResult(PanelResultScore panel)
+    {
+        if (binding == null || updateFailed || panel == null || !SceneThemeApplier.IsSceneComponent(panel, "SceneResult")
+            || !panel.gameObject.activeInHierarchy || panel.rankLayers == null || panel.rankLayers.Count < 3) return;
+        try
+        {
+            var rankImage = panel.rankLayers[2];
+            if (rankImage == null || !rankImage.gameObject.activeSelf || rankImage.sprite == null) return;
+            var result = Live2dEvents.ResultFromSprite(rankImage.sprite.name);
+            if (result.Length == 0) return;
+            foreach (var scene in Resources.FindObjectsOfTypeAll<SceneResult>())
+            {
+                if (!SceneThemeApplier.IsSceneComponent(scene, panel.gameObject.scene.name)
+                    || scene.gameObject.scene.handle != panel.gameObject.scene.handle || scene.marloControl == null) continue;
+                pendingResults[scene.gameObject.scene.handle] = (scene, result);
+                ApplyNow(scene.marloControl);
+            }
+        }
+        catch (Exception e) { ReportUpdateFailure(e); }
+    }
+
+    private void ApplyPendingResult(Replacement replacement)
+    {
+        if (binding == null || !pendingResults.TryGetValue(replacement.Widget.gameObject.scene.handle, out var pending)
+            || pending.Owner == null || replacement.PlayedResult == pending.Result) return;
+        replacement.PlayedResult = pending.Result;
+        if (binding.ResultMotions.TryGetValue(pending.Result, out var file)) replacement.Play(file);
     }
 
     private GameObject? FindInstantiatedVisual(WidgetLive2dControl widget)
@@ -157,6 +220,7 @@ internal sealed class Live2dReplacementService : IDisposable
         var document = Live2dModelDocument.Read(theme.Live2dDirectory, binding!.Model);
         var textures = new List<Texture2D>();
         CubismVisual? visual = null;
+        Replacement? prepared = null;
         try
         {
             foreach (var relative in document.Textures)
@@ -172,18 +236,28 @@ internal sealed class Live2dReplacementService : IDisposable
             CubismVisualFactory.Fit(visual, original.transform.parent, bounds, original.layer,
                 binding.Scale, binding.OffsetX, binding.OffsetY);
             var replacement = new Replacement(widget, original, visual, textures,
-                LoadMotion(binding.IdleMotion), LoadMotion(binding.TapMotion));
+                LoadMotion(binding.IdleMotion), new[] { binding.TapMotion }.Concat(binding.ClickRegions.Select(region => region.Motion))
+                    .Concat(binding.ResultMotions.Values).Where(file => file.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(file => file, file => LoadMotion(file)!, StringComparer.OrdinalIgnoreCase), binding.IdleMotion,
+                binding.MotionAudio.Where(pair => pair.Value.Length > 0).ToDictionary(pair => pair.Key,
+                    pair => Live2dAudio.Decode(Live2dModelDocument.Resolve(theme.Live2dDirectory, pair.Value)), StringComparer.OrdinalIgnoreCase));
+            prepared = replacement;
             replacement.Animate();
             // Commit only after the replacement has valid geometry, materials,
             // textures and animation. Game fields still refer to its own model.
             CubismVisualFactory.Show(visual);
             replacement.HideOriginal();
+            replacement.StartIdleAudio();
             return replacement;
         }
         catch
         {
-            visual?.Dispose();
-            foreach (var texture in textures) UnityEngine.Object.DestroyImmediate(texture);
+            if (prepared != null) prepared.Dispose();
+            else
+            {
+                visual?.Dispose();
+                foreach (var texture in textures) UnityEngine.Object.DestroyImmediate(texture);
+            }
             throw;
         }
     }
@@ -240,6 +314,7 @@ internal sealed class Live2dReplacementService : IDisposable
     {
         foreach (var replacement in replacements) replacement.Dispose();
         replacements.Clear();
+        pendingResults.Clear();
     }
 
     private sealed class Replacement : IDisposable
@@ -249,7 +324,12 @@ internal sealed class Live2dReplacementService : IDisposable
         public readonly CubismVisual Visual;
         private readonly List<Texture2D> textures;
         private readonly CubismMotion? idle;
-        private readonly CubismMotion? tap;
+        private readonly Dictionary<string, CubismMotion> actions;
+        private readonly Dictionary<string, AudioClip> clips = new(StringComparer.OrdinalIgnoreCase);
+        private readonly string idleFile;
+        private AudioSource? audioSource;
+        private CubismMotion? action;
+        public string PlayedResult { get; set; } = "";
         private readonly Dictionary<string, CubismParameter> parameters;
         private readonly Dictionary<string, float> defaults;
         private readonly Dictionary<string, CubismPart> parts;
@@ -258,13 +338,14 @@ internal sealed class Live2dReplacementService : IDisposable
         private readonly List<(Renderer Renderer, bool ForceRenderingOff)> originalRenderers = new();
         private readonly LAppModelProxy? legacy;
         private readonly bool legacyVisible;
-        private readonly float started = Time.unscaledTime;
-        private float tappedAt = float.NegativeInfinity;
+        private float idleAt = Time.unscaledTime;
+        private float actionAt = float.NegativeInfinity;
 
         public Replacement(WidgetLive2dControl widget, GameObject original, CubismVisual visual,
-            List<Texture2D> textures, CubismMotion? idle, CubismMotion? tap)
+            List<Texture2D> textures, CubismMotion? idle, Dictionary<string, CubismMotion> actions, string idleFile,
+            Dictionary<string, Live2dAudio> audio)
         {
-            Widget = widget; Original = original; Visual = visual; this.textures = textures; this.idle = idle; this.tap = tap;
+            Widget = widget; Original = original; Visual = visual; this.textures = textures; this.idle = idle; this.actions = actions;
             parameters = visual.Model.GetComponentsInChildren<CubismParameter>(true).ToDictionary(p => p.name, StringComparer.Ordinal);
             defaults = parameters.ToDictionary(p => p.Key, p => p.Value.Value, StringComparer.Ordinal);
             parts = visual.Model.GetComponentsInChildren<CubismPart>(true).ToDictionary(p => p.name, StringComparer.Ordinal);
@@ -272,6 +353,23 @@ internal sealed class Live2dReplacementService : IDisposable
             renderController = visual.Model.GetComponent<CubismRenderController>();
             legacy = original.GetComponent<LAppModelProxy>();
             legacyVisible = legacy != null && legacy.GetVisible();
+            this.idleFile = idleFile;
+            try
+            {
+                foreach (var pair in audio)
+                {
+                    var data = pair.Value;
+                    var clip = AudioClip.Create("ThemeLoader." + pair.Key, data.Samples.Length / data.Channels, data.Channels, data.SampleRate, false);
+                    clips.Add(pair.Key, clip);
+                    if (!clip.SetData(data.Samples, 0)) throw new InvalidDataException("动画音频创建失败。");
+                }
+                if (clips.Count > 0)
+                {
+                    audioSource = widget.gameObject.AddComponent<AudioSource>();
+                    audioSource.playOnAwake = false; audioSource.loop = false; audioSource.spatialBlend = 0;
+                }
+            }
+            catch { DisposeAudio(); throw; }
         }
 
         public void HideOriginal()
@@ -289,17 +387,37 @@ internal sealed class Live2dReplacementService : IDisposable
             if (legacy != null) legacy.SetVisible(false);
         }
 
-        public void PlayTap() { if (tap != null) tappedAt = Time.unscaledTime; }
+        public void Play(string file)
+        {
+            if (string.IsNullOrEmpty(file) || !actions.TryGetValue(file, out var motion)) return;
+            action = motion; actionAt = Time.unscaledTime; PlayAudio(file);
+        }
+
+        private void PlayAudio(string file)
+        {
+            StopAudio();
+            if (audioSource != null && clips.TryGetValue(file, out var clip)) { audioSource.clip = clip; audioSource.Play(); }
+        }
+
+        public void StartIdleAudio() { idleAt = Time.unscaledTime; StopAudio(); if (idle != null) PlayAudio(idleFile); }
+        public void StopAudio() { if (audioSource != null) audioSource.Stop(); }
+        private void DisposeAudio()
+        {
+            StopAudio(); if (audioSource != null) UnityEngine.Object.DestroyImmediate(audioSource);
+            foreach (var clip in clips.Values) if (clip != null) UnityEngine.Object.DestroyImmediate(clip);
+            clips.Clear(); audioSource = null;
+        }
 
         public void Animate()
         {
-            var tapTime = Time.unscaledTime - tappedAt;
+            var actionTime = Time.unscaledTime - actionAt;
+            if (action != null && actionTime >= action.Duration) { action = null; StartIdleAudio(); }
             foreach (var parameter in parameters) parameter.Value.Value = defaults[parameter.Key];
             foreach (var part in parts) part.Value.Opacity = partDefaults[part.Key];
             renderController.Opacity = 1;
-            if (idle != null) ApplyMotion(idle, (Time.unscaledTime - started) % idle.Duration, 1);
-            if (tap != null && tapTime < tap.Duration)
-                ApplyMotion(tap, tapTime, Math.Min(1, Math.Min(tapTime / .2f, (tap.Duration - tapTime) / .2f)));
+            if (idle != null) ApplyMotion(idle, (Time.unscaledTime - idleAt) % idle.Duration, 1);
+            if (action != null && actionTime < action.Duration)
+                ApplyMotion(action, actionTime, Math.Min(1, Math.Min(actionTime / .2f, (action.Duration - actionTime) / .2f)));
         }
 
         private void ApplyMotion(CubismMotion motion, float time, float weight)
@@ -318,6 +436,7 @@ internal sealed class Live2dReplacementService : IDisposable
 
         public void Dispose()
         {
+            DisposeAudio();
             foreach (var pair in originalRenderers) if (pair.Renderer != null) pair.Renderer.forceRenderingOff = pair.ForceRenderingOff;
             if (legacy != null) legacy.SetVisible(legacyVisible);
             Visual.Dispose();

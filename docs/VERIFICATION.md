@@ -41,7 +41,17 @@
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
-本次版本：[v2.3.2](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.3.2)。
+本次版本：[v2.4.0](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.4.0)。
+
+## 2.4 手动动画编辑器、结算与音频
+
+查阅 Emiria 的 PanelResultScore、SceneResult 与 PlayEnums，确认 M1–M5 对应已绘制评级 D/C/B/A/S。插件只观察三个结算显示 Fill 重载后的 rankLayers；歌曲信息 Fill 不触发事件，不补丁 Score 或分数/判定/提交逻辑。接口检查包含 3 个看板钩子、3 个结算显示目标签名，以及新增点击投射、结果 UI 和 AudioSource 的真实 interop 引用。
+
+`test-live2d-editor.ps1` 用 artifacts 中的样本副本和运行库副本验证：真实 moc/纹理和不同动作画面、手动画区域、重叠优先与点击回退、M1–M5 独立绑定、非法区域拒绝、JSON 往返，以及静音 OGG/WAV 的解码、导入、试播准备与中断。明暗各四张原生截图覆盖正常/最小窗口、结算绑定及模拟 150% 布局。没有用平面纹理冒充模型预览。
+
+GPU 绘制缓存不可变纹理与 shader；独立采样在本机预热后约 7–8 ms/420×560 帧，包含脚本截图/文件写入的两帧回归约 150–180 ms，不能视为所有机器的帧率承诺。测试音频是静音样本，只证明解码/调用和停止状态，不声称听觉音质验证。
+
+编辑器在自己的进程中加载原游戏 Cubism Core，不操作用户游戏窗口。真实安装目录保持只读；结算动画与游戏内音频仍需安装后端到端确认。物理显示器 DPI、完整辅助功能及所有外部模型的物理/表情控制器未验证；这些不在当前原始模型动画播放路径内。
 
 ## 2.3.2 返回大厅的模型切换时机
 

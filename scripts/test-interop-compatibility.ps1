@@ -78,6 +78,12 @@ try {
         $missing | Write-Output
         throw "Interop incompatibility: $($missing.Count) missing references in $InteropRoot"
     }
+    $resultPanel = $resolver.Resolve([Mono.Cecil.AssemblyNameReference]::Parse('Assembly-CSharp')).MainModule.GetType('Malody.Scene.Panel.PanelResultScore')
+    $resultTargets = @($resultPanel.Methods | Where-Object { $_.Name -eq 'Fill' -and ($_.Parameters.Count -eq 2 -or
+        ($_.Parameters.Count -eq 1 -and $_.Parameters[0].ParameterType.Name -in @('MPScore','ScoreRecord'))) })
+    if ($resultTargets.Count -ne 3 -or @($resultTargets | Where-Object { $_.IsStatic -or $_.ReturnType.FullName -ne 'System.Void' }).Count) {
+        throw 'Result display Fill targets differ from the validated three UI methods.'
+    }
     if ($checked -eq 0) { throw 'No game/Unity references were checked.' }
-    Write-Output "PASS: $checked game/Unity member references, 9 Cubism signatures and $lifecycleTargets Live2D Harmony targets resolve against $InteropRoot"
+    Write-Output "PASS: $checked game/Unity references, 9 Cubism signatures, $lifecycleTargets widget targets and 3 result display targets resolve against $InteropRoot"
 } finally { $module.Dispose(); $resolver.Dispose() }

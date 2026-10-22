@@ -137,6 +137,8 @@ Copy-Item -LiteralPath (Join-Path $pluginOutput 'MalodyVThemeLoader.Plugin.dll')
     -Destination $pluginTarget -Force
 Copy-Item -LiteralPath (Join-Path $pluginOutput 'MalodyVThemeLoader.Shared.dll') `
     -Destination $pluginTarget -Force
+Copy-Item -LiteralPath (Join-Path $pluginOutput 'NVorbis.dll') `
+    -Destination $pluginTarget -Force
 
 $docsTarget = Join-Path $payloadRoot 'ThemeLoader\docs'
 New-Item -ItemType Directory -Force -Path $docsTarget | Out-Null
@@ -144,6 +146,8 @@ Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\README.txt') `
     -Destination $docsTarget -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\THIRD_PARTY_NOTICES.txt') `
     -Destination $docsTarget -Force
+Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\licenses') `
+    -Destination $docsTarget -Recurse -Force
 
 dotnet publish (Join-Path $repoRoot 'src\MalodyVThemeLoader.ThemeManager') `
     -c Release `

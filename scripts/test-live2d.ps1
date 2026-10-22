@@ -99,15 +99,26 @@ $form = $formType.GetConstructor([type[]]@([string])).Invoke(@([string]$runRoot)
 $flags = [Reflection.BindingFlags]'Instance,NonPublic'
 try {
     $formType.GetMethod('RefreshThemes', $flags).Invoke($form, @('Murasame')) | Out-Null
+    $idleChoice = $formType.GetField('live2dIdle', $flags).GetValue($form)
+    $tapChoice = $formType.GetField('live2dTap', $flags).GetValue($form)
+    Assert ($idleChoice.SelectedIndex -eq 0 -and $tapChoice.SelectedIndex -eq 0) 'Unbound motions were automatically assigned.'
+    $idleChoice.SelectedIndex = 1; $tapChoice.SelectedIndex = 2
     $formType.GetMethod('ApplyLive2dModel', $flags).Invoke($form, @()) | Out-Null
     Assert ((Get-Content (Join-Path $runRoot 'ThemeLoader/active-theme.txt') -Raw).Trim() -eq 'Murasame') 'Apply did not activate the theme.'
     $settings = Get-Content (Join-Path $runRoot 'ThemeLoader/settings.json') -Raw | ConvertFrom-Json
     Assert $settings.realtimeMode 'Apply did not enable realtime mode.'
     $saved = Call 'GetBinding' @($item)
-    Assert ($saved.IdleMotion.EndsWith('motion01.motion3.json')) 'The default idle motion was not recognized.'
-    Assert ($saved.TapMotion.EndsWith('motion02.motion3.json')) 'The default tap motion was not assigned.'
+    Assert ($saved.IdleMotion.EndsWith('motion01.motion3.json')) 'The manually assigned idle motion was lost.'
+    Assert ($saved.TapMotion.EndsWith('motion02.motion3.json')) 'The manually assigned tap motion was lost.'
+    $draft = $formType.GetField('live2dEditingBinding', $flags).GetValue($form)
+    $region = [Activator]::CreateInstance($shared.GetType('MalodyVThemeLoader.Shared.Live2dClickRegion'))
+    $region.Name='手动区域'; $region.X=0.2; $region.Y=0.1; $region.Width=0.5; $region.Height=0.3; $region.Motion=$doc.Motions[4].File
+    $draft.ClickRegions.Add($region); $draft.ResultMotions['M1']=$doc.Motions[2].File; $draft.ResultMotions['M5']=$doc.Motions[3].File
+    $formType.GetMethod('ApplyLive2dModel', $flags).Invoke($form, @()) | Out-Null
+    $saved = Call 'GetBinding' @($item)
+    Assert ($saved.ClickRegions.Count -eq 1 -and $saved.ResultMotions.Count -eq 2) 'Main Save/Apply dropped editor region/result bindings.'
     $statusLabel = $formType.GetField('live2dState', $flags).GetValue($form)
-    Assert ($statusLabel.Text.Contains('2.3.0')) 'Old plugin installation did not show an update instruction.'
+    Assert ($statusLabel.Text.Contains('2.4.0')) 'Advanced bindings did not require an updated plugin.'
     $fakePlugin = Join-Path $runRoot 'BepInEx/plugins/MalodyVThemeLoader/MalodyVThemeLoader.Plugin.dll'
     New-Item -ItemType Directory -Path (Split-Path $fakePlugin) -Force | Out-Null
     # Only version metadata is needed for this fixture, not executable plugin behavior.
@@ -116,7 +127,11 @@ try {
     @{ pluginVersion = '2.3.0'; theme = 'murasame'; model = $saved.Model; state = 'applied'; message = '模型已在游戏中显示。'; updatedAt = [DateTimeOffset]::UtcNow } |
         ConvertTo-Json | Set-Content -LiteralPath $statusPath -Encoding utf8
     $formType.GetMethod('RefreshLive2dStatus', $flags).Invoke($form, @()) | Out-Null
-    Assert ($statusLabel.Text -eq '模型已在游戏中显示。') 'Runtime success was not displayed.'
+    Assert ($statusLabel.Text.Contains('重新启动游戏')) 'An old running plugin was mistaken for the newly installed version.'
+    @{ pluginVersion = '2.4.0'; theme = 'murasame'; model = $saved.Model; state = 'applied'; message = '模型已在游戏中显示。'; updatedAt = [DateTimeOffset]::UtcNow } |
+        ConvertTo-Json | Set-Content -LiteralPath $statusPath -Encoding utf8
+    $formType.GetMethod('RefreshLive2dStatus', $flags).Invoke($form, @()) | Out-Null
+    Assert ($statusLabel.Text -eq '模型已在游戏中显示。') 'Current runtime success was not displayed.'
     $formType.GetMethod('RestoreLive2dModel', $flags).Invoke($form, @()) | Out-Null
     Assert (!(Test-Path (Join-Path $theme 'characters/replacement.json'))) 'Form restore left a model binding behind.'
 } finally { $form.Dispose() }

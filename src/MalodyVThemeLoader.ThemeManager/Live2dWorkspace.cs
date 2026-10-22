@@ -153,6 +153,18 @@ internal static class Live2dWorkspace
         File.Move(file + ".tmp", file, true);
     }
 
+    public static string ImportAudio(string root, string source)
+    {
+        Live2dAudio.Decode(source); // Validate before copying or changing a binding.
+        using var stream = File.OpenRead(source); using var sha = System.Security.Cryptography.SHA256.Create();
+        var name = new string(Path.GetFileNameWithoutExtension(source).Where(character => char.IsLetterOrDigit(character) || " _-".Contains(character)).Take(48).ToArray());
+        var relative = "audio/" + name + "-" + Convert.ToHexString(sha.ComputeHash(stream)).ToLowerInvariant().Substring(0, 12) + Path.GetExtension(source).ToLowerInvariant();
+        var destination = PathRules.GetSafeCombinedPath(root, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        if (!Path.GetFullPath(source).Equals(destination, StringComparison.OrdinalIgnoreCase)) File.Copy(source, destination, true);
+        return relative;
+    }
+
     public static void RemoveBinding(ThemeItem item)
     {
         var root = GetLive2dRoot(item, false);

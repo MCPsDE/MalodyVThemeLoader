@@ -289,6 +289,49 @@ visibility; dead scene objects are cleaned before creating a new replacement.
 The binding still controls only a looping idle motion and a left-click motion
 that returns to idle. Model motion group names are choices, not body-region or
 game-event triggers. These hooks never alter the game's character selection.
+
+### 2.4 manual editor, displayed results and audio
+
+The manager's animation editor renders moc3 through the game's existing native
+`Live2DCubismCore.dll` and SkiaSharp. It evaluates the same motion3 curves used by
+the plugin, draws texture meshes with clipping/blending, and uses an independent
+hidden WGL context when supported. CPU rendering is a smaller fallback. It does
+not launch, attach to, or change the game process. No body parts, HitAreas or
+animation groups are automatically bound; new models start with empty bindings.
+
+The author draws rectangles on the neutral pose, names them and assigns motion
+files. `clickRegions` in replacement.json contains normalized X/Y/Width/Height
+coordinates relative to the default drawable bounds (top-left origin). At runtime
+a pointer ray is intersected with the replacement model plane and transformed
+to the same local coordinates. Last-added overlapping regions win. A region with
+no motion consumes the click; positions outside all regions use `tapMotion`.
+Rectangles follow the model's overall transform, not individual animated bones.
+
+`resultMotions` maps M1–M5 to motion files. Source evidence is
+`Scene/Panel/PanelResultScore.cs` and `Play/PlayEnums.cs`: the displayed rank image
+is `rank_score_<level><rank>`, with S=1→M5, A=2→M4, B=3→M3, C=4→M2, D=5→M1.
+The visual panel's three score-display Fill overloads are observed in postfixes;
+the MaChart-only Fill is excluded. The loader only reads rankLayers[2] and finds
+SceneResult.marloControl. It never calls or patches Score, score calculation,
+submission, authentication or gameplay logic. Pending display events are scoped
+to the result scene, survive widget initialization order, and play once per
+displayed rank on that model; actions return to idle. A periodic UI scan also
+handles late panel visibility and realtime theme reload.
+
+`motionAudio` maps full motion paths to imported audio paths within live2dRoot.
+OGG Vorbis and PCM/float WAV are decoded by shared code; imports validate before
+copying into an audio directory with a source-name/hash filename. Preview converts
+decoded samples to WAV for SoundPlayer. The plugin creates its own AudioClips and
+AudioSource on the displayed widget. Each activation plays sound once; another
+action interrupts it, action completion stops it and resumes idle audio, and
+hide/dispose stops playback. Audio is separate from the game's SoundManager and
+global settings. Payload includes NVorbis; manager single-file output embeds
+SkiaSharp native assets. Component licenses live in ThemeLoader/docs/licenses.
+
+Editor completion returns a draft to the workbench; Save/Apply atomically writes
+the complete binding. Closing the editor discards its binding edits (copied audio
+may remain as an unreferenced authoring file). Existing version-1 bindings remain
+valid; the manager requires loader 2.4 when regions, result actions or audio exist.
 Importing a ZIP with duplicate normalized entries uses the last entry, which
 matches ordinary overwrite semantics and handles Unicode Live2D archives.
 

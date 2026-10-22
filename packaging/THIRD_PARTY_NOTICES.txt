@@ -22,3 +22,17 @@ https://github.com/SamboyCoding/Cpp2IL
 
 Default theme resources are copied unchanged from the Malody V source tree.
 Adjacent attribution and license files are retained where available.
+
+SkiaSharp and Skia
+Copyright Microsoft and the Skia contributors.
+SkiaSharp is licensed under the MIT License; Skia uses the BSD License.
+https://github.com/mono/SkiaSharp
+The Live2D editor loads Live2DCubismCore.dll from the user's existing game
+installation. No separate copy of Cubism Core or third-party model artwork
+is added to the ThemeLoader distribution.
+
+NVorbis
+Copyright (c) 2020 Andrew Ward.
+Licensed under the MIT License.
+https://github.com/NVorbis/NVorbis
+Full license texts and native component notices are included in docs/licenses.

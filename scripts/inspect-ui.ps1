@@ -72,7 +72,9 @@ function Reach-Live2dFields($form) {
     [Windows.Forms.Application]::DoEvents()
     if (!$form.SelectNextControl($idle,$true,$true,$true,$true) -or !$tap.Focused) { throw 'Tab cannot reach tap animation from idle.' }
     $scale = Get-Field $form 'live2dScale'
-    if (!$form.SelectNextControl($tap,$true,$true,$true,$true) -or !$scale.Focused) { throw 'Tab cannot reach model size from tap animation.' }
+    $animationEditor = Get-Field $form 'live2dEditor'
+    if (!$form.SelectNextControl($tap,$true,$true,$true,$true) -or !$animationEditor.Focused) { throw 'Tab cannot reach the animation editor from tap animation.' }
+    if (!$form.SelectNextControl($animationEditor,$true,$true,$true,$true) -or !$scale.Focused) { throw 'Tab cannot reach model size from the animation editor.' }
     [Windows.Forms.Application]::DoEvents()
     $viewport = $scroll.RectangleToScreen($scroll.ClientRectangle)
     if (!$scroll.Parent.RectangleToScreen($scroll.Parent.ClientRectangle).Contains($viewport)) {

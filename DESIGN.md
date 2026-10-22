@@ -225,7 +225,9 @@ The ThemeLoader installer starts at 880 × 720 client pixels with a 760 × 660 m
 
 The Live2D workbench separates a vertically scrolling editor from a fixed action-and-status area (96 px). The editor constrains its content width to the scroll viewport, imports wrap above the side-by-side model and animation lists, and labeled idle/tap selectors precede three size/position fields. Receiving focus in the theme, motion or numeric editors requests scrolling that control into view. The fixed action row has an explicit height so wrapping measurement cannot consume the editor.
 
-Current native captures are under `.impeccable/review/live2d-dark` and `live2d-light`. They cover normal and minimum dimensions, manager switching and restoration, plus synthetic 150% layout stress. The `manager-live2d-minimum-fields.png` and `manager-scale150-fields.png` captures show the editor after scrolling to its assignment fields. The current top and scrolled states keep the theme selector and assignment fields inside their viewport while actions remain fixed. Both installers remain light in either capture set. These captures do not establish physical multi-monitor DPI behavior.
+The separate animation-and-region editor starts at 1140 × 760 client pixels with a 1000 × 680 minimum window. A two-column layout gives 62% to the model preview and 38% to trigger selection and assignment, separated by a 20 px margin within 24 px outer padding. Motion browsing, “试播” and “重置” sit below the preview. The right column retains a scrolling trigger list above region actions and persistently labeled fields. A fixed footer keeps concise status and the primary “完成绑定” action reachable.
+
+Current editor captures are `editor-desktop.png`, `editor-result.png`, `editor-minimum.png` and `editor-scale150.png` under both `.impeccable/review/editor-dark` and `editor-light`. They show actual model artwork, a manually drawn region, bound audio and a selected M3 result trigger, with controls reachable at normal, minimum and synthetic 150% layouts. The earlier `live2d-dark` and `live2d-light` sets retain evidence for the surrounding manager, scrolled workbench fields and fixed-light installers. Synthetic scaling does not establish physical multi-monitor DPI behavior or assistive-technology results.
 
 ## Elevation & Depth
 
@@ -273,15 +275,25 @@ Both installers initialize light appearance before creating palette-dependent co
 
 “Live2D 工作台” starts with a persistently labeled editable-theme choice, then wrapping actions for importing a model directory or ZIP, importing animation and replacing texture. Recursive discovery supplies the model list; the neighboring animation list follows the selected model. A concise model summary reports its name, texture count and animation count. Legacy selections retain file replacement actions and disable the Cubism binding fields.
 
-The binding editor labels looping idle motion and tap motion that returns to idle, then exposes size, horizontal position and vertical position as percentages. “保存并应用模型” is the primary fixed-footer action and “恢复游戏模型” is secondary. Saving records the model, motion choices and fitting values, enables real-time reload and activates that theme. Restore removes the replacement binding. Actions are enabled according to the selected theme and model rather than presented as universally available.
+The workbench labels looping idle motion and tap motion that returns to idle, adds “预览与绑定动画” before the size and position percentages, and retains “保存并应用模型” as its primary fixed-footer action with “恢复游戏模型” secondary. Saving commits the model, fitting values, idle/tap choices, custom regions, result motions and per-animation audio, enables real-time reload and activates that theme. Restore removes the replacement binding. Actions are enabled according to the selected theme and model rather than presented as universally available.
 
 The local status distinguishes unapplied edits, saved configuration, waiting for the game, loader-version guidance and a runtime loading error. A saved configuration is not presented as a loaded model: runtime feedback must match the theme and model and be no older than the binding. Detailed format limits stay in developer documentation. The texture picker describes GIF handling as “GIF 首帧”.
 
 Installers pair directory/environment diagnosis, a read-only log, operation feedback and stable bottom actions. Busy operations disable conflicting actions and prevent closing; completed or failed operations restore valid actions. The manager reports results in its bottom band. Destructive tasks remain under maintenance and use confirmation dialogs.
 
+### Live2D animation and region editor
+
+Real Cubism model and motion frames fill the alternate-neutral preview ground. “框选区域” restores the default pose and changes the pointer to a crosshair; dragging shows an accent dashed rectangle and Esc cancels. Saved regions have a subtle accent fill and a visible name. The selected region uses the accent outline; other outlines use muted ink. Region selection and preview focus remain visible in both appearances. These overlays reuse the existing palette and introduce no new artwork.
+
+The native trigger list contains “待机 · 循环”, “点击未绑定区域”, M1–M5 result choices and user-created regions. Only custom regions enable the name field and deletion. Users draw, name and assign each region manually; body parts, HitAreas and animation names never supply automatic bindings. Clicking the model tests the selected hit region, with later-added overlapping regions taking priority and uncovered clicks using the default click assignment. Result selection briefly explains playback once followed by idle.
+
+“播放动画” uses the existing ChoiceBox. Audio appears immediately below it as an unbound prompt or a bound filename, with “添加音频” and “移除音频” actions. The picker accepts OGG Vorbis and WAV; adding audio requires an assigned animation, and removal requires an existing audio binding. Audio belongs to the animation, so reusing a motion shares its audio. “试播绑定动画” auditions motion and sound together; switching playback, resetting or closing stops the prior sound. Motion browsing below the preview remains separate from assigning a trigger.
+
+“完成绑定” validates the edited clone and returns a draft. The workbench marks it “尚未应用” and directs the user to “保存并应用模型”; closing without completion does not adopt the edited clone. Errors stay in the concise status field, and detailed format explanations stay out of the task flow. The native preview uses the selected game's Cubism Core, cached Skia textures and an independent GPU context when available, with a lower-resolution CPU fallback; it does not use the running game window. The supplied native tests establish frame changes and audio preparation/stop, while silent fixtures and captures do not establish audible output or real-game result/audio playback.
+
 ### Artwork
 
-Use the existing embedded logo and icon. Default theme previews and exports come from read-only source artwork. Appearance changes add no generated or substituted artwork.
+Use the existing embedded logo and icon. Default theme previews and exports come from read-only source artwork. The editor captures show an external user-supplied Murasame model for validation, not artwork shipped in Default. Appearance changes add no generated or substituted artwork.
 
 ## Do's and Don'ts
 

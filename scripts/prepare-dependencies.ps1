@@ -123,6 +123,7 @@ $compileLibraries = @(
     'UnityEngine.ImageConversionModule.dll',
     'UnityEngine.ScreenCaptureModule.dll',
     'UnityEngine.AnimationModule.dll',
+    'UnityEngine.AudioModule.dll',
     'UnityEngine.TextCoreFontEngineModule.dll',
     'UnityEngine.TextCoreTextEngineModule.dll',
     'UnityEngine.TextRenderingModule.dll',

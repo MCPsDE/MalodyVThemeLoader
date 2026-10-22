@@ -54,3 +54,4 @@
 - 使用 `Path.GetExtension` 判断 `.motion3.json` 或 `.mtn.bytes` 只得到最后一段，动画列表会漏项；用完整文件名的 `EndsWith`。
 - ZIP 覆盖失败发生在解压阶段时，旧目标目录尚未移动；回滚不能无条件删除目标。恢复失败也不能在 finally 删除备份。
 - 发布目录里的旧安装器可能由用户打开，导致重建时被锁。不要结束用户窗口；构建和发布脚本支持 `-ReleaseDirectory artifacts/release-<version>`，输出到独立版本目录。
+- GitHub Release 创建时，`--target` 传短 SHA 在本环境会返回 HTTP 422（target_commitish invalid）。使用已推送的分支名或完整 40 位 SHA，上传前先核实目标。

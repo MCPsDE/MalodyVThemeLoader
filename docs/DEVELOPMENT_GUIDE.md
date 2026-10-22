@@ -238,13 +238,36 @@ Legacy models use centralized `Resources` access through
 
 The logical directory structure must mirror `Assets/Malody/Resources/Live2d`.
 
-Newer Cubism Maid/Chris models are imported Unity Prefabs. The first runtime
-implementation replaces their textures only. Full model and Animator
-replacement uses a compatible AssetBundle and must not bypass ownership.
+Newer Cubism Maid/Chris models are imported Unity Prefabs. Version 2.3 adds
+raw Cubism model construction using the retained `CubismMoc.CreateFrom`,
+`CubismModel.InstantiateFrom` and render/mask controllers in Malody 6.7.
+The higher-level `CubismModel3Json.ToModel` importer is stripped from IL2CPP;
+calling it from the editor SDK would give a misleading successful editor test.
+The version-specific property adapter is isolated in `Cubism67Api.cs`.
 
-The desktop manager includes a Live2D workspace. It can import a model directory
-or ZIP into the editable theme `live2d` directory, add existing compatible motion
-files (`.motion3.json`, `.mtn`, `.bytes`, `.anim`), and replace an existing texture.
+The workspace discovers `.model3.json` recursively, verifies moc3 and texture
+dependencies (including references containing backslashes), and stores imports
+under distinct model directories. `live2dRoot/replacement.json` binds a full
+relative model path and idle/tap motion paths to `displayed-character`. Imports
+validate before staging and replacing an existing model directory. External
+motions are offered for assignment without modifying the game's Animator.
+The original character must already have been instantiated by
+`WidgetLive2dControl`; the loader reads its visual fields, never selects a
+character or touches ownership. It constructs and fits a sibling visual, then
+hides original renderers only after successful creation. Reload/restore destroys
+the replacement before releasing moc/textures and restores renderer visibility.
+The existing pointer-click handler continues running; a postfix triggers only
+the replacement's visual animation. No gameplay input hooks are added.
+
+Motion3 linear, Bezier (with time inversion), stepped and inverse-stepped curves
+drive parameters, part opacity and model opacity; idle loops and tap fades back
+to idle. Foreign controller scripts, audio, expression controllers and physics
+JSON are not executed/imported by this path. These files may remain available
+for authoring, but playback does not promise their original app's behavior.
+Legacy replacements still use the original Resources paths. A compatible
+AssetBundle remains the extension path for complete Unity prefabs/controllers.
+`ThemeLoader/live2d-status.json` records waiting/applied/error for the manager;
+this output is outside the watched themes subtree to prevent reload loops.
 Importing a ZIP with duplicate normalized entries uses the last entry, which
 matches ordinary overwrite semantics and handles Unicode Live2D archives.
 

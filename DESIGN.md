@@ -211,7 +211,7 @@ The sponsor action alone uses the three recorded sponsor colors. `SponsorButton`
 
 **Diagnostic Font:** Cascadia Mono, then Consolas, then Courier New, then the system fallback.
 
-Page titles use `page-title`; the selected theme uses `selected-title`. Body copy and buttons use `body`, while metadata, footer credit and the manager's “外观” label use `label`. Section headings use 11 pt, with local 12 pt maintenance headings. The navigation wordmark uses 13 pt. Theme names and selected navigation are bold. Monospace is reserved for logs, raw JSON and animation filenames. The sun and moon are drawn geometry, not font glyphs or emoji. No custom tracking or fixed line-height system is implemented.
+Page titles use `page-title`; the selected theme uses `selected-title`. Body copy and buttons use `body`, while metadata, footer credit and the manager's “外观” label use `label`. Section headings use 11 pt, with local 12 pt maintenance headings. The navigation wordmark uses 13 pt. Theme names and selected navigation are bold. Monospace is reserved for logs and raw JSON; Live2D model and animation lists use the native body face. The sun and moon are drawn geometry, not font glyphs or emoji. No custom tracking or fixed line-height system is implemented.
 
 **The Native Type Rule.** Keep Chinese interface text on the native UI family chain and retain point-based font sizes. System typography is the deliberate choice for this task workspace.
 
@@ -223,7 +223,9 @@ The manager has a fixed navigation width (176 px), a flexible content area and a
 
 The ThemeLoader installer starts at 880 × 720 client pixels with a 760 × 660 minimum window; standalone BepInEx starts at 860 × 680 with a 740 × 620 minimum. The manager starts at 1120 × 800 with a 960 × 700 minimum. Client and minimum window dimensions are distinct. Installer content scrolls independently of bottom actions and its credit-only footer (40 px), which retains the same horizontal and vertical padding.
 
-Current native captures are under `.impeccable/review/toggle-dark` and `toggle-light`. They cover normal and minimum dimensions, manager switching and restoration, and synthetic 150% layout stress. Both installers remain light in either capture set. These captures do not establish physical multi-monitor DPI behavior.
+The Live2D workbench separates a vertically scrolling editor from a fixed action-and-status area (96 px). The editor constrains its content width to the scroll viewport, imports wrap above the side-by-side model and animation lists, and labeled idle/tap selectors precede three size/position fields. Receiving focus in the theme, motion or numeric editors requests scrolling that control into view. The fixed action row has an explicit height so wrapping measurement cannot consume the editor.
+
+Current native captures are under `.impeccable/review/live2d-dark` and `live2d-light`. They cover normal and minimum dimensions, manager switching and restoration, plus synthetic 150% layout stress. The `manager-live2d-minimum-fields.png` and `manager-scale150-fields.png` captures show the editor after scrolling to its assignment fields. The current top and scrolled states keep the theme selector and assignment fields inside their viewport while actions remain fixed. Both installers remain light in either capture set. These captures do not establish physical multi-monitor DPI behavior.
 
 ## Elevation & Depth
 
@@ -244,6 +246,8 @@ Pressed states follow each variant: deeper blue for primary, deeper red for dest
 ### Inputs and navigation
 
 Path and search fields remain native text boxes. A persistent “搜索主题” label identifies search independently of its name/author placeholder. Navigation contains four destinations: 主题库, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
+
+`ChoiceBox` retains the native ComboBox dropdown, selection, keyboard handling and accessibility. It paints the rectangular closed field with working surface, primary ink and a fine rule; focus changes the rule to readable accent and disabled text becomes secondary ink. The chevron is drawn geometry. Dropdown options use working surface and primary ink, with soft selection blue and readable accent for selection, ellipsis for long text and the native focus rectangle. Live2D theme, motion and texture choices use this component, including in palette-aware dialogs. It adds no new palette or motion treatment.
 
 ### Theme library and preview
 
@@ -267,7 +271,11 @@ Both installers initialize light appearance before creating palette-dependent co
 
 ### Live2D and operation feedback
 
-The Live2D page uses concise task copy: “管理当前主题的模型、动画和纹理。” Model and animation lists sit above wrapping import and replacement actions. Status text reports selection, completion or errors; detailed format limits stay in developer documentation. The image picker describes GIF handling as “GIF 首帧”.
+“Live2D 工作台” starts with a persistently labeled editable-theme choice, then wrapping actions for importing a model directory or ZIP, importing animation and replacing texture. Recursive discovery supplies the model list; the neighboring animation list follows the selected model. A concise model summary reports its name, texture count and animation count. Legacy selections retain file replacement actions and disable the Cubism binding fields.
+
+The binding editor labels looping idle motion and tap motion that returns to idle, then exposes size, horizontal position and vertical position as percentages. “保存并应用模型” is the primary fixed-footer action and “恢复游戏模型” is secondary. Saving records the model, motion choices and fitting values, enables real-time reload and activates that theme. Restore removes the replacement binding. Actions are enabled according to the selected theme and model rather than presented as universally available.
+
+The local status distinguishes unapplied edits, saved configuration, waiting for the game, loader-version guidance and a runtime loading error. A saved configuration is not presented as a loaded model: runtime feedback must match the theme and model and be no older than the binding. Detailed format limits stay in developer documentation. The texture picker describes GIF handling as “GIF 首帧”.
 
 Installers pair directory/environment diagnosis, a read-only log, operation feedback and stable bottom actions. Busy operations disable conflicting actions and prevent closing; completed or failed operations restore valid actions. The manager reports results in its bottom band. Destructive tasks remain under maintenance and use confirmation dialogs.
 

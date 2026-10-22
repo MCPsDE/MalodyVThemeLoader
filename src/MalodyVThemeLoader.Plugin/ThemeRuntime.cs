@@ -17,6 +17,7 @@ internal sealed class ThemeRuntime
     public FontReplacementService Fonts { get; }
     public ThemeVideoService Videos { get; }
     public SceneThemeApplier Applier { get; }
+    public Live2dReplacementService Live2d { get; }
     public ThemeRescanScheduler? Scheduler { get; set; }
 
     private ThemeRuntime(
@@ -32,6 +33,7 @@ internal sealed class ThemeRuntime
         Fonts = new FontReplacementService(log, theme);
         Videos = new ThemeVideoService(log, Assets);
         Applier = new SceneThemeApplier(log, Assets, Fonts, Videos);
+        Live2d = new Live2dReplacementService(log, theme);
     }
 
     public static ThemeRuntime Create(ManualLogSource log)

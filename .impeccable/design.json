@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-22T00:54:56.2783145+00:00",
+  "generatedAt": "2026-10-22T04:52:31.7542149Z",
   "title": "Design System: Malody V ThemeLoader",
   "extensions": {
     "colorMeta": {
@@ -158,6 +158,13 @@
     "breakpoints": []
   },
   "components": [
+    {
+      "name": "Native ChoiceBox",
+      "kind": "input",
+      "description": "Paired illustrations of the shared native ChoiceBox closed field and dropdown options, sourced from ChoiceBox.cs and the existing AppVisuals palette. Focus changes the field rule to readable accent; disabled text uses muted ink. Native WinForms owns dropdown operation, keys, accessibility, metrics and scrolling; this static HTML specimen is not a replacement control or DPI evidence.",
+      "html": "<div class=\"ds-choice-dark\" aria-label=\"暗黑模式\"><label class=\"ds-choice-label\">待机动画 · 循环</label><button class=\"ds-choice-field\" role=\"combobox\" aria-label=\"待机动画\" aria-expanded=\"false\"><span>Idle · motion01.motion3.json</span><svg viewBox=\"0 0 16 12\" aria-hidden=\"true\"><path d=\"M4 4l4 4 4-4\"/></svg></button><div class=\"ds-choice-options\" role=\"listbox\" aria-label=\"待机动画选项示例\"><div role=\"option\" aria-selected=\"true\" tabindex=\"0\">Idle · motion01.motion3.json</div><div role=\"option\" aria-selected=\"false\" tabindex=\"0\">不播放动画</div></div></div><div class=\"ds-choice-light\" aria-label=\"亮色模式\"><label class=\"ds-choice-label\">待机动画 · 循环</label><button class=\"ds-choice-field\" role=\"combobox\" aria-label=\"待机动画\" aria-expanded=\"false\"><span>Idle · motion01.motion3.json</span><svg viewBox=\"0 0 16 12\" aria-hidden=\"true\"><path d=\"M4 4l4 4 4-4\"/></svg></button><div class=\"ds-choice-options\" role=\"listbox\" aria-label=\"待机动画选项示例\"><div role=\"option\" aria-selected=\"true\" tabindex=\"0\">Idle · motion01.motion3.json</div><div role=\"option\" aria-selected=\"false\" tabindex=\"0\">不播放动画</div></div></div>",
+      "css": ".ds-choice-dark,.ds-choice-light{padding:12px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-choice-dark{background:#181818;--ds-choice-surface:#202020;--ds-choice-ink:#F5F5F5;--ds-choice-muted:#B8B8B8;--ds-choice-line:#444444;--ds-choice-accent:#69AFED;--ds-choice-selected:#1B3448;}.ds-choice-light{background:#F5F5F5;--ds-choice-surface:#FFFFFF;--ds-choice-ink:#242424;--ds-choice-muted:#616161;--ds-choice-line:#E1E1E1;--ds-choice-accent:#0F6CBD;--ds-choice-selected:#E5F1FB;}.ds-choice-label{display:block;margin-bottom:4px;color:var(--ds-choice-ink);font-size:9pt;}.ds-choice-field{display:flex;align-items:center;justify-content:space-between;width:100%;padding:5px 10px 5px 8px;border:1px solid var(--ds-choice-line);border-radius:0;background:var(--ds-choice-surface);color:var(--ds-choice-ink);font:inherit;text-align:left;}.ds-choice-field span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.ds-choice-field svg{flex:none;width:16px;height:12px;margin-left:14px;fill:none;stroke:currentColor;stroke-width:1.5;}.ds-choice-field:hover,.ds-choice-field:active{background:var(--ds-choice-surface);}.ds-choice-field:focus-visible{border-color:var(--ds-choice-accent);outline:none;}.ds-choice-field:disabled{color:var(--ds-choice-muted);}.ds-choice-options{margin-top:8px;background:var(--ds-choice-surface);color:var(--ds-choice-ink);}.ds-choice-options [role=option]{min-height:25px;padding:0 6px;display:flex;align-items:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.ds-choice-options [aria-selected=true]{background:var(--ds-choice-selected);color:var(--ds-choice-accent);}.ds-choice-options [role=option]:focus-visible{outline:1px dotted currentColor;outline-offset:-1px;}"
+    },
     {
       "name": "Primary action",
       "kind": "button",

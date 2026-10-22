@@ -93,7 +93,9 @@ The bundled catalog maps that logical ID to runtime matching information:
 
 Legacy Live2D file hooks may redirect expected `Resources` paths to a theme
 file. Cubism support initially replaces textures on instantiated renderers.
-Complete Cubism prefab replacement requires a compatible AssetBundle.
+Raw Cubism models may use the retained model/render factories through the
+version-specific adapter, bound to an already-instantiated character. Complete
+Unity prefab/controller replacement requires a compatible AssetBundle.
 
 ## Default Theme
 

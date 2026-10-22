@@ -103,6 +103,15 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        if (runtime == null) return;
+        // CubismModel.Update reads its previous native parameter buffer. Write
+        // animation values afterwards, before its PreLateUpdate model tick.
+        try { runtime.Live2d.Tick(); }
+        catch (Exception e) { runtime.Log.LogWarning($"Live2D update failed: {e.Message}"); }
+    }
+
     private void CheckActiveScene()
     {
         var sceneName = SceneManager.GetActiveScene().name;
@@ -310,6 +319,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         try
         {
             previous?.Videos.StopAll();
+            previous?.Live2d.Dispose();
             ThemeReplacementRegistry.RestoreAll(currentLog);
 
             var next = ThemeRuntime.Create(currentLog);

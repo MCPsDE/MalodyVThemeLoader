@@ -66,10 +66,16 @@ public static class AppAppearance
         if (color.A == 0) return color;
         if (color.ToArgb() == from.Ink.ToArgb()) return to.Ink;
         if (color.ToArgb() == from.MutedInk.ToArgb()) return to.MutedInk;
-        if (color.ToArgb() == from.Canvas.ToArgb()) return to.Canvas;
-        if (color.ToArgb() == from.Surface.ToArgb()) return to.Surface;
-        if (color.ToArgb() == from.SurfaceAlt.ToArgb()) return to.SurfaceAlt;
-        if (color.ToArgb() == from.Line.ToArgb()) return to.Line;
+        // NumericUpDown propagates its new text color to its native child before
+        // recursion reaches that child. Do not reinterpret that text as a
+        // background token (dark ink and light canvas share #F5F5F5).
+        if (!foreground)
+        {
+            if (color.ToArgb() == from.Canvas.ToArgb()) return to.Canvas;
+            if (color.ToArgb() == from.Surface.ToArgb()) return to.Surface;
+            if (color.ToArgb() == from.SurfaceAlt.ToArgb()) return to.SurfaceAlt;
+            if (color.ToArgb() == from.Line.ToArgb()) return to.Line;
+        }
         if (color.ToArgb() == from.Accent.ToArgb()) return to.Accent;
         if (color.ToArgb() == from.AccentSoft.ToArgb()) return to.AccentSoft;
         if (color.ToArgb() == from.Danger.ToArgb()) return to.Danger;

@@ -70,6 +70,10 @@
       <HintPath>..\..\generated\game-libs\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>..\..\generated\game-libs\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
       <HintPath>..\..\generated\game-libs\UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>false</Private>

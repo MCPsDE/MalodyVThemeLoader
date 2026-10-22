@@ -58,3 +58,17 @@
 - 用户明确要求统一输出 `artifacts/release`，不能再因旧文件被锁另建版本文件夹。发布脚本只覆盖当前版本，保留旧安装器，单独重建 Default 并只为当前版本写校验值。
 - 管理器外观必须用左太阳、右月亮的直接切换控件，不能用原生 ComboBox 代替。两个安装器固定亮色，只有作者署名，不显示外观或赞助操作。
 - C# 字段初始化早于构造函数体；安装器若先创建暗色控件再强制亮色，会留下混合配色。彩色字段在设置亮色之后创建；安装器的进程内覆盖不写管理器偏好。
+- 外部 `.model3.json` 复制到 `live2d/models` 不代表游戏会加载它。必须保存完整模型路径、目标和动画绑定，并在运行时真正创建网格；仅启用主题或重启无法补上缺失的加载逻辑。
+- Unity 源工程中的 `CubismModel3Json.ToModel` 在发行版 IL2CPP 中已裁剪。先检查实际 interop 程序集；2.3 使用保留的 moc/model 工厂和渲染接口。混淆后的属性集中在 6.7 适配层，未知游戏版本保留原模型。
+- 外部动画引用可混用 `motion\\file.motion3.json` 与 `/`；按模型 JSON 所在目录解析，再保存主题 live2dRoot 的相对路径。不能按纹理或动画 basename 绑定。
+- 只列动画文件或复制 motion3 并不会让动画播放。导入动作必须进入待机/点击选择器，保存绑定后由渲染模型的参数驱动；Murasame 的 PartOpacity 和 Model/Opacity 曲线也要处理。
+- WinForms ComboBox 在暗色下即便设置 BackColor、FlatStyle 仍会出现白色原生外壳。使用保留原生键盘/无障碍的 ChoiceBox，自绘关闭态、箭头和下拉选项；同时验证 DrawToBitmap 和明暗切换。
+- 固定在页面底部的操作区不要通过 FlowLayoutPanel AutoSize 测高，否则初次宽度不足的换行会虚报高度并挤掉编辑区。固定操作行高，内容独立滚动。
+- Unity 编辑器验证脚本在 Assembly-CSharp-Editor 中，不能直接调用 Assembly-CSharp 的 internal 工厂。测试副本显式添加 InternalsVisibleTo；不要为了测试改变发行接口或修改只读源工程。
+- Cubism 渲染器使用双缓冲；第一次 ForceUpdateNow 后排序标记还没应用，遮罩也需要注册到 mask texture。初始模型就绪前刷新两次并初始化遮罩，实际渲染截图检查刘海和前后层级，不能以“有像素”作为唯一通过条件。
+- 动画参数在普通 Update 写入可能被 CubismModel.Update 从上一帧原生缓冲读回覆盖。放在 LateUpdate，确保晚于读回、早于 Cubism 的 PreLateUpdate 模型计算。隐藏原模型使用 forceRenderingOff 并恢复旧值，避免 SDK 自行重置 enabled 后再次显示。
+- TableLayoutPanel 只有 ColumnCount=1、没有百分比 ColumnStyle 时，DPI/尺寸变化会让列按旧子控件的首选宽度撑开。显式设 100% 列宽，并检查滚动区域自身也完整位于页面内；只检查字段在滚动区域内部会漏掉整块区域超出窗口的问题。
+- 多层 TableLayoutPanel 内的 NumericUpDown 焦点切换不会总是自动滚入视野；编辑字段的 Enter 显式调用 ScrollControlIntoView，测试滚动后 Tab 从待机到点击再到尺寸输入。
+- 明暗切换递归遍历时，NumericUpDown 会先把新文字色传给内部编辑框。不能再次把这个文字色解释成背景 token（暗色文字和亮色画布同为 #F5F5F5），颜色转换需要区分前景和背景。
+- 插件目标是 .NET 6，SHA256.HashData(Stream) 重载不可用；流式哈希使用 SHA256.Create().ComputeHash(stream)。测试工程编译器版本较新并不意味着插件运行时 API 也较新。
+- 工具策略曾拒绝一条合并截图批量清理与构建的 PowerShell 命令，仅返回 blocked by policy，未说明细分原因。构建与验证改为独立调用即可继续；交付不要依赖可选清理成功，也不要把这类拒绝误报成代码构建失败。

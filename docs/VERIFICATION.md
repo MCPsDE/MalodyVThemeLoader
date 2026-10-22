@@ -41,7 +41,19 @@
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
-本次版本：[v2.2.2](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.2.2)。
+本次版本：[v2.3.0](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.3.0)。
+
+## 2.3 外部 Cubism 模型与动画
+
+实际 Murasame 主题已经启用 realtime，但旧日志的 Live2D overrides 为 0：原工具仅复制模型目录，既无目标绑定也无原始 Cubism 模型创建流程。2.3 增加 `replacement.json`、原生 moc/model/render 工厂、遮罩和待机/点击动作驱动。严格匹配已验证 GameAssembly SHA-256；更换游戏版本时保留原模型并返回状态。
+
+`test-live2d.ps1` 使用只读外部样本的副本，验证递归发现、12 个动作、反斜杠引用、四种插值、中文动作导入、重复覆盖、缺失依赖保留旧模型、自定义 live2dRoot、绑定失败回滚、实际窗体 Apply/Restore、主题/实时模式激活，以及旧插件更新提示和运行状态反馈。
+
+`test-live2d-render.ps1` 在 artifacts 内独立 Unity 2022.3.62f3 工程中使用同一模型工厂与原游戏 Cubism SDK 副本。Murasame 渲染结果为 86 个网格、72 个参数；生产曲线计算器采样的待机和点击动作产生不同画面。实际打开截图核对层级及刘海遮罩。外部模型、美术和该测试工程均未加入发布包或源码仓库。
+
+这不是已安装 IL2CPP 游戏中的端到端运行验证：编辑器测试使用对应公开 SDK 属性，发行插件编译验证了生成 interop 的适配接口；真实游戏需要更新后重启一次。未操作原游戏进程或更改玩家目录。外部应用的物理、表情控制器和音频不在当前原始模型播放路径内。
+
+界面检查覆盖明暗、正常/最小窗口、模拟 150% 布局，以及滚动与 Tab 到达动画及尺寸字段。捕获脚本断言字段和滚动区域都在实际父视口内。真实物理显示器 DPI 切换仍未验证。证据见 `.impeccable/review/live2d-dark` 和 `live2d-light`；独立复核与文档交接记录位于同级报告。
 
 ## Fluent 2 视觉复核
 

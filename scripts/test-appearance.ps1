@@ -66,7 +66,12 @@ try {
     $selector.PerformClick()
     [Windows.Forms.Application]::DoEvents()
     $restoredColors = @($controls | ForEach-Object { "$($_.BackColor.ToArgb()):$($_.ForeColor.ToArgb())" })
-    if (Compare-Object $darkColors $restoredColors -SyncWindow 0) { throw 'Dark/light round trip changed control color roles.' }
+    if (Compare-Object $darkColors $restoredColors -SyncWindow 0) {
+        for ($i = 0; $i -lt $controls.Count; $i++) {
+            if ($darkColors[$i] -ne $restoredColors[$i]) { Write-Output "$($controls[$i].GetType().FullName): $($darkColors[$i]) -> $($restoredColors[$i])" }
+        }
+        throw 'Dark/light round trip changed control color roles.'
+    }
     $formType.GetMethod('Navigate',[Reflection.BindingFlags]'Instance,NonPublic').Invoke($form,[object[]]@('live2d')) | Out-Null
     if ((Field 'live2dImportAnimation').Enabled) { throw 'Animation import is enabled without a selected model.' }
     if ($controls | Where-Object { $_.Text -match 'Live2D rig|凭空生成|参数绑定|只能导入已有兼容格式' }) { throw 'Removed implementation explanation still appears in the UI.' }

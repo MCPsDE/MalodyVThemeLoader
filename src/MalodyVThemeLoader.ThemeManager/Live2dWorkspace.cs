@@ -7,11 +7,6 @@ namespace MalodyVThemeLoader.ThemeManager;
 
 internal static class Live2dWorkspace
 {
-    private static readonly HashSet<string> ModelMarkers = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".model3.json", ".moc3", ".moc.bytes", ".json", ".mtn.bytes", ".motion3.json", ".anim"
-    };
-
     public static string EnsureEditableDirectory(ThemeItem item)
     {
         if (item.IsVirtual)
@@ -43,11 +38,13 @@ internal static class Live2dWorkspace
     {
         var root = GetLive2dRoot(item, false);
         if (root is null) return Array.Empty<string>();
-        return Directory.EnumerateDirectories(root, "*", SearchOption.TopDirectoryOnly)
-            .Where(path => ContainsModelFiles(path))
-            .Select(path => Path.GetFileName(path))
-            .OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        var cubism = Directory.EnumerateFiles(root, "*.model3.json", SearchOption.AllDirectories)
+            .Select(path => PathRules.NormalizeLogicalPath(Path.GetRelativePath(root, path)));
+        var legacy = Directory.EnumerateDirectories(root).Where(path =>
+            Directory.EnumerateFiles(path, "*.moc.bytes", SearchOption.AllDirectories).Any())
+            .Select(Path.GetFileName).OfType<string>();
+        return cubism.Concat(legacy).OrderBy(value => value.StartsWith("models/", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(value => value, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
     public static IReadOnlyList<string> GetTexturePaths(ThemeItem item)
@@ -68,6 +65,7 @@ internal static class Live2dWorkspace
         var root = GetLive2dRoot(item, false);
         if (root is null) return Array.Empty<string>();
         var modelRoot = PathRules.GetSafeCombinedPath(root, model);
+        if (model.EndsWith(".model3.json", StringComparison.OrdinalIgnoreCase)) modelRoot = Path.GetDirectoryName(modelRoot)!;
         if (!Directory.Exists(modelRoot)) return Array.Empty<string>();
         return Directory.EnumerateFiles(modelRoot, "*", SearchOption.AllDirectories)
             .Where(IsAnimation)
@@ -85,8 +83,7 @@ internal static class Live2dWorkspace
         var copyRoot = Directory.Exists(Path.Combine(source, "live2d"))
             ? Path.Combine(source, "live2d")
             : source;
-        CopyDirectoryWithoutLinks(copyRoot, destinationRoot);
-        return destinationRoot;
+        return ImportModelFiles(copyRoot, destinationRoot);
     }
 
     public static string ImportArchive(ThemeItem item, string archivePath)
@@ -100,8 +97,7 @@ internal static class Live2dWorkspace
                 ? Path.Combine(staging, "live2d")
                 : staging;
             var destinationRoot = EnsureLive2dRoot(themeRoot);
-            CopyDirectoryWithoutLinks(source, destinationRoot);
-            return destinationRoot;
+            return ImportModelFiles(source, destinationRoot);
         }
         finally { DeleteDirectory(staging); }
     }
@@ -109,14 +105,95 @@ internal static class Live2dWorkspace
     public static void ImportAnimations(ThemeItem item, string model, IEnumerable<string> paths)
     {
         var themeRoot = EnsureEditableDirectory(item);
-        var modelRoot = PathRules.GetSafeCombinedPath(
-            EnsureLive2dRoot(themeRoot), model);
+        var modelRoot = PathRules.GetSafeCombinedPath(EnsureLive2dRoot(themeRoot), model);
+        if (model.EndsWith(".model3.json", StringComparison.OrdinalIgnoreCase))
+            modelRoot = Path.Combine(Path.GetDirectoryName(modelRoot)!, "motions-imported");
         Directory.CreateDirectory(modelRoot);
         foreach (var path in paths)
         {
             if (!IsAnimation(path)) throw new InvalidDataException($"不是支持的 Live2D 动画文件：{path}");
-            File.Copy(path, Path.Combine(modelRoot, Path.GetFileName(path)), true);
+            if (model.EndsWith(".model3.json", StringComparison.OrdinalIgnoreCase)) CubismMotion.Read(path);
+            var destination = Path.Combine(modelRoot, Path.GetFileName(path));
+            if (!Path.GetFullPath(path).Equals(destination, StringComparison.OrdinalIgnoreCase)) File.Copy(path, destination, true);
         }
+    }
+
+    public static Live2dBinding? GetBinding(ThemeItem item)
+    {
+        var root = GetLive2dRoot(item, false);
+        var file = root is null ? "" : Path.Combine(root, Live2dModelDocument.BindingFile);
+        return File.Exists(file) ? JsonSerializer.Deserialize<Live2dBinding>(File.ReadAllText(file), JsonDefaults.Options) : null;
+    }
+
+    public static Live2dModelDocument ReadModel(ThemeItem item, string model) =>
+        Live2dModelDocument.Read(GetLive2dRoot(item, false) ?? throw new InvalidOperationException("请先选择主题。"), model);
+
+    public static IReadOnlyList<Live2dMotionReference> GetMotionChoices(ThemeItem item, string model)
+    {
+        var document = ReadModel(item, model);
+        var root = GetLive2dRoot(item, false)!;
+        var directory = Path.GetDirectoryName(Live2dModelDocument.Resolve(root, model))!;
+        var references = document.Motions.ToList();
+        foreach (var file in Directory.EnumerateFiles(directory, "*.motion3.json", SearchOption.AllDirectories))
+        {
+            var relative = PathRules.NormalizeLogicalPath(Path.GetRelativePath(root, file));
+            if (!references.Any(value => value.File.Equals(relative, StringComparison.OrdinalIgnoreCase)))
+                references.Add(new Live2dMotionReference { Group = "导入动画", File = relative });
+        }
+        return references;
+    }
+
+    public static void SaveBinding(ThemeItem item, Live2dBinding binding)
+    {
+        var root = EnsureLive2dRoot(EnsureEditableDirectory(item));
+        var document = Live2dModelDocument.Read(root, binding.Model);
+        document.ValidateBinding(root, binding);
+        var file = Path.Combine(root, Live2dModelDocument.BindingFile);
+        File.WriteAllText(file + ".tmp", JsonSerializer.Serialize(binding, JsonDefaults.Options));
+        File.Move(file + ".tmp", file, true);
+    }
+
+    public static void RemoveBinding(ThemeItem item)
+    {
+        var root = GetLive2dRoot(item, false);
+        if (root != null) File.Delete(Path.Combine(root, Live2dModelDocument.BindingFile));
+    }
+
+    private static string ImportModelFiles(string source, string root)
+    {
+        var models = Directory.EnumerateFiles(source, "*.model3.json", SearchOption.AllDirectories).ToArray();
+        if (models.Length == 0) throw new InvalidDataException("没有找到 .model3.json，请选择包含模型及纹理的目录。");
+        // Validate every dependency before touching an existing model. Keep each
+        // model's parent folder so two texture_00.png files never collide.
+        foreach (var file in models)
+            Live2dModelDocument.Read(source, Path.GetRelativePath(source, file));
+        string? firstImported = null;
+        foreach (var directory in models.Select(Path.GetDirectoryName).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var name = directory.Equals(source, StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileName(models.First(file => Path.GetDirectoryName(file) == directory)).Replace(".model3.json", "", StringComparison.OrdinalIgnoreCase)
+                : Path.GetRelativePath(source, directory);
+            var destination = Path.Combine(root, "models", name);
+            firstImported ??= PathRules.NormalizeLogicalPath(Path.GetRelativePath(root,
+                Path.Combine(destination, Path.GetFileName(models.First(file => Path.GetDirectoryName(file) == directory)))));
+            if (Path.GetFullPath(source).Equals(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase)
+                || Path.GetFullPath(source).StartsWith(Path.GetFullPath(root).TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)
+                || Path.GetFullPath(root).StartsWith(Path.GetFullPath(source).TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("模型已经在当前主题内，请直接选择它并应用。");
+            var staging = destination + ".new-" + Guid.NewGuid().ToString("N");
+            var backup = destination + ".backup-" + Guid.NewGuid().ToString("N");
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            try
+            {
+                CopyDirectoryWithoutLinks(directory, staging);
+                if (Directory.Exists(destination)) Directory.Move(destination, backup);
+                try { Directory.Move(staging, destination); }
+                catch { if (Directory.Exists(backup)) Directory.Move(backup, destination); throw; }
+                DeleteDirectory(backup);
+            }
+            finally { DeleteDirectory(staging); }
+        }
+        return firstImported!;
     }
 
     public static void ImportImageOrGif(ThemeItem item, string sourcePath, string targetRelativePath)
@@ -143,7 +220,7 @@ internal static class Live2dWorkspace
     {
         var root = EnsureEditableDirectoryIfPossible(item);
         if (root is null) return null;
-        var live2d = PathRules.GetSafeCombinedPath(root, "live2d");
+        var live2d = PathRules.GetSafeCombinedPath(root, item.Info?.Manifest.Live2dRoot ?? "live2d");
         if (create) Directory.CreateDirectory(live2d);
         return live2d;
     }
@@ -153,20 +230,16 @@ internal static class Live2dWorkspace
         if (item.IsVirtual) return null;
         return item.IsLegacyDirectory
             ? item.SourcePath
-            : EnsureEditableDirectory(item);
+            : null;
     }
 
     private static string EnsureLive2dRoot(string themeRoot)
     {
-        var root = PathRules.GetSafeCombinedPath(themeRoot, "live2d");
+        var manifest = JsonSerializer.Deserialize<ThemeManifest>(File.ReadAllText(Path.Combine(themeRoot, "theme.json")), JsonDefaults.Options);
+        var root = PathRules.GetSafeCombinedPath(themeRoot, manifest?.Live2dRoot ?? "live2d");
         Directory.CreateDirectory(root);
         return root;
     }
-
-    private static bool ContainsModelFiles(string directory) =>
-        Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
-            .Any(path => ModelMarkers.Any(marker =>
-                path.EndsWith(marker, StringComparison.OrdinalIgnoreCase)));
 
     private static bool IsAnimation(string path)
     {

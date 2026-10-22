@@ -12,6 +12,16 @@ using UnityEngine.UI;
 
 namespace MalodyVThemeLoader.Plugin;
 
+[HarmonyPatch(typeof(Malody.Scene.Widget.WidgetLive2dControl), "OnPointerClick")]
+internal static class Live2dVisualClickPatch
+{
+    private static void Postfix(Malody.Scene.Widget.WidgetLive2dControl __instance, UnityEngine.EventSystems.PointerEventData eventData)
+    {
+        if (eventData.button == UnityEngine.EventSystems.PointerEventData.InputButton.Left)
+            ThemeRuntime.Current?.Live2d.PlayTap(__instance);
+    }
+}
+
 [HarmonyPatch(typeof(UIGlobal), nameof(UIGlobal.GetSprite))]
 internal static class UiGlobalGetSpritePatch
 {

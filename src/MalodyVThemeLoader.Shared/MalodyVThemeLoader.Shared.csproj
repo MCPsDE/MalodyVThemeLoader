@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="6.0.10" />
     <PackageReference Include="NVorbis" Version="0.10.5" />
+    <PackageReference Include="NLayer" Version="1.16.0" />
   </ItemGroup>
 
 </Project>

@@ -476,3 +476,27 @@ pwsh -NoProfile -File scripts/test-appearance.ps1 -Phase Installers
 Release builds use `artifacts/release` by default. They preserve older installer
 executables that may still be open, overwrite the current version, and reset only
 the generated Default directory. SHA256SUMS lists the current installer and README.
+
+## 18. Resource authoring and UI audio
+
+See [RESOURCE_AUTHORING.md](RESOURCE_AUTHORING.md) for the scene/control image
+rules, slice order, audio event allowlist, theme directory layout and validation.
+`ThemeResources` preserves format-version-1 packages and writes `resources.json`
+atomically. The optional manifest `audioRoot` defaults to `audio`. The builder
+resolves the actual nine serialized SoundManager slots and result-music source,
+copies the original bytes into Default, and records direct scene image usages.
+Catalog usage listings do not claim to exhaust dynamically instantiated prefabs.
+
+Image clones retain original-asset provenance, preserve pivot/PPU, and cache
+by file and border. Only component scans choose scene/control rules; global
+atlas lookups remain global. Explicit image rules override a legacy global
+video sidecar. Reload stops audio/video/models, restores component references
+and draw types, then destroys old image caches before loading the next theme.
+
+Only SoundManager's UI presentation methods are patched. AudioSource and clips
+belong to ThemeLoader, use UI-effect volume and stop at gameplay boundaries;
+no chart, hit-sound, preview or library-music engine is intercepted. The unique
+instance float getter supplies effect volume through the version adapter.
+The release interop check verifies that getter, the nine enum values and all
+three audio Harmony targets. NVorbis and NLayer ship beside the plugin, with
+full license texts in the offline documentation.

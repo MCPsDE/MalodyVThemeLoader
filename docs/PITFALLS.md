@@ -89,3 +89,14 @@
 - 音频按完整 motion 相对路径绑定，不按动作组/部位名称绑定。同一动作复用时共用音频，新动作停止上一段；游戏播放使用加载器自己的 AudioSource，不能控制游戏 SoundManager 或全局音量。
 - 插件项目默认不会复制所有传递 NuGet 运行依赖；启用 CopyLocalLockFileAssemblies，并将 NVorbis.dll 加进离线 payload 和完整性检查，否则编辑器能解码 OGG，游戏插件却会缺程序集。SkiaSharp 原生依赖随管理器单文件自解压，原游戏 Cubism Core 只从所选游戏目录加载。
 - 只读验证期间用户仍可能运行游戏。Emiria 的 Config 保存逻辑会写 config.json，已安装旧插件也会写 ThemeLoader/live2d-status.json（本次状态版本仍为 2.3.1）；它们不是稳定程序资源。完整差异必须保留，VerifyStable 仅精确排除这些已确认的运行数据，不排除整个 ThemeLoader 目录，也不回滚用户设置。
+- 场景独立图片不能只在 UIGlobal.GetSprite 中按活动场景返回：调用者可能缓存并复用同一 Sprite。图集钩子只做全局替换，组件应用时使用对象所属场景、完整控件路径和组件类型；每个替换 Sprite 保留原图来源，缓存键包含文件、切片和原图形状。
+- Unity Image.overrideSprite 的 getter 在没有显式覆盖时也返回 activeSprite。用它备份后再恢复，会把普通 sprite 意外固定成 override。备份和检查显式覆盖应使用实际 interop 的 m_OverrideSprite，同时恢复 Image.type / SpriteRenderer.drawMode；销毁旧纹理必须晚于组件还原。
+- 同一 Image 会被游戏重新设置为其他图标；还原清单应更新到最新的原图来源，而不是永久记住首次扫描的图标。替换对象仍需解包回真正原图，不能把上一轮主题图片当原资源。
+- Malody 的 UI 音效由 FMOD 播放，AudioEngineFMOD.CreateAudio 还按 key 缓存；不要通过全局音频工厂替换所有声音。限定 SoundManager 的 UI EffectType 和 SceneResult 的 music_finish，使用加载器独立 AudioSource，并读取已有音效音量。effectVol 在实际 interop 中已混淆，适配器按唯一的实例 float getter 绑定并在发布前校验；不可照抄源工程 Config 类名或私有字段别名。
+- 源音频采用 .ogg.bytes / .mp3.bytes，试听解码需识别复合扩展名。新增 MP3 后，NLayer.dll、许可和离线完整性检查必须同时加入；Default 音频仍逐字节复制源文件，不转换编码。
+- 音频按 UI 事件绑定。Cancel 与 MsgFail 使用同一源文件，但用户仍应能分别替换；目录树和规则不能仅以文件名或源路径合并这两个事件。
+- 明暗 UI 测试即使使用不同主题，也不能共享 active-theme.txt / settings.json。本次并行验证曾因此把亮色测试写到暗色主题；现改为每种外观独立假游戏目录，仅通过 junction 共享只读 Default fixture。
+- Unity Mono 的 netstandard2.1 不提供 File.Move 的覆盖重载。资源渲染测试在 artifacts 中仅为未调用的写入方法做兼容替换；实际 .NET 6 原子保存由桌面编辑器测试覆盖，不能把这个测试适配当成发行逻辑。
+- 原生 TreeView 会按深层路径扩展水平滚动范围，导致窄窗口的文件名被硬裁切。资源树使用 TVS_NOHSCROLL 和带省略号的原生文本自绘，保留层级、提示和键盘行为；文件展示名独立于内容哈希存储路径。
+- 手动输入控件路径不等于读取了该范围。路径/组件类型未提交时必须禁止资源导入与保存，并通过“读取此范围”重新载入文件、边距、模式与预览，否则会把上一范围的状态覆盖到已有控件规则。取消定位保留原草稿，同主题 F5 仅在干净状态重读；ZIP 编辑后要刷新主列表的目录身份。
+- 旧界面的回归脚本可能重写已提交的截图，GPU 和状态文本会造成少量像素差异。若该界面没有修改，只恢复本轮脚本刚生成的那些 PNG，保留真正新功能的捕获和他人文件；不要把无关截图混入发布提交。

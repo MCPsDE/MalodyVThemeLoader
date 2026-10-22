@@ -62,6 +62,7 @@ internal sealed partial class ThemeManagerForm : Form
         var item = SelectedTheme;
         SetPreview(item);
         RefreshLive2d();
+        RefreshResourceThemes();
         if (item?.Info == null)
         {
             nameValue.Text = item?.DisplayName ?? "没有匹配的主题";

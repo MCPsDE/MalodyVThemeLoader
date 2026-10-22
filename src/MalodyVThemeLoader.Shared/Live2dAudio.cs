@@ -17,7 +17,23 @@ public sealed class Live2dAudio
     public static Live2dAudio Decode(string file)
     {
         if (new FileInfo(file).Length > 64L * 1024 * 1024) throw new InvalidDataException("音频文件超过 64 MB。");
-        if (file.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase))
+        var formatPath = file.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase) ? file[..^6] : file;
+        if (formatPath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+        {
+            using var reader = new NLayer.MpegFile(file);
+            CheckFormat(reader.Channels, reader.SampleRate);
+            var decoded = new List<float>(); var block = new float[reader.SampleRate * reader.Channels];
+            int count;
+            while ((count = reader.ReadSamples(block, 0, block.Length)) > 0)
+            {
+                if (decoded.Count + count > MaximumSamples || decoded.Count + count > reader.SampleRate * reader.Channels * MaximumSeconds)
+                    throw new InvalidDataException("音频过长，请缩短音频或降低采样率。");
+                for (var i = 0; i < count; i++) decoded.Add(float.IsFinite(block[i]) ? Math.Clamp(block[i], -1, 1) : 0);
+            }
+            if (decoded.Count == 0) throw new InvalidDataException("音频为空。");
+            return new Live2dAudio { Channels = reader.Channels, SampleRate = reader.SampleRate, Samples = decoded.ToArray() };
+        }
+        if (formatPath.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase))
         {
             using var reader = new VorbisReader(file);
             CheckFormat(reader.Channels, reader.SampleRate);
@@ -33,7 +49,7 @@ public sealed class Live2dAudio
             if (samples.Count == 0) throw new InvalidDataException("音频为空。");
             return new Live2dAudio { Channels = reader.Channels, SampleRate = reader.SampleRate, Samples = samples.ToArray() };
         }
-        if (!file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("请选择 OGG 或 WAV 音频。");
+        if (!formatPath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("请选择 OGG、WAV 或 MP3 音频。");
         using var stream = System.IO.File.OpenRead(file); using var input = new BinaryReader(stream, Encoding.ASCII);
         if (new string(input.ReadChars(4)) != "RIFF") throw new InvalidDataException("WAV 文件无效。");
         input.ReadUInt32(); if (new string(input.ReadChars(4)) != "WAVE") throw new InvalidDataException("WAV 文件无效。");

@@ -61,6 +61,7 @@ internal sealed partial class ThemeManagerForm
         statusLabel.AccessibleName = "操作结果";
         shell.Controls.Add(statusLabel, 1, 1);
         pages["themes"] = BuildThemePage();
+        pages["resources"] = BuildResourcesPage();
         pages["live2d"] = BuildLive2dPage();
         pages["settings"] = BuildSettingsPage();
         pages["maintenance"] = BuildMaintenancePage();
@@ -78,13 +79,14 @@ internal sealed partial class ThemeManagerForm
             await CheckForUpdatesAsync();
         };
         FormClosed += (_, _) => { preview.Image?.Dispose(); };
-        FormClosing += (_,e) => { if (themeOperationBusy) e.Cancel = true; };
+        FormClosing += (_,e) => { if (themeOperationBusy || resourceEditor?.ConfirmLeave() == false) e.Cancel = true; };
         KeyPreview = true;
         KeyDown += (_, e) =>
         {
             if (e.Control && e.KeyCode == Keys.F) { Navigate("themes"); searchBox.Focus(); e.SuppressKeyPress = true; }
             if (e.Control && e.KeyCode == Keys.O) { ImportFromDialog(); e.SuppressKeyPress = true; }
             if (e.KeyCode == Keys.F5) { RefreshThemes(SelectedTheme?.Key); e.SuppressKeyPress = true; }
+            if (e.Control && e.KeyCode == Keys.S && pages["resources"].Visible) { _ = resourceEditor?.SaveAsync(); e.SuppressKeyPress = true; }
         };
         AppAppearance.Initialize(this);
     }
@@ -99,7 +101,7 @@ internal sealed partial class ThemeManagerForm
         var subtitle = AppVisuals.TextBlock("Malody V 主题管理", 9F);
         subtitle.Margin = new Padding(0, 0, 0, 32);
         AppVisuals.AddRow(stack, subtitle);
-        foreach (var (key, text) in new[] { ("themes", "主题库"), ("live2d", "Live2D"), ("settings", "设置"), ("maintenance", "维护") })
+        foreach (var (key, text) in new[] { ("themes", "主题库"), ("resources", "资源编辑"), ("live2d", "Live2D"), ("settings", "设置"), ("maintenance", "维护") })
         {
             var button = AppVisuals.CreateButton(text);
             button.Dock = DockStyle.Top;

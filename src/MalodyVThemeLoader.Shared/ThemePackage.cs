@@ -190,6 +190,7 @@ public static class ThemePackage
         ValidateRoot(manifest.ImageRoot, "imageRoot");
         ValidateRoot(manifest.FontRoot, "fontRoot");
         ValidateRoot(manifest.Live2dRoot, "live2dRoot");
+        ValidateRoot(manifest.AudioRoot, "audioRoot");
     }
 
     private static void ValidateArchive(ZipArchive archive)

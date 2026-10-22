@@ -46,7 +46,10 @@ silently replace it with a newer build.
 
 ## Safety Boundary
 
-ThemeLoader is visual-only. Never patch, call, alter, or bypass:
+ThemeLoader changes presentation only. The user also authorized replacement of
+the nine built-in UI effects and result-screen music. Keep this audio in a
+separate source; do not hook music-library, chart, preview or hit-sound engines.
+Never patch, call, alter, or bypass:
 
 - `Malody.Utils.Guardian` or `GuardianImpl`
 - `Malody.Play.ScoreSubmitter`

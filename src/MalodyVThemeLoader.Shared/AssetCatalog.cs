@@ -8,6 +8,8 @@ public sealed class AssetCatalog
     public string UnityVersion { get; set; } = "";
     public List<ImageCatalogEntry> Images { get; set; } = new();
     public List<FileCatalogEntry> Live2dFiles { get; set; } = new();
+    public List<AudioCatalogEntry> Audio { get; set; } = new();
+    public List<string> Scenes { get; set; } = new();
 }
 
 public sealed class ImageCatalogEntry
@@ -22,6 +24,23 @@ public sealed class ImageCatalogEntry
     public Float4 Border { get; set; } = new(0, 0, 0, 0);
     public float PixelsPerUnit { get; set; } = 100;
     public int MeshType { get; set; }
+    public List<ImageUsage> Usages { get; set; } = new();
+}
+
+public sealed class ImageUsage
+{
+    public string Scene { get; set; } = "";
+    public string Hierarchy { get; set; } = "";
+    public string Component { get; set; } = "Image";
+    public bool Sliced { get; set; }
+}
+
+public sealed class AudioCatalogEntry
+{
+    public string Event { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string LogicalId { get; set; } = "";
+    public string Sha256 { get; set; } = "";
 }
 
 public sealed class FileCatalogEntry

@@ -105,6 +105,16 @@ Live2D 长篇格式/边界说明已从界面移除，技术资料留在开发文
 
 完整快照对比发现：源工程及稳定游戏程序文件没有变化；运行中的游戏自行更新了数据库、回放和 WebView2 缓存。完整差异保存在 `artifacts/reference-changes.json`，`check-reference-inputs.ps1 -Mode VerifyStable` 明确排除这些已观察到的活动数据，并单独验证其余文件。未回滚或编辑玩家运行产生的数据。
 
+## 2.5 资源编辑验证
+
+- Release 构建通过，0 警告、0 错误。实际游戏 interop 的 238 个游戏/Unity 引用、9 个 Cubism 接口、3 个看板钩子、3 个结算显示入口、3 个 UI 音频入口、九个音效枚举及唯一实例音量 getter 校验通过。
+- 源目录生成 1,428 张图片、380 个直接场景使用位置和 10 个 UI 音频事件；Cancel 与 MsgFail 保持独立事件，允许分别替换。
+- `test-resource-editor.ps1` 在独立假游戏目录中通过暗色、亮色验证：目录树、全局/场景/控件文件与切片、手动范围重新读取、取消定位、同主题外部配置重读、ZIP 物化后的主列表目录身份、恢复继承、原子验证失败、OGG/WAV/MP3、静音试听启停、活动主题及实时设置。
+- `test-resource-render.ps1` 在仓库独立 Unity 项目中用发行图片解析代码创建并渲染两个实际切片 Sprite；检查纹理隔离、来源、控件覆盖、border、pivot、PPU、游玩场景排除和缺失/非法资源回退。结果在 `artifacts/resource-render-test/result.json`，图像为 `scene-slices.png`。IL2CPP byte-array 包装及未调用的 Mono 写入重载是测试适配，未改变发行逻辑。
+- 新 UI 的十张捕获位于 `.impeccable/review/resources-dark`、`resources-light`：图片、控件范围、音频、最小窗口和合成 150%。Live2D 模型/动画回归、外观偏好写入、新进程恢复及配色往返通过。
+
+没有在实际安装游戏中端到端运行新功能。音频回归使用静音样本，未验证用户声卡输出；合成缩放未验证物理显示器 DPI 切换；静态位置列表未声称穷举动态 prefab 或提供整场景实时预览。
+
 ## 美术来源
 
 Default 资源来自只读源工程，逐文件哈希验证；界面预览来自主题内真实图片。应用图标 `src/MalodyVThemeLoader.Windows/Assets/mtp.png` 和 `mtp.ico` 为工作区已有文件，本次未修改。没有生成或替换美术资源。

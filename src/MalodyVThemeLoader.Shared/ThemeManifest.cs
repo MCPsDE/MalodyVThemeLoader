@@ -18,6 +18,7 @@ public sealed class ThemeManifest
     public string ImageRoot { get; set; } = "images";
     public string FontRoot { get; set; } = "fonts";
     public string Live2dRoot { get; set; } = "live2d";
+    public string AudioRoot { get; set; } = "audio";
     public List<FontMapping> FontMappings { get; set; } = new();
 }
 

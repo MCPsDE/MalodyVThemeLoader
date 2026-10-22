@@ -227,7 +227,11 @@ The Live2D workbench separates a vertically scrolling editor from a fixed action
 
 The separate animation-and-region editor starts at 1140 × 760 client pixels with a 1000 × 680 minimum window. A two-column layout gives 62% to the model preview and 38% to trigger selection and assignment, separated by a 20 px margin within 24 px outer padding. Motion browsing, “试播” and “重置” sit below the preview. The right column retains a scrolling trigger list above region actions and persistently labeled fields. A fixed footer keeps concise status and the primary “完成绑定” action reachable.
 
+The “资源编辑” page retains the manager shell and puts its labeled theme selector above a three-column work area (24/44/32%). The left column holds labeled search and the image/UI-audio tree; the center holds source/stretch or waveform preview above a source-usage list; the right holds scope, import, playback and slice fields. The right fields scroll independently above a fixed save allocation (54 px), so the primary action remains reachable at minimum size and synthetic scaling. Hierarchy, component and numeric field focus requests scroll-into-view. Native tree scrolling, clipped names with ellipsis and full logical-path tooltips accommodate long resource paths.
+
 Current editor captures are `editor-desktop.png`, `editor-result.png`, `editor-minimum.png` and `editor-scale150.png` under both `.impeccable/review/editor-dark` and `editor-light`. They show actual model artwork, a manually drawn region, bound audio and a selected M3 result trigger, with controls reachable at normal, minimum and synthetic 150% layouts. The earlier `live2d-dark` and `live2d-light` sets retain evidence for the surrounding manager, scrolled workbench fields and fixed-light installers. Synthetic scaling does not establish physical multi-monitor DPI behavior or assistive-technology results.
+
+Resource-editor captures are `resources-images.png`, `resources-minimum.png`, `resources-audio.png`, `resources-scale150.png` and `resources-control.png` in both `.impeccable/review/resources-dark` and `resources-light`. They show existing source artwork, slice editing, a loaded exact-control scope and silent audio fixtures. The documentation evidence and Unity-versus-installed-game limits are recorded in `.impeccable/review/resources-documentation.md`.
 
 ## Elevation & Depth
 
@@ -247,7 +251,7 @@ Pressed states follow each variant: deeper blue for primary, deeper red for dest
 
 ### Inputs and navigation
 
-Path and search fields remain native text boxes. A persistent “搜索主题” label identifies search independently of its name/author placeholder. Navigation contains four destinations: 主题库, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
+Path and search fields remain native text boxes. Persistent “搜索主题” and “搜索资源” labels identify search independently of placeholders. Navigation contains five destinations: 主题库, 资源编辑, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
 
 `ChoiceBox` retains the native ComboBox dropdown, selection, keyboard handling and accessibility. It paints the rectangular closed field with working surface, primary ink and a fine rule; focus changes the rule to readable accent and disabled text becomes secondary ink. The chevron is drawn geometry. Dropdown options use working surface and primary ink, with soft selection blue and readable accent for selection, ellipsis for long text and the native focus rectangle. Live2D theme, motion and texture choices use this component, including in palette-aware dialogs. It adds no new palette or motion treatment.
 
@@ -256,6 +260,16 @@ Path and search fields remain native text boxes. A persistent “搜索主题”
 The owner-drawn native ListBox has 64 px rows, one selected item, no horizontal scrollbar and ellipsis for long text. Each row shows a bold theme name, then active-state text or author/version. Selection uses soft blue and retains keyboard focus. Double-click applies the selected theme.
 
 Real previews preserve aspect ratio against the alternate surface. Missing preview, invalid theme and empty search have distinct messages. With no selection, metadata is suppressed, recovery guidance appears and theme actions are disabled. “查看 theme.json” has a local minimum width (164 px); raw manifests open in a native read-only, scrollable dialog.
+
+### Resource tree, preview and editing
+
+The resource tree groups images by their logical directory paths and lists UI audio by event, keeping separately editable events even when they share a source file. It retains native hierarchy and keyboard selection, uses ellipsis instead of horizontal scrolling, and gives logical paths in tooltips. The selected resource name and import status preserve the author-facing filename; hash-based storage paths remain an implementation detail.
+
+Image previews fit the source and chosen stretch size into their available areas. Both image areas use a fixed mid-gray transparency checker (local rendering values `#666666` and `#808080`, 8 px tiles in a 16 px pattern) in either appearance. This functional alpha backdrop keeps pale borders visible without recoloring the artwork or changing the application palette. Dashed slice guides use the existing accent; four labeled native numeric fields provide the same pixel-margin edits as dragging. Known RawImage targets hide slice controls. Audio previews use the alternate surface, a fine-rule baseline, an accent waveform and duration/sample-rate/channel metadata, with explicit “试听” and “停止” actions.
+
+Persistently labeled scene, hierarchy and component fields establish the loaded image scope. Double-clicking a source usage reads it directly. Manually changing hierarchy or component exposes “读取此范围” and “取消定位”; import, slice editing and save stay disabled until the requested scope is read. Reading reloads that scope's exact or inherited file, mode, margins and preview after resolving any resource draft. Cancelling returns to the loaded scope while preserving its draft. Source usages are a partial authoring aid, not a full scene preview.
+
+The fixed “保存并实时应用” action is enabled when a selected resource has edits and its scope is loaded. Busy operations disable conflicting controls; save-time validation errors retain edits and give concise corrective feedback. “恢复此范围” is enabled only for an exact saved override and removes that override to restore inheritance. Clean same-theme refreshes reload persisted rules; dirty edits remain local. Applying a materialized ZIP refreshes the library's directory identity. Saved/activated status does not certify that the installed game has rendered or played the replacement.
 
 ### Manager footer and appearance
 

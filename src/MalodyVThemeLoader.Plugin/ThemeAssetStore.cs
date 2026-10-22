@@ -6,13 +6,14 @@ using UnityEngine;
 
 namespace MalodyVThemeLoader.Plugin;
 
-internal sealed class ThemeAssetStore
+internal sealed partial class ThemeAssetStore : IDisposable
 {
     private readonly ManualLogSource log;
     private readonly LoadedTheme theme;
     private readonly Dictionary<string, List<ImageCatalogEntry>> imagesByRuntimeName;
     private readonly Dictionary<string, Texture2D> textureCache =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> textureFailures = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Sprite> spriteCache =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, bool> imageOverrideCache =
@@ -31,6 +32,8 @@ internal sealed class ThemeAssetStore
     {
         this.log = log;
         this.theme = theme;
+        try { ResourceRules = ThemeResources.Read(theme.ThemeDirectory); }
+        catch (Exception e) { log.LogWarning($"Invalid resource rules; keeping original scoped assets: {e.Message}"); ResourceRules = new ThemeResources(); }
         imagesByRuntimeName = catalog.Images
             .GroupBy(entry => NormalizeRuntimeName(entry.RuntimeName),
                 StringComparer.OrdinalIgnoreCase)
@@ -70,75 +73,6 @@ internal sealed class ThemeAssetStore
         LogImageOverrideSummary(catalog.Images);
         LogVideoOverrideSummary(catalog.Images);
         LogLive2dOverrideSummary(catalog.Live2dFiles);
-    }
-
-    public Sprite? ResolveSprite(string requestedName, Sprite? original)
-    {
-        var key = NormalizeRuntimeName(requestedName);
-        if (!TryResolveImageEntry(key, original, out var entry, out var filePath))
-        {
-            return null;
-        }
-
-        var cacheKey = entry.LogicalId + "|" + GetSpriteShapeKey(original);
-        if (spriteCache.TryGetValue(cacheKey, out var cached))
-        {
-            if (cached != null)
-            {
-                return cached;
-            }
-
-            spriteCache.Remove(cacheKey);
-        }
-
-        var texture = LoadTexture(filePath, entry.TextureName);
-        if (texture == null)
-        {
-            return null;
-        }
-
-        var width = texture.width;
-        var height = texture.height;
-        var pivot = original != null && original.rect.width > 0 && original.rect.height > 0
-            ? new Vector2(
-                original.pivot.x / original.rect.width,
-                original.pivot.y / original.rect.height)
-            : new Vector2(entry.Pivot.X, entry.Pivot.Y);
-        var border = original != null
-            ? original.border
-            : new Vector4(entry.Border.X, entry.Border.Y, entry.Border.Z, entry.Border.W);
-        var pixelsPerUnit = original != null && original.pixelsPerUnit > 0
-            ? original.pixelsPerUnit
-            : entry.PixelsPerUnit;
-
-        var sprite = Sprite.Create(
-            texture,
-            new Rect(0, 0, width, height),
-            pivot,
-            pixelsPerUnit,
-            0,
-            SpriteMeshType.FullRect,
-            border);
-        sprite.name = original != null ? original.name : entry.RuntimeName;
-        sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
-        spriteCache[cacheKey] = sprite;
-        return sprite;
-    }
-
-    public Texture2D? ResolveTexture(Texture? original)
-    {
-        if (original == null)
-        {
-            return null;
-        }
-
-        var key = NormalizeRuntimeName(original.name);
-        if (!TryResolveImageEntry(key, null, out var entry, out var filePath))
-        {
-            return null;
-        }
-
-        return LoadTexture(filePath, entry.TextureName);
     }
 
     public ThemeVideoReplacement? ResolveVideo(string requestedName, Sprite? original)
@@ -211,68 +145,6 @@ internal sealed class ThemeAssetStore
         }
 
         return null;
-    }
-
-    private bool TryResolveImageEntry(
-        string runtimeName,
-        Sprite? original,
-        out ImageCatalogEntry entry,
-        out string filePath)
-    {
-        entry = null!;
-        filePath = "";
-
-        if (!imagesByRuntimeName.TryGetValue(runtimeName, out var candidates))
-        {
-            return false;
-        }
-
-        var existing = candidates
-            .Select(candidate => new
-            {
-                Entry = candidate,
-                Path = PathRules.GetSafeCombinedPath(theme.ImageDirectory, candidate.LogicalId)
-            })
-            .Where(candidate => IsImageOverride(candidate.Entry, candidate.Path))
-            .ToList();
-        if (existing.Count == 0)
-        {
-            return false;
-        }
-
-        if (candidates.Count == 1)
-        {
-            entry = existing[0].Entry;
-            filePath = existing[0].Path;
-            return true;
-        }
-
-        if (original != null)
-        {
-            var sizeMatches = candidates.Where(candidate =>
-                    candidate.Width > 0
-                    && candidate.Height > 0
-                    && Math.Abs(original.rect.width - candidate.Width) < 0.5f
-                    && Math.Abs(original.rect.height - candidate.Height) < 0.5f)
-                .ToList();
-            if (sizeMatches.Count == 1)
-            {
-                var selected = existing.FirstOrDefault(candidate =>
-                    string.Equals(
-                        candidate.Entry.LogicalId,
-                        sizeMatches[0].LogicalId,
-                        StringComparison.OrdinalIgnoreCase));
-                if (selected != null)
-                {
-                    entry = selected.Entry;
-                    filePath = selected.Path;
-                    return true;
-                }
-            }
-        }
-
-        log.LogWarning($"Ambiguous theme image '{runtimeName}', keeping original.");
-        return false;
     }
 
     private bool TryResolveVideoEntry(
@@ -438,6 +310,7 @@ internal sealed class ThemeAssetStore
 
     private Texture2D? LoadTexture(string filePath, string textureName)
     {
+        if (textureFailures.Contains(filePath)) return null;
         if (textureCache.TryGetValue(filePath, out var cached))
         {
             if (cached != null)
@@ -455,6 +328,7 @@ internal sealed class ThemeAssetStore
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             if (!ImageConversion.LoadImage(texture, il2CppBytes, false))
             {
+                textureFailures.Add(filePath);
                 log.LogWarning($"Unity rejected image: {filePath}");
                 UnityEngine.Object.Destroy(texture);
                 return null;
@@ -468,6 +342,7 @@ internal sealed class ThemeAssetStore
         }
         catch (Exception exception)
         {
+            textureFailures.Add(filePath);
             log.LogWarning($"Failed to load theme image '{filePath}': {exception.Message}");
             return null;
         }

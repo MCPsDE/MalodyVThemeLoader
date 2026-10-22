@@ -28,8 +28,10 @@ required = ['winhttp.dll', 'doorstop_config.ini', '.doorstop_version',
     'BepInEx/plugins/MalodyVThemeLoader/catalog.json', 'ThemeLoader/MalodyVThemeManager.exe',
     'ThemeLoader/themes/Default/theme.json', 'ThemeLoader/active-theme.txt', 'ThemeLoader/settings.json']
 required.extend(['BepInEx/plugins/MalodyVThemeLoader/NVorbis.dll',
+    'BepInEx/plugins/MalodyVThemeLoader/NLayer.dll',
     'BepInEx/interop/UnityEngine.AudioModule.dll',
     'ThemeLoader/docs/licenses/SkiaSharp-LICENSE.txt', 'ThemeLoader/docs/licenses/NVorbis-LICENSE.txt',
+    'ThemeLoader/docs/licenses/NLayer-LICENSE.txt',
     'ThemeLoader/docs/licenses/Skia-THIRD-PARTY-NOTICES.txt'])
 for name in required:
     assert (payload / name).is_file(), f'Missing offline file: {name}'
@@ -50,7 +52,7 @@ for name in names:
     if name == 'theme.json':
         continue
     prefix, _, logical = name.partition('/')
-    root = {'images': source, 'fonts': source / 'Fonts', 'live2d': source / 'Resources/Live2d'}.get(prefix)
+    root = {'images': source, 'audio': source, 'fonts': source / 'Fonts', 'live2d': source / 'Resources/Live2d'}.get(prefix)
     assert root is not None, f'Unrelated Default entry: {name}'
     original = root / logical
     assert original.is_file(), f'No source resource: {name}'
@@ -65,6 +67,23 @@ for entry in catalog['live2dFiles']:
     safe(entry['logicalId'])
     name = 'live2d/' + entry['logicalId']
     assert name in names and digest((default_root / name).read_bytes()) == entry['sha256']
+
+ui_events = {'Click', 'MsgOK', 'MsgFail', 'Switch', 'Back', 'Cancel', 'Screenshot', 'MsgNotify', 'ClickLight', 'music_finish'}
+assert {entry['event'] for entry in catalog['audio']} == ui_events
+assert len(catalog['audio']) == len(ui_events)
+for entry in catalog['audio']:
+    safe(entry['logicalId'])
+    original = source / entry['logicalId']
+    copied = default_root / manifest.get('audioRoot', 'audio') / entry['logicalId']
+    assert original.is_file() and copied.is_file(), entry
+    assert digest(original.read_bytes()) == entry['sha256'] == digest(copied.read_bytes()), entry
+scenes = set(catalog['scenes'])
+assert not scenes.intersection({'ScenePlay', 'SceneReplay', 'SceneRoomWatch', 'SceneWatchSub'})
+assert not any(scene.startswith('PlayMode') for scene in scenes)
+for entry in catalog['images']:
+    for usage in entry['usages']:
+        assert usage['scene'] in scenes and usage['hierarchy'], usage
+        assert usage['component'] in {'Image', 'RawImage', 'SpriteRenderer'}, usage
 
 with zipfile.ZipFile(repo / 'artifacts/payload.zip') as archive:
     for name in archive.namelist():

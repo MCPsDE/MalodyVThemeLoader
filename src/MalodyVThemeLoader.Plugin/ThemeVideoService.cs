@@ -27,6 +27,8 @@ internal sealed class ThemeVideoService
             return ThemeVideoApplyState.None;
         }
 
+        if (assets.HasImageRule(sprite.name, sprite, null, image.gameObject.scene.name, SceneThemeApplier.GetHierarchy(image.transform), "Image"))
+            return ThemeVideoApplyState.None;
         var replacement = assets.ResolveVideo(sprite.name, sprite);
         if (replacement == null)
         {
@@ -80,6 +82,8 @@ internal sealed class ThemeVideoService
 
     public ThemeVideoApplyState ApplyRawImage(RawImage image, bool logChange)
     {
+        if (image.texture != null && assets.HasImageRule(image.texture.name, null, image.texture, image.gameObject.scene.name, SceneThemeApplier.GetHierarchy(image.transform), "RawImage"))
+            return ThemeVideoApplyState.None;
         var replacement = assets.ResolveVideo(image.texture);
         if (replacement == null)
         {
@@ -133,6 +137,8 @@ internal sealed class ThemeVideoService
             return ThemeVideoApplyState.None;
         }
 
+        if (assets.HasImageRule(renderer.sprite.name, renderer.sprite, null, renderer.gameObject.scene.name, SceneThemeApplier.GetHierarchy(renderer.transform), "SpriteRenderer"))
+            return ThemeVideoApplyState.None;
         var replacement = assets.ResolveVideo(renderer.sprite.name, renderer.sprite);
         if (replacement == null)
         {

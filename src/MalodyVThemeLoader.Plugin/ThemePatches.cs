@@ -59,6 +59,7 @@ internal static class UiGlobalGetSpritePatch
 {
     private static void Postfix(string _name, ref Sprite __result)
     {
+        if (!SceneThemeApplier.IsAllowedScene(SceneManager.GetActiveScene().name)) return;
         var replacement = ThemeRuntime.Current?.Assets.ResolveSprite(_name, __result);
         if (replacement != null)
         {
@@ -72,6 +73,7 @@ internal static class EditResourceGetSpritePatch
 {
     private static void Postfix(string _name, ref Sprite __result)
     {
+        if (!SceneThemeApplier.IsAllowedScene(SceneManager.GetActiveScene().name)) return;
         var replacement = ThemeRuntime.Current?.Assets.ResolveSprite(_name, __result);
         if (replacement != null)
         {

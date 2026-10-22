@@ -55,6 +55,8 @@ internal static class Program
 
         CopyImages(assetsRoot, imageRoot, catalog);
         CopyLive2d(assetsRoot, live2dRoot, catalog);
+        SourceUsageCatalog.Build(assetsRoot, catalog,
+            themeRoot == null ? null : Path.Combine(themeRoot, "audio"));
 
         string? defaultDirectory = null;
         if (options.IncludeDefaultTheme && themeRoot != null)
@@ -97,6 +99,7 @@ internal static class Program
             new ThemeLoaderSettings());
 
         Console.WriteLine($"Catalog images: {catalog.Images.Count}");
+        Console.WriteLine($"Catalog UI audio: {catalog.Audio.Count}; scene image uses: {catalog.Images.Sum(e => e.Usages.Count)}");
         Console.WriteLine(defaultDirectory == null
             ? "Default theme: not packaged"
             : $"Default theme directory: {defaultDirectory}");

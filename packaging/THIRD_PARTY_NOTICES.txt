@@ -36,3 +36,8 @@ Copyright (c) 2020 Andrew Ward.
 Licensed under the MIT License.
 https://github.com/NVorbis/NVorbis
 Full license texts and native component notices are included in docs/licenses.
+
+NLayer
+Copyright (c) 2018 Mark Heath, Andrew Ward & Contributors.
+Licensed under the MIT License.
+https://github.com/naudio/NLayer

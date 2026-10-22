@@ -88,7 +88,7 @@ internal sealed class SceneThemeApplier
                 continue;
             }
 
-            var replacement = assets.ResolveTexture(rawImage.texture);
+            var replacement = assets.ResolveTexture(rawImage.texture, rawImage.gameObject.scene.name, GetHierarchy(rawImage.transform));
             if (replacement != null && rawImage.texture != replacement)
             {
                 ThemeReplacementRegistry.TrackRawImage(rawImage);
@@ -121,12 +121,16 @@ internal sealed class SceneThemeApplier
                 continue;
             }
 
-            var replacement = assets.ResolveSprite(renderer.sprite.name, renderer.sprite);
-            if (replacement != null && renderer.sprite != replacement)
+            var hierarchy = GetHierarchy(renderer.transform);
+            var replacement = assets.ResolveSprite(renderer.sprite.name, renderer.sprite, renderer.gameObject.scene.name, hierarchy, "SpriteRenderer");
+            var imageMode = replacement == null ? "" : assets.GetImageMode(replacement, renderer.gameObject.scene.name, hierarchy, "SpriteRenderer");
+            var desiredMode = imageMode.Length == 0 ? renderer.drawMode : imageMode == "sliced" ? SpriteDrawMode.Sliced : SpriteDrawMode.Simple;
+            if (replacement != null && (renderer.sprite != replacement || renderer.drawMode != desiredMode))
             {
                 ThemeReplacementRegistry.TrackSpriteRenderer(renderer);
                 var originalName = renderer.sprite.name;
                 renderer.sprite = replacement;
+                renderer.drawMode = desiredMode;
                 log.LogInfo(
                     $"Theme sprite renderer applied in '{renderer.gameObject.scene.name}': "
                     + $"{GetHierarchy(renderer.transform)} [{originalName}].");
@@ -229,7 +233,7 @@ internal sealed class SceneThemeApplier
 
         if (ApplyImageSprite(
                 image,
-                image.overrideSprite,
+                image.m_OverrideSprite,
                 replacement => image.overrideSprite = replacement,
                 "image override",
                 logChange))
@@ -252,14 +256,19 @@ internal sealed class SceneThemeApplier
             return false;
         }
 
-        var replacement = assets.ResolveSprite(original.name, original);
-        if (replacement == null || original == replacement)
+        var hierarchy = GetHierarchy(image.transform);
+        var replacement = assets.ResolveSprite(original.name, original, image.gameObject.scene.name, hierarchy, "Image");
+        if (replacement == null)
         {
             return false;
         }
+        var mode = assets.GetImageMode(replacement, image.gameObject.scene.name, hierarchy, "Image");
+        var desiredType = mode.Length == 0 ? image.type : mode == "sliced" ? Image.Type.Sliced : Image.Type.Simple;
+        if (original == replacement && desiredType == image.type) return false;
 
         ThemeReplacementRegistry.TrackImage(image);
         setSprite(replacement);
+        image.type = desiredType;
         if (logChange)
         {
             log.LogInfo(
@@ -305,7 +314,7 @@ internal sealed class SceneThemeApplier
     {
         var parts = new List<string>();
         var current = transform;
-        while (current != null && parts.Count < 12)
+        while (current != null && parts.Count < 96)
         {
             parts.Add(current.name);
             current = current.parent;

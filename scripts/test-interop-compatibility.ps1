@@ -85,5 +85,21 @@ try {
         throw 'Result display Fill targets differ from the validated three UI methods.'
     }
     if ($checked -eq 0) { throw 'No game/Unity references were checked.' }
-    Write-Output "PASS: $checked game/Unity references, 9 Cubism signatures, $lifecycleTargets widget targets and 3 result display targets resolve against $InteropRoot"
+    $sound = $resolver.Resolve([Mono.Cecil.AssemblyNameReference]::Parse('Assembly-CSharp')).MainModule.GetType('Malody.Audio.SoundManager')
+    $audioTargets = @($sound.Methods | Where-Object {
+        ($_.Name -eq 'Stop' -and $_.Parameters.Count -eq 0) -or
+        ($_.Name -eq 'Play' -and $_.Parameters.Count -eq 1 -and $_.Parameters[0].ParameterType.FullName -eq 'Malody.Audio.SoundManager/EffectType') -or
+        ($_.Name -eq 'Play' -and $_.Parameters.Count -eq 3 -and $_.Parameters[0].ParameterType.FullName -eq 'System.String' -and
+            $_.Parameters[1].ParameterType.FullName -eq 'Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray`1<System.Byte>' -and $_.Parameters[2].ParameterType.FullName -eq 'System.Single')
+    })
+    if ($audioTargets.Count -ne 3 -or @($audioTargets | Where-Object { $_.IsStatic -or $_.ReturnType.FullName -ne 'System.Void' }).Count) { throw 'UI sound Harmony targets changed.' }
+    $volume = @($sound.Properties | Where-Object { $_.PropertyType.FullName -eq 'System.Single' -and $_.GetMethod -and !$_.GetMethod.IsStatic -and $_.Parameters.Count -eq 0 })
+    if ($volume.Count -ne 1) { throw 'SoundManager no longer has the unique instance effect-volume float.' }
+    $effects = @('Click','MsgOK','MsgFail','Switch','Back','Cancel','Screenshot','MsgNotify','ClickLight')
+    $enum = $sound.NestedTypes | Where-Object Name -eq 'EffectType'
+    for($index=0; $index -lt $effects.Count; $index++) {
+        $field = @($enum.Fields | Where-Object Name -eq $effects[$index])
+        if ($field.Count -ne 1 -or !$field[0].HasConstant -or $field[0].Constant -ne $index) { throw 'UI effect enum differs from the supported source slots.' }
+    }
+    Write-Output "PASS: $checked game/Unity references, 9 Cubism signatures, $lifecycleTargets widget targets, 3 result display and 3 UI audio targets, nine effect slots and the volume adapter resolve against $InteropRoot"
 } finally { $module.Dispose(); $resolver.Dispose() }

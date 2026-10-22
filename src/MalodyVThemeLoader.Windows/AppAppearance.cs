@@ -53,7 +53,7 @@ public static class AppAppearance
         }
         if (control is CheckBox checkBox) checkBox.UseVisualStyleBackColor = false;
         if (control is BrandBar bar) bar.RefreshAppearance();
-        if (control is TextBoxBase or ListBox or ComboBox or ProgressBar or ScrollableControl)
+        if (control is TextBoxBase or ListBox or ComboBox or ProgressBar or ScrollableControl or TreeView)
         {
             if (control.IsHandleCreated) ApplyNativeTheme(control);
             else control.HandleCreated += (_, _) => ApplyNativeTheme(control);

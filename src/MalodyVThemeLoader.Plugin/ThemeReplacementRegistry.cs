@@ -18,28 +18,25 @@ internal static class ThemeReplacementRegistry
     public static void TrackImage(Image image)
     {
         var key = image.GetInstanceID();
-        if (!Images.ContainsKey(key))
-        {
-            Images[key] = new ImageOriginal(image, image.sprite, image.overrideSprite);
-        }
+        var assets = ThemeRuntime.Current?.Assets;
+        var type = Images.TryGetValue(key, out var previous) ? previous.Type : image.type;
+        Images[key] = new ImageOriginal(image, assets == null ? image.sprite : assets.GetOriginalSprite(image.sprite),
+            assets == null ? image.m_OverrideSprite : assets.GetOriginalSprite(image.m_OverrideSprite), type);
     }
 
     public static void TrackRawImage(RawImage image)
     {
         var key = image.GetInstanceID();
-        if (!RawImages.ContainsKey(key))
-        {
-            RawImages[key] = new RawImageOriginal(image, image.texture);
-        }
+        var assets = ThemeRuntime.Current?.Assets;
+        RawImages[key] = new RawImageOriginal(image, assets == null ? image.texture : assets.GetOriginalTexture(image.texture));
     }
 
     public static void TrackSpriteRenderer(SpriteRenderer renderer)
     {
         var key = renderer.GetInstanceID();
-        if (!SpriteRenderers.ContainsKey(key))
-        {
-            SpriteRenderers[key] = new SpriteRendererOriginal(renderer, renderer.sprite);
-        }
+        var assets = ThemeRuntime.Current?.Assets;
+        var mode = SpriteRenderers.TryGetValue(key, out var previous) ? previous.DrawMode : renderer.drawMode;
+        SpriteRenderers[key] = new SpriteRendererOriginal(renderer, assets == null ? renderer.sprite : assets.GetOriginalSprite(renderer.sprite), mode);
     }
 
     public static void TrackCubismRenderer(CubismRenderer renderer)
@@ -90,6 +87,7 @@ internal static class ThemeReplacementRegistry
                 {
                     original.Image.sprite = original.Sprite;
                     original.Image.overrideSprite = original.OverrideSprite;
+                    original.Image.type = original.Type;
                 }
             }
             catch (Exception exception)
@@ -130,6 +128,7 @@ internal static class ThemeReplacementRegistry
                 if (original.Renderer != null)
                 {
                     original.Renderer.sprite = original.Sprite;
+                    original.Renderer.drawMode = original.DrawMode;
                 }
             }
             catch (Exception exception)
@@ -207,13 +206,15 @@ internal static class ThemeReplacementRegistry
     private sealed record ImageOriginal(
         Image Image,
         Sprite? Sprite,
-        Sprite? OverrideSprite);
+        Sprite? OverrideSprite,
+        Image.Type Type);
 
     private sealed record RawImageOriginal(RawImage Image, Texture? Texture);
 
     private sealed record SpriteRendererOriginal(
         SpriteRenderer Renderer,
-        Sprite? Sprite);
+        Sprite? Sprite,
+        SpriteDrawMode DrawMode);
 
     private sealed record CubismRendererOriginal(
         CubismRenderer Renderer,

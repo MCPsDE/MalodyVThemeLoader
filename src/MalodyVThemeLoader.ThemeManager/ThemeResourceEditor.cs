@@ -19,9 +19,9 @@ internal sealed partial class ThemeResourceEditor : UserControl
     private readonly TextBox hierarchyBox = new() { Dock = DockStyle.Top, MaxLength = 1024 };
     private readonly ChoiceBox componentBox = new() { Dock = DockStyle.Top };
     private readonly CheckBox sliceToggle = new() { Text = "九宫格切片", AutoSize = true, Margin = new Padding(0, 14, 0, 8) };
-    private readonly Dictionary<string, NumericUpDown> borders = new();
-    private readonly NumericUpDown targetWidth = Number(1, 4096, 320);
-    private readonly NumericUpDown targetHeight = Number(1, 4096, 120);
+    private readonly Dictionary<string, NumberField> borders = new();
+    private readonly NumberField targetWidth = Number(1, 4096, 320);
+    private readonly NumberField targetHeight = Number(1, 4096, 120);
     private readonly ListBox usages = new() { Dock = DockStyle.Fill, IntegralHeight = false, BorderStyle = BorderStyle.None, HorizontalScrollbar = false };
     private readonly Label usagesTitle = AppVisuals.TextBlock("使用位置 · 双击选择", 9F);
     private readonly Button import = AppVisuals.CreateButton("导入替换文件…");
@@ -101,22 +101,20 @@ internal sealed partial class ThemeResourceEditor : UserControl
         playback = Row(play, stop); AppVisuals.AddRow(fields, playback);
         imageFields = AppVisuals.Stack(); imageFields.Margin = Padding.Empty;
         AppVisuals.AddRow((TableLayoutPanel)imageFields, sliceToggle);
-        var grid = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, Margin = Padding.Empty };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        var grid = new FieldGrid();
         var names = new[] { "左", "右", "上", "下" };
         for (var i = 0; i < names.Length; i++)
         {
             var column = AppVisuals.Stack(); column.Margin = new Padding(0, 0, i % 2 == 0 ? 10 : 0, 8);
             var number = Number(0, 16384, 0); borders[names[i]] = number; number.AccessibleName = names[i] + "切片边距（像素）";
-            Field(column, names[i] + " · px", number); grid.Controls.Add(column, i % 2, i / 2);
+            Field(column, names[i] + " · px", number); grid.AddField(column);
             number.ValueChanged += (_, _) => { if (!selecting) { UpdateSlicePreview(); MarkDirty(); } };
         }
         AppVisuals.AddRow((TableLayoutPanel)imageFields, grid);
-        var previewSize = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, Margin = new Padding(0, 12, 0, 0) };
-        previewSize.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); previewSize.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        var previewSize = new FieldGrid { Margin = new Padding(0, 12, 0, 0) };
         var widthField = AppVisuals.Stack(); widthField.Margin = new Padding(0, 0, 10, 0); Field(widthField, "预览宽度", targetWidth);
         var heightField = AppVisuals.Stack(); heightField.Margin = Padding.Empty; Field(heightField, "预览高度", targetHeight);
-        previewSize.Controls.Add(widthField, 0, 0); previewSize.Controls.Add(heightField, 1, 0); AppVisuals.AddRow((TableLayoutPanel)imageFields, previewSize);
+        previewSize.AddField(widthField); previewSize.AddField(heightField); AppVisuals.AddRow((TableLayoutPanel)imageFields, previewSize);
         AppVisuals.AddRow(fields, imageFields);
         restore.Dock = DockStyle.Top; restore.Height = 38; restore.Margin = new Padding(0, 18, 0, 8); AppVisuals.AddRow(fields, restore);
         scroll.Controls.Add(fields);
@@ -152,7 +150,7 @@ internal sealed partial class ThemeResourceEditor : UserControl
         value.Dock = DockStyle.Top; value.Margin = new Padding(0, 0, 0, 2);
         AppVisuals.AddRow(parent, label); AppVisuals.AddRow(parent, value);
     }
-    private static NumericUpDown Number(int minimum, int maximum, int value) => new() { Minimum = minimum, Maximum = maximum, Value = value, Dock = DockStyle.Top };
+    private static NumberField Number(int minimum, int maximum, int value) => new() { Minimum = minimum, Maximum = maximum, Value = value, Dock = DockStyle.Top };
     private static Control TextFrame(TextBox text)
     {
         text.BorderStyle = BorderStyle.None; text.BackColor = AppVisuals.Surface; text.ForeColor = AppVisuals.Ink; text.Dock = DockStyle.Fill;
@@ -164,9 +162,7 @@ internal sealed partial class ThemeResourceEditor : UserControl
     }
     private static Control Row(params Button[] buttons)
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Top, Height = 42, ColumnCount = buttons.Length, Margin = Padding.Empty };
-        for (var i = 0; i < buttons.Length; i++) { panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / buttons.Length)); buttons[i].Dock = DockStyle.Fill; buttons[i].Margin = new Padding(0, 0, i < buttons.Length - 1 ? 8 : 0, 0); panel.Controls.Add(buttons[i], i, 0); }
-        return panel;
+        return new ButtonRow(buttons);
     }
 
     public bool ConfirmLeave()

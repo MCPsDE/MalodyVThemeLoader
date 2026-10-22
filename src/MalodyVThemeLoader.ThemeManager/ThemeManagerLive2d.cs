@@ -10,9 +10,9 @@ internal sealed partial class ThemeManagerForm
     private ComboBox live2dTheme = null!;
     private ComboBox live2dIdle = null!;
     private ComboBox live2dTap = null!;
-    private NumericUpDown live2dScale = null!;
-    private NumericUpDown live2dX = null!;
-    private NumericUpDown live2dY = null!;
+    private NumberField live2dScale = null!;
+    private NumberField live2dX = null!;
+    private NumberField live2dY = null!;
     private Button live2dApply = null!;
     private Button live2dRestore = null!;
     private Label live2dModelState = null!;
@@ -138,10 +138,10 @@ internal sealed partial class ThemeManagerForm
         Font = AppVisuals.UiFont(10F), AccessibleName = name, IntegralHeight = false, DropDownHeight = 240
     };
 
-    private static NumericUpDown Adjustment(string name, int minimum, int maximum, int value) => new()
+    private static NumberField Adjustment(string name, int minimum, int maximum, int value) => new NumberField
     {
         Dock = DockStyle.Top, Minimum = minimum, Maximum = maximum, Value = value,
-        BackColor = AppVisuals.Surface, ForeColor = AppVisuals.Ink, BorderStyle = BorderStyle.FixedSingle,
+        BackColor = AppVisuals.Surface, ForeColor = AppVisuals.Ink,
         AccessibleName = name, Font = AppVisuals.UiFont(10F)
     };
 

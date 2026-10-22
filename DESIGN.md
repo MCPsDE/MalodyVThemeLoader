@@ -117,6 +117,14 @@ components:
   navigation-item-selected:
     backgroundColor: "{colors.accent-soft}"
     textColor: "{colors.accent}"
+  number-field:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    height: "32px"
+  number-field-disabled:
+    backgroundColor: "{colors.surface-alt}"
+    textColor: "{colors.muted-ink}"
   theme-row:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -219,7 +227,9 @@ Page titles use `page-title`; the selected theme uses `selected-title`. Body cop
 
 Measurements are 96-DPI logical pixels except point-based typography. Forms use `AutoScaleMode.Dpi`; layout containers, docking and scroll regions accommodate resizing.
 
-The manager has a fixed navigation width (176 px), a flexible content area and an operation-result band (58 px), above its footer (58 px). Its theme list and detail columns use a 32/68 split and a 20 px gap. The library fills its cell with single selection and vertical scrolling; details, Live2D, settings and maintenance scroll vertically. The footer has 24 px horizontal and 10 px vertical padding, flexible author-credit space, then fixed columns for the appearance label (44 px), toggle allocation (108 px, including the 16 px right margin) and sponsorship action (124 px). The toggle itself is 92 × 38 px.
+The manager sizes its navigation rail from the actual preferred widths of the wordmark, subtitle, version and all destination buttons, including margins and panel padding, with a DPI-scaled floor (208 px). Those labels stay on one line. A flexible content area and operation-result band (58 px) sit above its footer (58 px). Its theme list and detail columns use a 32/68 split and a 20 px gap. The library fills its cell with single selection and vertical scrolling; details, Live2D, settings and maintenance scroll vertically. The footer has 24 px horizontal and 10 px vertical padding, flexible author-credit space, then fixed columns for the appearance label (44 px), toggle allocation (108 px, including the 16 px right margin) and sponsorship action (124 px). The toggle itself is 92 × 38 px.
+
+Shared `ButtonRow` compares the complete measured button widths plus its DPI-scaled gap (8 px) with the available width, then stacks actions when needed. `FieldGrid` gives numeric fields equal-width columns with separate gap tracks (10 px) and reduces the column count before their preferred input widths stop fitting. Content growth and reflow preserve the normal font size and complete labels.
 
 The ThemeLoader installer starts at 880 × 720 client pixels with a 760 × 660 minimum window; standalone BepInEx starts at 860 × 680 with a 740 × 620 minimum. The manager starts at 1120 × 800 with a 960 × 700 minimum. Client and minimum window dimensions are distinct. Installer content scrolls independently of bottom actions and its credit-only footer (40 px), which retains the same horizontal and vertical padding.
 
@@ -233,6 +243,8 @@ Current editor captures are `editor-desktop.png`, `editor-result.png`, `editor-m
 
 Resource-editor captures are `resources-images.png`, `resources-minimum.png`, `resources-audio.png`, `resources-scale150.png` and `resources-control.png` in both `.impeccable/review/resources-dark` and `resources-light`. They show existing source artwork, slice editing, a loaded exact-control scope and silent audio fixtures. The documentation evidence and Unity-versus-installed-game limits are recorded in `.impeccable/review/resources-documentation.md`.
 
+The 2.5.1 correction captures are under `.impeccable/review/controls-dark`, `controls-light`, `controls-animation-dark` and `controls-animation-light`. Shared geometric checks cover all five manager pages and both fixed-light installers at normal/minimum sizes, synthetic 125/150/200% and 125% font size; composed inspection checks real Tab entry and scroll bounds. The exact capture list, logs and evidence limits are in `.impeccable/review/controls-documentation.md`. Synthetic scaling remains layout stress; API-level accessibility checks do not establish screen-reader behavior.
+
 ## Elevation & Depth
 
 Neutral layers, whitespace and fine rules establish grouping without custom shadows. `WindowsBackdrop` requests Windows 11 Mica and a matching dark title-bar mode when supported; failure retains solid neutral surfaces. Bitmap captures do not verify the compositor backdrop. Native frames and dialogs retain operating-system depth. Hover and pressed feedback changes immediately; no custom animated transition is implemented. The sponsorship fill is the single local gradient exception.
@@ -245,13 +257,19 @@ Working panels and native fields are rectangular. Shared action and sponsor butt
 
 ### Buttons
 
-Shared `ActionButton` controls have primary, secondary and destructive variants. The factory height is 36 px; theme actions commonly use a 42 px minimum, installer actions 44 px and navigation 46 px. Text has a DPI-scaled horizontal drawing inset (12 px) and ellipsis when space runs out.
+Shared `ActionButton` controls have primary, secondary and destructive variants. The factory height is 36 px; theme actions commonly use a 42 px minimum, installer actions 44 px and navigation 46 px. Preferred and minimum sizes measure the actual localized font at the current DPI, adding horizontal drawing allowance (26 px) and the control's explicit padding. Painting uses horizontal insets (12 px), a single text line and no overflow ellipsis. Text, font, padding and DPI changes refresh the content minimum.
 
 Pressed states follow each variant: deeper blue for primary, deeper red for destructive and pressed neutral for secondary. Disabled controls use alternate surface and muted ink. Primary and destructive text stays white while enabled. Native dotted keyboard focus is inset from the edge. Preserve accessible names and native button behavior.
 
+**The Complete Label Rule.** Action and navigation labels stay complete on one line. Measure their actual font, DPI and painting insets, then grow or reflow containers; never hide an undersized command with wrapping, clipping, smaller text or overflow ellipsis. Intentional dialog-opening ellipsis may remain.
+
 ### Inputs and navigation
 
-Path and search fields remain native text boxes. Persistent “搜索主题” and “搜索资源” labels identify search independently of placeholders. Navigation contains five destinations: 主题库, 资源编辑, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
+Path and search fields remain native text boxes. Persistent “搜索主题” and “搜索资源” labels identify search independently of placeholders. Navigation contains five destinations: 主题库, 资源编辑, Live2D, 设置 and 维护. Its selected row uses soft selection blue, readable accent text and bold weight. `SingleLineLabel` measures and paints the rail's wordmark, subtitle and version without wrapping. Native inputs, lists, combo boxes and scrollable controls receive the current Windows theme hint; platform-owned dialogs retain Windows behavior.
+
+`NumberField` is the shared numeric editor for Live2D fitting and resource slice/preview dimensions. Its preferred height starts at 32 logical pixels and grows with the font. It retains native parsing and arrow-key input inside a clipped host, hiding the native spinner buttons and reserving their actual internal width outside the visible input. Two theme-painted horizontal minus/plus buttons use the working surface, hover/pressed neutrals and primary ink; disabled steps use alternate surface and muted ink. Focus changes the outer rule to readable accent. Range, read-only and disabled states govern stepping. The outer Tab stop forwards focus to the editor; named increment/decrement controls and a writable SpinButton accessible value remain available. Layout measures range samples rather than reading `Value`, preserving incomplete input until an explicit commit.
+
+**The Themed Number Rule.** All numeric editors use the shared themed control without exposed native white spinner chrome. Preserve typing, arrow keys, focus, accessible stepping, validation, range and disabled behavior.
 
 `ChoiceBox` retains the native ComboBox dropdown, selection, keyboard handling and accessibility. It paints the rectangular closed field with working surface, primary ink and a fine rule; focus changes the rule to readable accent and disabled text becomes secondary ink. The chevron is drawn geometry. Dropdown options use working surface and primary ink, with soft selection blue and readable accent for selection, ellipsis for long text and the native focus rectangle. Live2D theme, motion and texture choices use this component, including in palette-aware dialogs. It adds no new palette or motion treatment.
 
@@ -265,7 +283,7 @@ Real previews preserve aspect ratio against the alternate surface. Missing previ
 
 The resource tree groups images by their logical directory paths and lists UI audio by event, keeping separately editable events even when they share a source file. It retains native hierarchy and keyboard selection, uses ellipsis instead of horizontal scrolling, and gives logical paths in tooltips. The selected resource name and import status preserve the author-facing filename; hash-based storage paths remain an implementation detail.
 
-Image previews fit the source and chosen stretch size into their available areas. Both image areas use a fixed mid-gray transparency checker (local rendering values `#666666` and `#808080`, 8 px tiles in a 16 px pattern) in either appearance. This functional alpha backdrop keeps pale borders visible without recoloring the artwork or changing the application palette. Dashed slice guides use the existing accent; four labeled native numeric fields provide the same pixel-margin edits as dragging. Known RawImage targets hide slice controls. Audio previews use the alternate surface, a fine-rule baseline, an accent waveform and duration/sample-rate/channel metadata, with explicit “试听” and “停止” actions.
+Image previews fit the source and chosen stretch size into their available areas. Both image areas use a fixed mid-gray transparency checker (local rendering values `#666666` and `#808080`, 8 px tiles in a 16 px pattern) in either appearance. This functional alpha backdrop keeps pale borders visible without recoloring the artwork or changing the application palette. Dashed slice guides use the existing accent; four labeled `NumberField` controls provide the same pixel-margin edits as dragging. Known RawImage targets hide slice controls. Audio previews use the alternate surface, a fine-rule baseline, an accent waveform and duration/sample-rate/channel metadata, with explicit “试听” and “停止” actions.
 
 Persistently labeled scene, hierarchy and component fields establish the loaded image scope. Double-clicking a source usage reads it directly. Manually changing hierarchy or component exposes “读取此范围” and “取消定位”; import, slice editing and save stay disabled until the requested scope is read. Reading reloads that scope's exact or inherited file, mode, margins and preview after resolving any resource draft. Cancelling returns to the loaded scope while preserving its draft. Source usages are a partial authoring aid, not a full scene preview.
 
@@ -320,6 +338,8 @@ Use the existing embedded logo and icon. Default theme previews and exports come
 - Do preserve keyboard focus, native behavior and Ctrl+F, Ctrl+O and F5 shortcuts.
 - Do use real theme artwork and preserve its aspect ratio.
 - Do keep Live2D interface copy focused on tasks and results.
+- Do use shared numeric, single-line text, button measurement and reflow helpers; inspect CJK labels in both appearances, normal/minimum sizes and relevant synthetic font/scaling cases.
+- Do keep full filenames and paths available when their variable display text uses ellipsis.
 
 ### Don't:
 
@@ -327,3 +347,4 @@ Use the existing embedded logo and icon. Default theme previews and exports come
 - Don't use generated or substituted artwork for the Default theme.
 - Don't style unavailable actions as enabled or expose empty metadata as a selected theme.
 - Don't treat synthetic 150% captures as physical DPI verification or bitmap captures as Mica verification.
+- Don't expose native white numeric spinner chrome or hide action/navigation text with wrapping, clipping, smaller text or overflow ellipsis.

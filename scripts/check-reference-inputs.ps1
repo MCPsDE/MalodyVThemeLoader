@@ -22,16 +22,19 @@ if ($Mode -eq 'Record') {
             $path = $_.Path
             if (!$path.StartsWith($gamePrefix,[StringComparison]::OrdinalIgnoreCase)) { return $true }
             $relative = $path.Substring($gamePrefix.Length).Replace('\','/')
-            # Config.Save writes config.json; the running ThemeLoader writes its
-            # status independently of editor tests. Keep these differences in the
-            # full audit without treating them as program/resource modifications.
+            # A user-started game also rewrites BepInEx startup logs, type cache
+            # and its own configuration. These remain in the full audit; this
+            # mode checks stable program/resource files, not configuration bytes.
             return !($relative -in @('chart.bin','score.bin','song.bin','config.json',
-                'BepInEx/LogOutput.log','ThemeLoader/live2d-status.json') -or
+                'BepInEx/LogOutput.log','BepInEx/ErrorLog.log',
+                'BepInEx/cache/chainloader_typeloader.dat','BepInEx/config/BepInEx.cfg',
+                'ThemeLoader/live2d-status.json') -or
+                $relative -match '^log/[^/]+\.log$' -or
                 $relative.StartsWith('cache/') -or $relative.StartsWith('replay/') -or
                 $relative.StartsWith('BepInEx/plugins/MalodyVReworkOverlay/MalodyV.ReworkOverlay.exe.WebView2/'))
         })
         if ($stableChanges.Count) { $stableChanges | Format-List; throw 'Source or stable game files changed.' }
-        Write-Output "Source and stable game files unchanged. $(@($changes).Count) difference records are active-game databases, config, runtime status, replay files or caches. Full differences: artifacts/reference-changes.json"
+        Write-Output "Source and stable game files unchanged. $(@($changes).Count) difference records are active-game databases, configuration, startup logs, runtime status, replay files or caches. Configuration content is not covered by this assertion. Full differences: artifacts/reference-changes.json"
         exit 0
     }
     if ($changes) { $changes | Format-Table; throw 'Reference inputs changed.' }

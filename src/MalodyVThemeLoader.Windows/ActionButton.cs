@@ -6,6 +6,7 @@ internal sealed class ActionButton : Button
 {
     private bool hovered;
     private bool pressed;
+    private bool sizing;
     public bool Primary { get; init; }
     public bool Danger { get; init; }
 
@@ -13,6 +14,36 @@ internal sealed class ActionButton : Button
     {
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
     }
+    public Size RequiredContentSize()
+    {
+        var scale = DeviceDpi / 96f;
+        var flags = TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
+        flags |= UseMnemonic ? TextFormatFlags.HidePrefix : TextFormatFlags.NoPrefix;
+        var text = TextRenderer.MeasureText(Text, Font, Size.Empty, flags);
+        return new Size(text.Width + (int)Math.Ceiling(26 * scale) + Padding.Horizontal,
+            Math.Max((int)Math.Ceiling(32 * scale), text.Height + (int)Math.Ceiling(12 * scale) + Padding.Vertical));
+    }
+    public override Size GetPreferredSize(Size proposedSize)
+    {
+        var required = RequiredContentSize();
+        return new Size(Math.Max(required.Width, MinimumSize.Width), Math.Max(required.Height, MinimumSize.Height));
+    }
+    private void RefreshTextSize()
+    {
+        if (sizing) return;
+        sizing = true;
+        try
+        {
+            var required = RequiredContentSize();
+            MinimumSize = new Size(Math.Max(MinimumSize.Width, required.Width), Math.Max(MinimumSize.Height, required.Height));
+        }
+        finally { sizing = false; }
+        Parent?.PerformLayout(); Invalidate();
+    }
+    protected override void OnTextChanged(EventArgs e) { base.OnTextChanged(e); RefreshTextSize(); }
+    protected override void OnFontChanged(EventArgs e) { base.OnFontChanged(e); RefreshTextSize(); }
+    protected override void OnPaddingChanged(EventArgs e) { base.OnPaddingChanged(e); RefreshTextSize(); }
+    protected override void OnDpiChangedAfterParent(EventArgs e) { base.OnDpiChangedAfterParent(e); RefreshTextSize(); }
     protected override void OnMouseEnter(EventArgs e) { hovered = true; Invalidate(); base.OnMouseEnter(e); }
     protected override void OnMouseLeave(EventArgs e) { hovered = pressed = false; Invalidate(); base.OnMouseLeave(e); }
     protected override void OnMouseDown(MouseEventArgs e) { pressed = true; Invalidate(); base.OnMouseDown(e); }
@@ -48,9 +79,11 @@ internal sealed class ActionButton : Button
             using var pen = new Pen(AppVisuals.Line,scale);
             e.Graphics.DrawPath(pen,path);
         }
-        var textRect = Rectangle.Inflate(ClientRectangle,-(int)(12*scale),-2);
-        var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
+        var inset = (int)Math.Ceiling(12 * scale);
+        var textRect = Rectangle.FromLTRB(inset + Padding.Left, 2 + Padding.Top, Width - inset - Padding.Right, Height - 2 - Padding.Bottom);
+        var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
         flags |= TextAlign == ContentAlignment.MiddleLeft ? TextFormatFlags.Left : TextFormatFlags.HorizontalCenter;
+        if (!UseMnemonic) flags |= TextFormatFlags.NoPrefix;
         if (!ShowKeyboardCues) flags |= TextFormatFlags.HidePrefix;
         TextRenderer.DrawText(e.Graphics,Text,Font,textRect,ink,flags);
         if (Focused && ShowFocusCues) ControlPaint.DrawFocusRectangle(e.Graphics,Rectangle.Inflate(ClientRectangle,-4,-4),ink,fill);

@@ -128,6 +128,14 @@ The installer must:
 
 ## Verification
 
+### Shared UI constraints
+
+- All numeric editors use the shared themed `NumberField`; no native white spinner chrome. Keep keyboard entry, arrow keys, focus indication, accessible increment/decrement and normal validation.
+- Action and navigation labels stay complete on one line. Shared button sizing measures the actual font/DPI and painting insets; never conceal undersized actions with overflow ellipsis or wrapping. Dialog-opening ellipsis is intentional punctuation and may remain.
+- Size the navigation rail from its actual labels with a sensible minimum. Let action rows reflow when their measured content does not fit. Filenames/paths may use ellipsis with full-value access; command names may not.
+- Validate all affected pages, editors and installers in dark/light, minimum/normal sizes and synthetic 125/150/200% where practical. Numeric steppers and every action label are explicit inspection targets.
+- Routine UI corrections increment only the patch version. This correction is 2.5.1.
+
 Before delivery:
 
 - Build all projects in Release mode.

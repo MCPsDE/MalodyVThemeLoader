@@ -13,6 +13,12 @@ New-Item -ItemType Directory -Path $env:MALODY_THEMELOADER_PREFERENCES -Force | 
 $fakeGame = Join-Path $repo 'artifacts\ui-fixture\MalodyV'
 New-Item -ItemType Directory -Path (Join-Path $fakeGame 'ThemeLoader\themes'),(Join-Path $fakeGame 'Malody V_Data\il2cpp_data') -Force | Out-Null
 foreach($name in @('Malody V.exe','UnityPlayer.dll','GameAssembly.dll')) { [IO.File]::WriteAllBytes((Join-Path $fakeGame $name),[byte[]](1,2,3)) }
+$fixtureCatalog=Join-Path $repo 'artifacts\payload\BepInEx\plugins\MalodyVThemeLoader\catalog.json'
+if(Test-Path $fixtureCatalog) {
+    $fixturePlugin=Join-Path $fakeGame 'BepInEx\plugins\MalodyVThemeLoader'
+    New-Item -ItemType Directory -Path $fixturePlugin -Force | Out-Null
+    Copy-Item -LiteralPath $fixtureCatalog -Destination $fixturePlugin -Force
+}
 if (Test-Path (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default')) {
     $fixtureDefault = [IO.Path]::GetFullPath((Join-Path $fakeGame 'ThemeLoader\themes\Default'))
     $fixtureAllowed = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')).TrimEnd('\') + '\'
@@ -74,7 +80,7 @@ function Reach-Live2dFields($form) {
     $scale = Get-Field $form 'live2dScale'
     $animationEditor = Get-Field $form 'live2dEditor'
     if (!$form.SelectNextControl($tap,$true,$true,$true,$true) -or !$animationEditor.Focused) { throw 'Tab cannot reach the animation editor from tap animation.' }
-    if (!$form.SelectNextControl($animationEditor,$true,$true,$true,$true) -or !$scale.Focused) { throw 'Tab cannot reach model size from the animation editor.' }
+    if (!$form.SelectNextControl($animationEditor,$true,$true,$true,$true) -or !$scale.ContainsFocus) { throw 'Tab cannot reach model size from the animation editor.' }
     [Windows.Forms.Application]::DoEvents()
     $viewport = $scroll.RectangleToScreen($scroll.ClientRectangle)
     if (!$scroll.Parent.RectangleToScreen($scroll.Parent.ClientRectangle).Contains($viewport)) {

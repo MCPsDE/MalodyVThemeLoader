@@ -14,6 +14,9 @@ internal sealed partial class ThemeManagerForm
     private readonly Dictionary<string, Control> pages = new();
     private readonly Dictionary<string, Button> navigation = new();
     private bool themeOperationBusy;
+    private TableLayoutPanel? shell;
+    private Panel? navigationPanel;
+    private readonly List<Control> navigationLabels = new();
     private ListBox? live2dModels;
     private ListBox? live2dAnimations;
     private Label? live2dState;
@@ -43,8 +46,8 @@ internal sealed partial class ThemeManagerForm
         exportButton.Click += (_, _) => ExportSelected();
         activateButton.Click += (_, _) => ActivateSelected();
         removeButton.Click += (_, _) => RemoveSelected();
-        var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
-        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 176));
+        shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 208));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         shell.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
@@ -89,16 +92,21 @@ internal sealed partial class ThemeManagerForm
             if (e.Control && e.KeyCode == Keys.S && pages["resources"].Visible) { _ = resourceEditor?.SaveAsync(); e.SuppressKeyPress = true; }
         };
         AppAppearance.Initialize(this);
+        Shown += (_, _) => FitNavigation();
+        DpiChanged += (_, _) => BeginInvoke(FitNavigation);
     }
 
     private Control BuildNavigation()
     {
         var panel = new Panel { Dock = DockStyle.Fill, BackColor = AppVisuals.Surface, Padding = new Padding(20, 28, 16, 20), Margin = Padding.Empty };
+        navigationPanel = panel;
         var stack = AppVisuals.Stack();
         var logo = new PictureBox { Image = AppVisuals.CreateLogoImage(), Size = new Size(42, 42), SizeMode = PictureBoxSizeMode.Zoom, Margin = new Padding(0, 0, 0, 12) };
         AppVisuals.AddRow(stack, logo);
-        AppVisuals.AddRow(stack, AppVisuals.TextBlock("ThemeLoader", 13F, true));
-        var subtitle = AppVisuals.TextBlock("Malody V 主题管理", 9F);
+        var wordmark = AppVisuals.SingleLineText("ThemeLoader", 13F, true);
+        navigationLabels.Add(wordmark); AppVisuals.AddRow(stack, wordmark);
+        var subtitle = AppVisuals.SingleLineText("Malody V 主题管理", 9F);
+        navigationLabels.Add(subtitle);
         subtitle.Margin = new Padding(0, 0, 0, 32);
         AppVisuals.AddRow(stack, subtitle);
         foreach (var (key, text) in new[] { ("themes", "主题库"), ("resources", "资源编辑"), ("live2d", "Live2D"), ("settings", "设置"), ("maintenance", "维护") })
@@ -107,18 +115,27 @@ internal sealed partial class ThemeManagerForm
             button.Dock = DockStyle.Top;
             button.Height = 46;
             button.TextAlign = ContentAlignment.MiddleLeft;
-            button.Padding = new Padding(12,0,0,0);
+            button.Padding = Padding.Empty;
             button.FlatAppearance.BorderSize = 0;
             button.Margin = new Padding(0,0,0,8);
             button.Click += (_, _) => Navigate(key);
             navigation[key] = button;
             AppVisuals.AddRow(stack, button);
         }
-        var version = AppVisuals.TextBlock("版本 " + typeof(ThemeManagerForm).Assembly.GetName().Version?.ToString(3), 9F);
+        var version = AppVisuals.SingleLineText("版本 " + typeof(ThemeManagerForm).Assembly.GetName().Version?.ToString(3), 9F);
+        navigationLabels.Add(version);
         version.Dock = DockStyle.Bottom;
         panel.Controls.Add(stack);
         panel.Controls.Add(version);
         return panel;
+    }
+
+    private void FitNavigation()
+    {
+        if (shell == null || navigationPanel == null || IsDisposed) return;
+        var preferred = navigationLabels.Concat(navigation.Values).Select(c => c.GetPreferredSize(Size.Empty).Width + c.Margin.Horizontal).DefaultIfEmpty(0).Max();
+        var width = Math.Max((int)Math.Ceiling(208 * DeviceDpi / 96f), preferred + navigationPanel.Padding.Horizontal + (int)Math.Ceiling(8 * DeviceDpi / 96f));
+        if (Math.Abs(shell.ColumnStyles[0].Width - width) > 1) shell.ColumnStyles[0].Width = width;
     }
 
     private void Navigate(string key)
@@ -131,6 +148,7 @@ internal sealed partial class ThemeManagerForm
             button.ForeColor = name == key ? AppVisuals.Accent : AppVisuals.MutedInk;
             button.Font = AppVisuals.UiFont(10F, name == key ? FontStyle.Bold : FontStyle.Regular);
         }
+        FitNavigation();
     }
 
     private void SetThemeBusy(bool value, string? message = null)

@@ -162,6 +162,12 @@ public static class AppVisuals
         UseMnemonic = false
     };
 
+    public static SingleLineLabel SingleLineText(string text, float size = 10F, bool bold = false) => new()
+    {
+        Text = text, Dock = DockStyle.Top, Font = UiFont(size, bold ? FontStyle.Bold : FontStyle.Regular),
+        ForeColor = bold ? Ink : MutedInk, Margin = new Padding(0, 0, 0, 12)
+    };
+
     public static void AddRow(TableLayoutPanel table, Control control)
     {
         var row = table.RowCount++;

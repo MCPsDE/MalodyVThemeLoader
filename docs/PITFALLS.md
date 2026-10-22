@@ -78,3 +78,5 @@
 - 为了让源代码也能针对新旧缓存编译，Cubism 适配层按保留的 SDK accessor 方法名绑定托管委托。发布检查同时校验这些反射接口的返回值、参数及唯一性；仅检查直接 MemberRef 会漏掉反射绑定。
 - artifacts/interop-host 可能保留更新前的 GameAssembly，而 Data junction 指向更新后的数据，不能视为当前游戏版本的依据。2.3.1 发布包采用经校验的实际 interop 目录，不再复制旧 host 的接口缓存。
 - 顶层每帧捕获并打印同一个异常会把游戏日志刷到数百 MB，状态却停在 waiting。运行故障应停止该项更新、尝试恢复原模型、写入 error 状态；用户重新应用主题后才重试。
+- 回大厅时原版模型闪现：新看板的 Start 已创建原模型，但加载器还在等 0.4 秒的下一次发现扫描。场景加载回调也可能早于 Start，因此不能只在 SceneLoaded 扫描。对 WidgetLive2dControl.Start / Show 使用定向 postfix，同步应用模型，成功后隐藏原图；扫描仅保留补漏，不在这些回调中检查扫描冷却。
+- Harmony 的字符串目标不一定生成直接 MemberRef；新生命周期钩子必须检查实际 interop 中同名方法的唯一性与签名。接口校验通过仍不等于已实测切场景时的首帧画面。

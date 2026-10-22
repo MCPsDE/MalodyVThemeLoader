@@ -72,13 +72,36 @@ internal sealed class Live2dReplacementService : IDisposable
         nextScan = Time.unscaledTime + .4f;
         if (replacements.Count == 0 && failed.Count == 0) Status("waiting", "等待游戏显示看板角色。");
         foreach (var widget in Resources.FindObjectsOfTypeAll<WidgetLive2dControl>())
+            ApplyNow(widget);
+    }
+
+    // Widget.Start has already created the game's visual, and no camera has
+    // rendered it yet. Show can also reactivate an existing widget. Neither
+    // lifecycle event may wait for the bounded fallback discovery timer.
+    public void ApplyNow(WidgetLive2dControl widget)
+    {
+        if (binding == null || updateFailed || widget == null) return;
+        try
         {
             if (!SceneThemeApplier.IsSceneComponent(widget) || !widget.gameObject.activeInHierarchy
-                || !SceneThemeApplier.IsAllowedScene(widget.gameObject.scene.name) || widget.container == null) continue;
+                || !SceneThemeApplier.IsAllowedScene(widget.gameObject.scene.name) || widget.container == null) return;
+            for (var index = replacements.Count - 1; index >= 0; index--)
+            {
+                var previous = replacements[index];
+                if (previous.Original != null && previous.Widget != null && previous.Visual.Model != null) continue;
+                previous.Dispose();
+                replacements.RemoveAt(index);
+            }
             // Read the already-instantiated visual only. Never select/instantiate
             // a game character or invoke MarloManage, purchases or notifications.
             var original = FindInstantiatedVisual(widget);
-            if (original == null || replacements.Any(r => r.Original == original) || failed.Contains(original.GetInstanceID())) continue;
+            if (original == null || failed.Contains(original.GetInstanceID())) return;
+            var existing = replacements.FirstOrDefault(replacement => replacement.Original == original);
+            if (existing != null)
+            {
+                existing.KeepOriginalHidden();
+                return;
+            }
             try
             {
                 replacements.Add(Create(widget, original));
@@ -92,6 +115,7 @@ internal sealed class Live2dReplacementService : IDisposable
                 log.LogWarning($"Live2D replacement failed; original preserved: {e}");
             }
         }
+        catch (Exception exception) { ReportUpdateFailure(exception); }
     }
 
     public void PlayTap(WidgetLive2dControl widget)

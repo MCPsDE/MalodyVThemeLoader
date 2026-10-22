@@ -53,10 +53,31 @@ try {
             }
         }
     } finally { $cubism.Dispose() }
+    # Harmony target names are strings, so direct MemberRef resolution cannot
+    # catch a stripped/renamed lifecycle method. Resolve those targets too.
+    $lifecycleTargets = 0
+    foreach ($patchType in $module.Types) {
+        foreach ($attribute in $patchType.CustomAttributes) {
+            if ($attribute.AttributeType.FullName -ne 'HarmonyLib.HarmonyPatch' -or $attribute.ConstructorArguments.Count -ne 2) { continue }
+            $target = $attribute.ConstructorArguments[0].Value
+            if ($target -isnot [Mono.Cecil.TypeReference] -or $target.FullName -ne 'Malody.Scene.Widget.WidgetLive2dControl') { continue }
+            $targetName = [string]$attribute.ConstructorArguments[1].Value
+            try {
+                $owner = $target.Resolve()
+                $matches = @($owner.Methods | Where-Object Name -eq $targetName)
+                $expectedCount = if ($targetName -eq 'OnPointerClick') { 1 } else { 0 }
+                if ($matches.Count -ne 1 -or $matches[0].IsStatic -or $matches[0].Parameters.Count -ne $expectedCount -or
+                    $matches[0].ReturnType.FullName -ne 'System.Void') {
+                    $missing.Add($target.FullName + '::' + $targetName + ' (Harmony target)')
+                }
+                $lifecycleTargets++
+            } catch { $missing.Add($target.FullName + '::' + $targetName + ': ' + $_.Exception.GetBaseException().Message) }
+        }
+    }
     if ($missing.Count) {
         $missing | Write-Output
         throw "Interop incompatibility: $($missing.Count) missing references in $InteropRoot"
     }
     if ($checked -eq 0) { throw 'No game/Unity references were checked.' }
-    Write-Output "PASS: $checked game/Unity member references and 9 Cubism wrapper signatures resolve against $InteropRoot"
+    Write-Output "PASS: $checked game/Unity member references, 9 Cubism signatures and $lifecycleTargets Live2D Harmony targets resolve against $InteropRoot"
 } finally { $module.Dispose(); $resolver.Dispose() }

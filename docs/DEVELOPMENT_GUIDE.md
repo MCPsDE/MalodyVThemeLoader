@@ -279,6 +279,16 @@ reference against the actual target interop directory without running the game.
 The release build runs this gate and packages that validated interop cache.
 An uncaught Live2D update fault now stops that service and writes an error status
 instead of logging the same failure every frame; reapplying the theme retries.
+
+Version 2.3.2 applies replacements synchronously from targeted
+`WidgetLive2dControl.Start` and `Show` postfixes. `Start` has created the game's
+visual before returning, so the replacement commits before the next render
+instead of waiting up to 0.4 seconds for discovery. The periodic scan remains a
+fallback. Repeated callbacks reuse the existing replacement and reassert original
+visibility; dead scene objects are cleaned before creating a new replacement.
+The binding still controls only a looping idle motion and a left-click motion
+that returns to idle. Model motion group names are choices, not body-region or
+game-event triggers. These hooks never alter the game's character selection.
 Importing a ZIP with duplicate normalized entries uses the last entry, which
 matches ordinary overwrite semantics and handles Unicode Live2D archives.
 

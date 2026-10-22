@@ -12,6 +12,24 @@ using UnityEngine.UI;
 
 namespace MalodyVThemeLoader.Plugin;
 
+[HarmonyPatch(typeof(Malody.Scene.Widget.WidgetLive2dControl), "Start")]
+internal static class Live2dVisualStartPatch
+{
+    private static void Postfix(Malody.Scene.Widget.WidgetLive2dControl __instance)
+    {
+        ThemeRuntime.Current?.Live2d.ApplyNow(__instance);
+    }
+}
+
+[HarmonyPatch(typeof(Malody.Scene.Widget.WidgetLive2dControl), "Show")]
+internal static class Live2dVisualShowPatch
+{
+    private static void Postfix(Malody.Scene.Widget.WidgetLive2dControl __instance)
+    {
+        ThemeRuntime.Current?.Live2d.ApplyNow(__instance);
+    }
+}
+
 [HarmonyPatch(typeof(Malody.Scene.Widget.WidgetLive2dControl), "OnPointerClick")]
 internal static class Live2dVisualClickPatch
 {

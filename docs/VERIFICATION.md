@@ -41,7 +41,13 @@
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
-本次版本：[v2.3.1](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.3.1)。
+本次版本：[v2.3.2](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.3.2)。
+
+## 2.3.2 返回大厅的模型切换时机
+
+用户在 2.3.1 已成功显示 Murasame，但返回大厅时会先闪现原模型。检查确认角色只在每 0.4 秒的发现扫描中替换，SceneLoaded 也早于角色 Start，存在可见间隙。2.3.2 在游戏看板 Start 与 Show 返回时同步调用替换，不受扫描冷却影响；已有替换只重申隐藏状态，已销毁场景对象先清理。失败时仍保留原模型。
+
+发布接口检查新增三个 Live2D Harmony 字符串目标的唯一性及签名校验，覆盖初始化、重新显示和点击。Release 编译和假目录回归不代表已在用户正在运行的游戏中完成切场景首帧验证，真实目录保持只读；安装后仍需重启并确认该画面。
 
 ## 2.3.1 真实运行接口故障
 

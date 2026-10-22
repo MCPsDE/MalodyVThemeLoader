@@ -88,3 +88,4 @@
 - WinForms Timer 的绘制若超过 tick 间隔，持续开启会令 DoEvents 测试被绘制饿死。Tick 先停表，完成一帧后再启表，限制预览分辨率；停止、切换、释放时同步释放图像和绘图上下文。
 - 音频按完整 motion 相对路径绑定，不按动作组/部位名称绑定。同一动作复用时共用音频，新动作停止上一段；游戏播放使用加载器自己的 AudioSource，不能控制游戏 SoundManager 或全局音量。
 - 插件项目默认不会复制所有传递 NuGet 运行依赖；启用 CopyLocalLockFileAssemblies，并将 NVorbis.dll 加进离线 payload 和完整性检查，否则编辑器能解码 OGG，游戏插件却会缺程序集。SkiaSharp 原生依赖随管理器单文件自解压，原游戏 Cubism Core 只从所选游戏目录加载。
+- 只读验证期间用户仍可能运行游戏。Emiria 的 Config 保存逻辑会写 config.json，已安装旧插件也会写 ThemeLoader/live2d-status.json（本次状态版本仍为 2.3.1）；它们不是稳定程序资源。完整差异必须保留，VerifyStable 仅精确排除这些已确认的运行数据，不排除整个 ThemeLoader 目录，也不回滚用户设置。

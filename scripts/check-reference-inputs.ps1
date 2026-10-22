@@ -22,12 +22,16 @@ if ($Mode -eq 'Record') {
             $path = $_.Path
             if (!$path.StartsWith($gamePrefix,[StringComparison]::OrdinalIgnoreCase)) { return $true }
             $relative = $path.Substring($gamePrefix.Length).Replace('\','/')
-            return !($relative -in @('chart.bin','score.bin','song.bin','BepInEx/LogOutput.log') -or
+            # Config.Save writes config.json; the running ThemeLoader writes its
+            # status independently of editor tests. Keep these differences in the
+            # full audit without treating them as program/resource modifications.
+            return !($relative -in @('chart.bin','score.bin','song.bin','config.json',
+                'BepInEx/LogOutput.log','ThemeLoader/live2d-status.json') -or
                 $relative.StartsWith('cache/') -or $relative.StartsWith('replay/') -or
                 $relative.StartsWith('BepInEx/plugins/MalodyVReworkOverlay/MalodyV.ReworkOverlay.exe.WebView2/'))
         })
         if ($stableChanges.Count) { $stableChanges | Format-List; throw 'Source or stable game files changed.' }
-        Write-Output "Source and stable game files unchanged. $(@($changes).Count) difference records are active-game databases, replay files or caches. Full differences: artifacts/reference-changes.json"
+        Write-Output "Source and stable game files unchanged. $(@($changes).Count) difference records are active-game databases, config, runtime status, replay files or caches. Full differences: artifacts/reference-changes.json"
         exit 0
     }
     if ($changes) { $changes | Format-Table; throw 'Reference inputs changed.' }

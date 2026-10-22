@@ -4,7 +4,7 @@ Mode: Operate. Chinese Windows x64 utility for Malody V players and theme author
 
 THESIS: Make installation and choosing a theme immediate. Keep configuration and removal separate from normal theme selection.
 
-OWN-WORLD: Fluent 2 neutral layers with dark mode by default and a saved light option; readable neutral text and restrained brand blue. A shared footer carries the exact author credit, appearance selector and a vivid multicolor sponsorship button explicitly requested by the user. The rest of the workspace stays neutral.
+OWN-WORLD: Fluent 2 neutral layers. The manager defaults dark with a saved light option through a drawn sun/moon switch; readable neutral text and restrained brand blue. Its footer carries the exact author credit and requested multicolor sponsor button. Installers always use light appearance with credit only. The rest of the workspace stays neutral.
 
 STORY: The installer recognizes the game, explains whether BepInEx will be reused and installs offline. The manager shows a real theme preview, lets the user apply/import/export ZIPs, and offers settings and maintenance on separate pages. No agreement or device restrictions.
 
@@ -16,7 +16,7 @@ Workflow record: This session applied the skill's native Operate guidance direct
 
 QUALITY BAR: At supported normal and minimum window sizes, the primary task remains visible and controls do not overlap. Search has a persistent label. Empty, invalid, busy and disabled states remain truthful and recoverable. Shared buttons paint cleanly against their actual surface. Real artwork comes from the source; no generated rasters ship. Keyboard focus and native affordances remain available. Technical checks validate ZIP packages, install ownership, runtime reuse and rollback; synthetic scale tests are reported within their actual limits.
 
-2.2.1 scope: persistent dark/light mode across manager and installers; exact watermark `by 猫猫虫小窝(451586654)`; sponsor label exactly `赞助支持` linking to `https://ifdian.net/a/mcpsde`; concise Live2D task copy without model-format explanations. GIF's actual first-frame behavior appears only as the GIF file-filter label. Preserve existing theme, settings and selection during appearance changes. Gradient restriction is overridden only for the specifically requested sponsor control; no added animation or decorative assets.
+2.2.2 scope: replace the manager's dropdown with a single drawn sun/moon switch, sun on left and moon on right. Click flips the highlighted half; left/right keys select light/dark. Preserve persistence, theme and settings. Installers use light only and have neither appearance toggle nor sponsorship, retaining the author credit. Release directly to artifacts/release. Preserve concise Live2D copy, exact watermark and manager-only sponsor label/link; no new imagery or layout redesign.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 

@@ -354,20 +354,24 @@ See `docs/PITFALLS.md` before changing install, theme or UI code.
 
 ## 17. Desktop appearance and copy
 
-The manager and both installers share `BrandBar` and `AppAppearance` from the
-Windows project. A fresh installation starts dark; the appearance selector applies
-colors immediately without rebuilding the library or changing the game theme.
+The manager uses the full `BrandBar` and `AppAppearance` from the Windows project.
+A fresh manager starts dark; its two-position `AppearanceToggle` draws a sun on
+the left and a moon on the right. Click toggles, left/right keys select light/dark,
+and Space/Enter retain button activation. It exposes an accessible checked state.
+Colors update without rebuilding the library or changing the game theme.
 The preference is an atomic JSON file at
 `%LOCALAPPDATA%/MalodyVThemeLoader/appearance.json`, separate from game settings.
 `MALODY_THEMELOADER_PREFERENCES` redirects only that directory for isolated tests.
 Invalid or missing preferences fall back to dark. Failed writes retain the current
 selection and report a save error.
 
-The shared footer contains the exact credit and a `赞助支持` button. Its fixed
+The manager footer contains the exact credit and a `赞助支持` button. Its fixed
 URL opens only after a click; the multicolor fill is the user's explicit exception
 to the otherwise neutral Fluent surfaces. Native window themes and DWM follow the
 selected appearance where supported; older systems retain native scrollbars.
-Artwork is never recolored.
+Artwork is never recolored. Installers call `UseLightAppearance()` before creating
+colored controls and use `BrandBar(showManagerActions: false)`. They always render
+light, with credit only, and never write the manager's appearance preference.
 
 Live2D screens show concise actions and results. Model format details stay here;
 the GIF picker calls its actual behavior `GIF 首帧`. Compound motion suffixes
@@ -379,4 +383,9 @@ Validate preference persistence in two separate processes:
 ```powershell
 pwsh -NoProfile -File scripts/test-appearance.ps1 -Phase Write
 pwsh -NoProfile -File scripts/test-appearance.ps1 -Phase Reload
+pwsh -NoProfile -File scripts/test-appearance.ps1 -Phase Installers
 ```
+
+Release builds use `artifacts/release` by default. They preserve older installer
+executables that may still be open, overwrite the current version, and reset only
+the generated Default directory. SHA256SUMS lists the current installer and README.

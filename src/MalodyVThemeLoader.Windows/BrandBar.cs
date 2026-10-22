@@ -7,21 +7,18 @@ public sealed class BrandBar : UserControl
 {
     public const string Watermark = "by 猫猫虫小窝(451586654)";
     public const string SponsorUrl = "https://ifdian.net/a/mcpsde";
-    private readonly ComboBox appearance = new();
+    private readonly AppearanceToggle? appearance;
     private bool refreshing;
 
-    public BrandBar()
+    public BrandBar(bool showManagerActions = true)
     {
         Dock = DockStyle.Bottom;
-        Height = 58;
+        Height = showManagerActions ? 58 : 40;
         BackColor = AppVisuals.Canvas;
         ForeColor = AppVisuals.Ink;
         Padding = new Padding(24,10,24,10);
-        var row = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1, Margin = Padding.Empty };
+        var row = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = showManagerActions ? 4 : 1, RowCount = 1, Margin = Padding.Empty };
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,44));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,126));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,124));
         var credit = new Label
         {
             Text = Watermark, AutoSize = false, Dock = DockStyle.Fill,
@@ -29,34 +26,25 @@ public sealed class BrandBar : UserControl
             Font = AppVisuals.UiFont(9F), UseMnemonic = false, Margin = Padding.Empty,
             AccessibleName = Watermark
         };
+        row.Controls.Add(credit,0,0);
+        Controls.Add(row);
+        if (!showManagerActions) return;
+
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,44));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,108));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,124));
         var label = new Label { Text = "外观", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
             ForeColor = AppVisuals.MutedInk, Font = AppVisuals.UiFont(9F), Margin = Padding.Empty };
-        appearance.DropDownStyle = ComboBoxStyle.DropDownList;
-        appearance.FlatStyle = FlatStyle.Flat;
-        appearance.DrawMode = DrawMode.OwnerDrawFixed;
-        appearance.DrawItem += (_,e) =>
+        appearance = new AppearanceToggle
         {
-            var selected = (e.State & DrawItemState.Selected) != 0;
-            using var brush = new SolidBrush(selected ? AppVisuals.AccentSoft : AppVisuals.Surface);
-            e.Graphics.FillRectangle(brush,e.Bounds);
-            TextRenderer.DrawText(e.Graphics,e.Index >= 0 ? appearance.Items[e.Index]?.ToString() ?? "" : appearance.Text,
-                appearance.Font,Rectangle.Inflate(e.Bounds,-4,0),AppVisuals.Ink,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-            if ((e.State & DrawItemState.Focus) != 0) e.DrawFocusRectangle();
+            Name = "appearanceToggle", Dock = DockStyle.Fill,
+            Margin = new Padding(0,0,16,0)
         };
-        appearance.Name = "appearanceSelector";
-        appearance.AccessibleName = "外观模式";
-        appearance.Items.AddRange(new object[] { "暗黑模式", "亮色模式" });
-        appearance.Dock = DockStyle.Fill;
-        appearance.Margin = new Padding(0,4,16,0);
-        appearance.Font = AppVisuals.UiFont(9F);
-        appearance.BackColor = AppVisuals.Surface;
-        appearance.ForeColor = AppVisuals.Ink;
         RefreshAppearance();
-        appearance.SelectedIndexChanged += (_,_) =>
+        appearance.DarkSelectedChanged += (_,_) =>
         {
             if (refreshing) return;
-            try { AppAppearance.SetDarkMode(appearance.SelectedIndex == 0); }
+            try { AppAppearance.SetDarkMode(appearance.DarkSelected); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 RefreshAppearance();
@@ -73,17 +61,15 @@ public sealed class BrandBar : UserControl
                 MessageBox.Show(FindForm(), "无法打开赞助页面：" + ex.Message, "赞助支持", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         };
-        row.Controls.Add(credit,0,0);
         row.Controls.Add(label,1,0);
         row.Controls.Add(appearance,2,0);
         row.Controls.Add(sponsor,3,0);
-        Controls.Add(row);
     }
 
     internal void RefreshAppearance()
     {
         refreshing = true;
-        try { appearance.SelectedIndex = AppAppearance.IsDark ? 0 : 1; }
+        try { if (appearance is not null) appearance.DarkSelected = AppAppearance.IsDark; }
         finally { refreshing = false; }
     }
 }

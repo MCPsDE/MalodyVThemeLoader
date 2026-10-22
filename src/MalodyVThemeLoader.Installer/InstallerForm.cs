@@ -6,21 +6,29 @@ namespace MalodyVThemeLoader.Installer;
 internal sealed class InstallerForm : Form
 {
     private readonly TextBox pathBox = new();
-    private readonly Label pathState = AppVisuals.TextBlock("");
-    private readonly Label environmentState = AppVisuals.TextBlock("");
-    private readonly Label operationState = AppVisuals.TextBlock("选择游戏目录后即可安装。");
+    private readonly Label pathState;
+    private readonly Label environmentState;
+    private readonly Label operationState;
     private readonly TextBox statusBox = new();
     private readonly ProgressBar progressBar = new();
-    private readonly Button browseButton = AppVisuals.CreateButton("浏览…");
-    private readonly Button installButton = AppVisuals.CreateButton("安装 ThemeLoader", primary: true);
-    private readonly Button uninstallButton = AppVisuals.CreateButton("卸载加载器");
-    private readonly Button managerButton = AppVisuals.CreateButton("打开主题管理器");
+    private readonly Button browseButton;
+    private readonly Button installButton;
+    private readonly Button uninstallButton;
+    private readonly Button managerButton;
     private readonly InstallService service = new();
     private readonly System.Windows.Forms.Timer pathTimer = new() { Interval = 350 };
     private bool busy;
 
     public InstallerForm()
     {
+        AppAppearance.UseLightAppearance();
+        pathState = AppVisuals.TextBlock("");
+        environmentState = AppVisuals.TextBlock("");
+        operationState = AppVisuals.TextBlock("选择游戏目录后即可安装。");
+        browseButton = AppVisuals.CreateButton("浏览…");
+        installButton = AppVisuals.CreateButton("安装 ThemeLoader",primary: true);
+        uninstallButton = AppVisuals.CreateButton("卸载加载器");
+        managerButton = AppVisuals.CreateButton("打开主题管理器");
         Text = "ThemeLoader · 安装";
         AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(880, 720);
@@ -104,7 +112,7 @@ internal sealed class InstallerForm : Form
         AppVisuals.AddRow(footer, actions);
         layout.Controls.Add(footer, 0, 2);
         Controls.Add(layout);
-        Controls.Add(new BrandBar());
+        Controls.Add(new BrandBar(showManagerActions: false));
         installButton.Click += async (_, _) => await RunOperationAsync(false);
         uninstallButton.Click += async (_, _) =>
         {

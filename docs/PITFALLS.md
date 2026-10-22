@@ -53,5 +53,8 @@
 - 追加复制 Default 目录到已存在的测试目录会形成 Default/Default，文件数量翻倍。只重置 artifacts 内已核实的 UI fixture，再复制。
 - 使用 `Path.GetExtension` 判断 `.motion3.json` 或 `.mtn.bytes` 只得到最后一段，动画列表会漏项；用完整文件名的 `EndsWith`。
 - ZIP 覆盖失败发生在解压阶段时，旧目标目录尚未移动；回滚不能无条件删除目标。恢复失败也不能在 finally 删除备份。
-- 发布目录里的旧安装器可能由用户打开，导致重建时被锁。不要结束用户窗口；构建和发布脚本支持 `-ReleaseDirectory artifacts/release-<version>`，输出到独立版本目录。
+- 发布目录里的旧安装器可能由用户打开，导致整目录重建时被锁。不要结束用户窗口；统一写入 `artifacts/release`，保留旧 EXE，只覆盖当前版本并单独重建 Default。
 - GitHub Release 创建时，`--target` 传短 SHA 在本环境会返回 HTTP 422（target_commitish invalid）。使用已推送的分支名或完整 40 位 SHA，上传前先核实目标。
+- 用户明确要求统一输出 `artifacts/release`，不能再因旧文件被锁另建版本文件夹。发布脚本只覆盖当前版本，保留旧安装器，单独重建 Default 并只为当前版本写校验值。
+- 管理器外观必须用左太阳、右月亮的直接切换控件，不能用原生 ComboBox 代替。两个安装器固定亮色，只有作者署名，不显示外观或赞助操作。
+- C# 字段初始化早于构造函数体；安装器若先创建暗色控件再强制亮色，会留下混合配色。彩色字段在设置亮色之后创建；安装器的进程内覆盖不写管理器偏好。

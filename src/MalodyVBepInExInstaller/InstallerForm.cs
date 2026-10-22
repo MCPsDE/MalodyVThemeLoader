@@ -5,18 +5,24 @@ namespace MalodyVBepInExInstaller;
 internal sealed class InstallerForm : Form
 {
     private readonly TextBox pathBox = new();
-    private readonly Label pathState = AppVisuals.TextBlock("");
-    private readonly Label operationState = AppVisuals.TextBlock("准备就绪。");
+    private readonly Label pathState;
+    private readonly Label operationState;
     private readonly TextBox statusBox = new();
     private readonly CheckBox configurationManagerCheckBox = new();
-    private readonly Button installButton = AppVisuals.CreateButton("安装 / 修复 BepInEx", primary: true);
-    private readonly Button uninstallButton = AppVisuals.CreateButton("卸载 BepInEx");
-    private readonly Button browseButton = AppVisuals.CreateButton("浏览…");
+    private readonly Button installButton;
+    private readonly Button uninstallButton;
+    private readonly Button browseButton;
     private readonly InstallService service = new();
     private bool busy;
 
     public InstallerForm()
     {
+        AppAppearance.UseLightAppearance();
+        pathState = AppVisuals.TextBlock("");
+        operationState = AppVisuals.TextBlock("准备就绪。");
+        installButton = AppVisuals.CreateButton("安装 / 修复 BepInEx",primary: true);
+        uninstallButton = AppVisuals.CreateButton("卸载 BepInEx");
+        browseButton = AppVisuals.CreateButton("浏览…");
         Text = "Malody V · BepInEx 安装";
         AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(860, 680);
@@ -74,7 +80,7 @@ internal sealed class InstallerForm : Form
         installButton.Margin = new Padding(0,0,12,0);
         actions.Controls.Add(installButton); actions.Controls.Add(uninstallButton);
         AppVisuals.AddRow(footer,actions); shell.Controls.Add(footer,0,1); Controls.Add(shell);
-        Controls.Add(new BrandBar());
+        Controls.Add(new BrandBar(showManagerActions: false));
         installButton.Click += async (_,_) =>
         {
             if (MessageBox.Show(this,"重建运行时、配置与缓存？已有 plugins 将保留。","安装 BepInEx",MessageBoxButtons.YesNo,MessageBoxIcon.Question) != DialogResult.Yes) return;

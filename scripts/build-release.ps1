@@ -60,7 +60,14 @@ if (-not (Test-Path (Join-Path $InteropHost 'BepInEx\interop\Assembly-CSharp.dll
 }
 
 Reset-WorkspaceDirectory $payloadRoot
-Reset-WorkspaceDirectory $releaseRoot
+# Keep older installers in the standard release directory; an existing window
+# may still hold one open. Only the new version's artifacts are overwritten.
+$releasePath = [IO.Path]::GetFullPath($releaseRoot)
+$allowedRelease = [IO.Path]::GetFullPath($artifactsRoot).TrimEnd('\') + '\'
+if (-not $releasePath.StartsWith($allowedRelease,[StringComparison]::OrdinalIgnoreCase)) {
+    throw "Release path must stay inside artifacts: $releasePath"
+}
+New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
 Reset-WorkspaceDirectory $pluginBuildRoot
 Reset-WorkspaceDirectory $themeBuilderBuildRoot
 Reset-WorkspaceDirectory $managerBuildRoot
@@ -166,12 +173,15 @@ $installerTarget = Join-Path $releaseRoot "MalodyVThemeLoader-Setup-$Version.exe
 Copy-Item -LiteralPath $installerSource -Destination $installerTarget -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\README.txt') `
     -Destination $releaseRoot -Force
-Copy-Item -LiteralPath (Join-Path $payloadRoot 'ThemeLoader\themes\Default') `
-    -Destination (Join-Path $releaseRoot 'Default') -Recurse -Force
+$releaseDefault = Join-Path $releaseRoot 'Default'
+Reset-WorkspaceDirectory $releaseDefault
+Get-ChildItem -LiteralPath (Join-Path $payloadRoot 'ThemeLoader\themes\Default') -Force | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination $releaseDefault -Recurse -Force
+}
 
-Get-ChildItem -LiteralPath $releaseRoot -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
-    $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
-    "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+@($installerTarget,(Join-Path $releaseRoot 'README.txt')) | ForEach-Object {
+    $hash = Get-FileHash -LiteralPath $_ -Algorithm SHA256
+    "$($hash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_))"
 } |
     Set-Content -LiteralPath (Join-Path $releaseRoot 'SHA256SUMS.txt') -Encoding ASCII
 

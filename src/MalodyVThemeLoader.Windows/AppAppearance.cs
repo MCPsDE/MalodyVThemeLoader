@@ -9,6 +9,9 @@ public static class AppAppearance
     private static readonly ConditionalWeakTable<Form, FormState> States = new();
     public static bool IsDark => AppVisuals.DarkMode;
 
+    /// <summary>Installer process override; never changes the saved manager preference.</summary>
+    public static void UseLightAppearance() => SetDarkMode(false,persist: false);
+
     public static void Initialize(Form form)
     {
         if (!States.TryGetValue(form, out _))

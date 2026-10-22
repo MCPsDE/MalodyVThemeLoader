@@ -54,6 +54,9 @@ function Capture($form, [string]$name) {
     Write-Output (Join-Path $OutputRoot "$name.png")
 }
 foreach ($name in $assemblies.Keys) {
+    $windows = [Reflection.Assembly]::LoadFrom((Join-Path ([IO.Path]::GetDirectoryName($assemblies[$name].Location)) 'MalodyVThemeLoader.Windows.dll'))
+    $windows.GetType('MalodyVThemeLoader.Windows.AppAppearance').GetMethod('SetDarkMode').Invoke(
+        $null,[object[]]@([bool]($Appearance -eq 'dark'),[bool]$false))
     $isManager = $name.EndsWith('ThemeManager')
     $type = $assemblies[$name].GetType($name + $(if ($isManager) { '.ThemeManagerForm' } else { '.InstallerForm' }), $true)
     $arguments = if ($isManager) { [object[]]@($fakeGame) } else { [object[]]@() }

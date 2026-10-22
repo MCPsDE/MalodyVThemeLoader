@@ -1,6 +1,6 @@
 ---
 name: Malody V ThemeLoader
-description: A focused Fluent 2 native Windows workspace with persistent dark and light appearances.
+description: A focused Fluent 2 Windows workspace with saved manager appearance and light installers.
 colors:
   accent: "#69AFED"
   accent-light: "#0F6CBD"
@@ -138,6 +138,20 @@ components:
     typography: "{typography.label}"
     padding: "10px 24px"
     height: "58px"
+  brand-bar-installer:
+    backgroundColor: "{colors.canvas-light}"
+    textColor: "{colors.muted-ink-light}"
+    typography: "{typography.label}"
+    padding: "10px 24px"
+    height: "40px"
+  appearance-toggle:
+    backgroundColor: "{colors.surface-alt}"
+    textColor: "{colors.muted-ink}"
+    width: "92px"
+    height: "38px"
+  appearance-toggle-selected:
+    backgroundColor: "{colors.accent-soft}"
+    textColor: "{colors.accent}"
   sponsor:
     textColor: "{colors.on-fill}"
     typography: "{typography.sponsor-label}"
@@ -151,9 +165,9 @@ components:
 
 **Creative North Star: "Fluent 2 Windows utility"**
 
-The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral layers, restrained blue actions and familiar Windows controls keep attention on the next task. Dark mode is the default; a saved light option preserves the same hierarchy.
+The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral layers, restrained blue actions and familiar Windows controls keep attention on the next task. The manager defaults to dark and saves its light or dark appearance. Both installers always use the established light palette.
 
-The existing logo and real theme artwork carry the product identity. A shared footer adds the exact author credit, appearance selector and user-requested multicolor sponsorship action. This document records the WinForms implementation; workflow composition remains in the surface brief.
+The existing logo and real theme artwork carry the product identity. The manager footer adds the exact author credit, a drawn sun/moon appearance toggle and the user-requested multicolor sponsorship action. Installer footers carry the author credit alone. This document records the WinForms implementation; workflow composition remains in the surface brief.
 
 **Key Characteristics:**
 
@@ -161,11 +175,11 @@ The existing logo and real theme artwork carry the product identity. A shared fo
 - Native Chinese typography and keyboard affordances.
 - Persistent task labels and truthful operation states.
 - Real source artwork with proportion-preserving previews.
-- One vivid sponsorship control in the shared footer.
+- One vivid sponsorship control in the manager footer.
 
 ## Colors
 
-The frontmatter records the implemented values in `AppVisuals`, `ActionButton` and `BrandBar`. Unsuffixed mode-dependent tokens describe the dark default; their `-light` counterparts describe light mode. Fill, hover, pressed and sponsor colors are shared across modes.
+The frontmatter records the implemented values in `AppVisuals`, `ActionButton`, `AppearanceToggle` and `BrandBar`. Unsuffixed mode-dependent tokens describe the manager's dark default; their `-light` counterparts describe its light option and the fixed installer appearance. Fill, hover, pressed and sponsor colors are shared across manager modes. The sun/moon control uses the existing palette.
 
 ### Primary
 
@@ -197,7 +211,7 @@ The sponsor action alone uses the three recorded sponsor colors. `SponsorButton`
 
 **Diagnostic Font:** Cascadia Mono, then Consolas, then Courier New, then the system fallback.
 
-Page titles use `page-title`; the selected theme uses `selected-title`. Body copy and buttons use `body`, while metadata, footer credit and appearance labels use `label`. Section headings use 11 pt, with local 12 pt maintenance headings. The navigation wordmark uses 13 pt. Theme names and selected navigation are bold. Monospace is reserved for logs, raw JSON and animation filenames. No custom tracking or fixed line-height system is implemented.
+Page titles use `page-title`; the selected theme uses `selected-title`. Body copy and buttons use `body`, while metadata, footer credit and the manager's “外观” label use `label`. Section headings use 11 pt, with local 12 pt maintenance headings. The navigation wordmark uses 13 pt. Theme names and selected navigation are bold. Monospace is reserved for logs, raw JSON and animation filenames. The sun and moon are drawn geometry, not font glyphs or emoji. No custom tracking or fixed line-height system is implemented.
 
 **The Native Type Rule.** Keep Chinese interface text on the native UI family chain and retain point-based font sizes. System typography is the deliberate choice for this task workspace.
 
@@ -205,11 +219,11 @@ Page titles use `page-title`; the selected theme uses `selected-title`. Body cop
 
 Measurements are 96-DPI logical pixels except point-based typography. Forms use `AutoScaleMode.Dpi`; layout containers, docking and scroll regions accommodate resizing.
 
-The manager has a fixed navigation width (176 px), a flexible content area and an operation-result band (58 px), above the separate shared footer (58 px). Its theme list and detail columns use a 32/68 split and a 20 px gap. The library fills its cell with single selection and vertical scrolling; details, Live2D, settings and maintenance scroll vertically. The footer has 24 px horizontal and 10 px vertical padding, flexible author-credit space, then fixed columns for the appearance label (44 px), selector (126 px including its margin) and sponsorship action (124 px).
+The manager has a fixed navigation width (176 px), a flexible content area and an operation-result band (58 px), above its footer (58 px). Its theme list and detail columns use a 32/68 split and a 20 px gap. The library fills its cell with single selection and vertical scrolling; details, Live2D, settings and maintenance scroll vertically. The footer has 24 px horizontal and 10 px vertical padding, flexible author-credit space, then fixed columns for the appearance label (44 px), toggle allocation (108 px, including the 16 px right margin) and sponsorship action (124 px). The toggle itself is 92 × 38 px.
 
-The ThemeLoader installer starts at 880 × 720 client pixels with a 760 × 660 minimum window; standalone BepInEx starts at 860 × 680 with a 740 × 620 minimum. The manager starts at 1120 × 800 with a 960 × 700 minimum. Client and minimum window dimensions are distinct. Installer content scrolls independently of bottom actions and the shared footer.
+The ThemeLoader installer starts at 880 × 720 client pixels with a 760 × 660 minimum window; standalone BepInEx starts at 860 × 680 with a 740 × 620 minimum. The manager starts at 1120 × 800 with a 960 × 700 minimum. Client and minimum window dimensions are distinct. Installer content scrolls independently of bottom actions and its credit-only footer (40 px), which retains the same horizontal and vertical padding.
 
-Appearance captures cover normal and minimum dimensions, mode switching and restoration, and synthetic 150% layout stress. They do not establish physical multi-monitor DPI behavior.
+Current native captures are under `.impeccable/review/toggle-dark` and `toggle-light`. They cover normal and minimum dimensions, manager switching and restoration, and synthetic 150% layout stress. Both installers remain light in either capture set. These captures do not establish physical multi-monitor DPI behavior.
 
 ## Elevation & Depth
 
@@ -217,7 +231,7 @@ Neutral layers, whitespace and fine rules establish grouping without custom shad
 
 ## Shapes
 
-Working panels and native fields are rectangular. Shared action and sponsor buttons use the `action` corner radius, scaled by `DeviceDpi`. Secondary actions have a fine outline; primary and destructive actions use solid fills. Separators are single logical-pixel lines. Custom button painting clears corners to the nearest opaque ancestor.
+Working panels and native fields are rectangular. Shared action and sponsor buttons use the `action` corner radius, scaled by `DeviceDpi`. The appearance toggle uses a pill track and a rounded selected half, each rounded to half its own height. Secondary actions have a fine outline; primary and destructive actions use solid fills. Separators are single logical-pixel lines. Custom button painting clears corners to the nearest opaque ancestor.
 
 ## Components
 
@@ -237,13 +251,19 @@ The owner-drawn native ListBox has 64 px rows, one selected item, no horizontal 
 
 Real previews preserve aspect ratio against the alternate surface. Missing preview, invalid theme and empty search have distinct messages. With no selection, metadata is suppressed, recovery guidance appears and theme actions are disabled. “查看 theme.json” has a local minimum width (164 px); raw manifests open in a native read-only, scrollable dialog.
 
-### Shared footer and appearance
+### Manager footer and appearance
 
-The credit is exactly `by 猫猫虫小窝(451586654)`. The “外观” selector offers “暗黑模式” and “亮色模式”; its accessible name is “外观模式”. Switching updates initialized open forms and hidden pages while preserving the selected game theme and manager settings.
+The credit is exactly `by 猫猫虫小窝(451586654)`. Beside the “外观” label, a single icon-only button shows the sun on the left and moon on the right. Clicking anywhere on the button toggles the current mode; Left selects light and Right selects dark. Enter and native button activation toggle it. The accessible name is “暗黑模式”, the role is CheckButton, checked means dark, and its description reports the current mode and next action. Switching updates initialized manager forms and hidden pages while preserving the selected game theme and manager settings.
 
-The choice is stored atomically in `%LocalAppData%\MalodyVThemeLoader\appearance.json`, independently of game settings. Missing or unreadable preferences default to dark. Saving succeeds before the UI changes; failure restores the selector and reports an error. Test runs can isolate this directory through `MALODY_THEMELOADER_PREFERENCES`.
+`AppearanceToggle` draws the sun and crescent with GDI+ geometry and anti-aliasing. Its outlined track uses alternate surface, hover uses pressed neutral, the selected half uses soft selection blue, and the selected icon uses readable accent. The other icon uses muted ink. A dotted focus rectangle appears for keyboard focus. Feedback is immediate; no sliding animation is implemented.
+
+The choice is stored atomically in `%LocalAppData%\MalodyVThemeLoader\appearance.json`, independently of game settings. Missing or unreadable preferences default to dark. Saving succeeds before the application palette changes; failure restores the toggle and reports an error. Test runs can isolate this directory through `MALODY_THEMELOADER_PREFERENCES`.
 
 The sponsor action is labeled exactly “赞助支持” and opens `https://ifdian.net/a/mcpsde` through the default browser. It uses a bold label, white text, the documented multicolor fill, immediate hover/pressed overlays and dotted keyboard focus. It adds no animation or artwork.
+
+### Installer footer and appearance
+
+Both installers initialize light appearance before creating palette-dependent controls and use `BrandBar(showManagerActions: false)`. Their footer contains only the exact author credit. It has no appearance label, sun/moon button or sponsorship action. The light override is confined to the installer process and never writes the manager's saved appearance.
 
 ### Live2D and operation feedback
 
@@ -260,7 +280,8 @@ Use the existing embedded logo and icon. Default theme previews and exports come
 ### Do:
 
 - Do use the paired appearance tokens and keep readable accent text separate from solid button fills.
-- Do keep the exact author credit, appearance labels, sponsor label and destination.
+- Do keep the exact author credit in all three applications and the “外观” label, sun-left/moon-right control, sponsor label and destination in the manager.
+- Do keep both installers light with credit-only footers and preserve the saved manager appearance.
 - Do keep labels visible and provide distinct empty, invalid, busy and disabled states.
 - Do preserve keyboard focus, native behavior and Ctrl+F, Ctrl+O and F5 shortcuts.
 - Do use real theme artwork and preserve its aspect ratio.

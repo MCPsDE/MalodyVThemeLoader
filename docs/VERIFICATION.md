@@ -1,4 +1,4 @@
-# 2.2.1 验证记录
+# 2.2.2 验证记录
 
 验证日期：2026-10-22。所有安装操作均针对仓库 `artifacts` 内的可丢弃假游戏目录，未启动游戏。
 
@@ -8,7 +8,7 @@
 - 发布自包含 x64 单文件安装器和主题管理器，使用固定 BepInEx `6.0.0-be.785`。
 - `verify-plugin.ps1` 检查实际插件程序集：引用 BepInEx IL2CPP、Il2CppInterop 和游戏互操作程序集，没有 UnityEditor 或已删除的授权类型。
 - `verify-payload.py` 检查离线 ZIP 的完整性和路径，逐一校验固定运行库文件。Default 目录中的 1,617 个资源文件与源工程逐字节哈希一致，包含 1,428 张目录图片；另有主题清单。
-- 最终 EXE 和 README 的 SHA-256 由发布脚本写入 `artifacts/release-2.2.1/SHA256SUMS.txt`；Default 目录的资源哈希由 payload 检查覆盖。
+- 最终 EXE 和 README 的 SHA-256 由发布脚本写入 `artifacts/release/SHA256SUMS.txt`；Default 目录的资源哈希由 payload 检查覆盖。
 
 ## 安装与主题回归
 
@@ -41,13 +41,15 @@
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
-本次版本：[v2.2.1](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.2.1)。
+本次版本：[v2.2.2](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.2.2)。
 
 ## Fluent 2 视觉复核
 
 本轮按 Microsoft Fluent 2 公开规范重新检查了安装器、主题管理器和独立 BepInEx 安装器。官方参考见 `docs/FLUENT_2.md`。共享视觉 token 已切换为 Fluent 中性背景、brand blue、成功/危险状态；Windows 11 使用 DWM Mica，截图和旧系统安全回退为纯色背景。截图确认没有青绿色产品 chrome、渐变、发光或大胶囊按钮。
 
 ## 原生界面审查
+
+2.2.2 将管理器外观下拉框替换为手绘太阳／月亮双段开关，验证鼠标点击、左右键和无障碍选中状态；偏好保存和新进程恢复沿用现有测试。两个安装器固定亮色，检查无外观开关或赞助按钮，并确认启动安装器没有改写管理器的暗色偏好。输出直接使用 `artifacts/release`，旧安装器打开时仍能构建新版本。
 
 2.2.1 补齐了暗色默认、即时明暗切换、独立偏好持久化、指定作者水印、仅含“赞助支持”的多色按钮，以及 Live2D 简洁文案。执行了真实外观选择器切换、全部控件颜色往返比对和新进程亮色恢复；测试不打开浏览器，不覆盖真实用户偏好。
 

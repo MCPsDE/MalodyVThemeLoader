@@ -20,6 +20,7 @@ internal sealed class Live2dReplacementService : IDisposable
     private Live2dBinding? binding;
     private string lastStatus = "";
     private float nextScan;
+    private bool updateFailed;
     private static readonly Lazy<bool> CompatibleGame = new(() =>
     {
         // Match the native build that generated this version's obfuscated API.
@@ -53,7 +54,7 @@ internal sealed class Live2dReplacementService : IDisposable
     // Called on Unity's main thread, before the game's Cubism LateUpdate.
     public void Tick()
     {
-        if (binding == null) return;
+        if (binding == null || updateFailed) return;
         for (var i = replacements.Count - 1; i >= 0; i--)
         {
             var replacement = replacements[i];
@@ -76,8 +77,7 @@ internal sealed class Live2dReplacementService : IDisposable
                 || !SceneThemeApplier.IsAllowedScene(widget.gameObject.scene.name) || widget.container == null) continue;
             // Read the already-instantiated visual only. Never select/instantiate
             // a game character or invoke MarloManage, purchases or notifications.
-            GameObject? original = widget.bkmv != null ? widget.bkmv.gameObject
-                : widget.bkmw != null ? widget.bkmw.gameObject : null;
+            var original = FindInstantiatedVisual(widget);
             if (original == null || replacements.Any(r => r.Original == original) || failed.Contains(original.GetInstanceID())) continue;
             try
             {
@@ -97,6 +97,35 @@ internal sealed class Live2dReplacementService : IDisposable
     public void PlayTap(WidgetLive2dControl widget)
     {
         foreach (var replacement in replacements.Where(r => r.Widget == widget)) replacement.PlayTap();
+    }
+
+    private GameObject? FindInstantiatedVisual(WidgetLive2dControl widget)
+    {
+        GameObject? found = null;
+        var container = widget.container;
+        for (var index = 0; index < container.childCount; index++)
+        {
+            var candidate = container.GetChild(index).gameObject;
+            if (!candidate.activeSelf || replacements.Any(replacement => replacement.Visual.Model != null
+                && replacement.Visual.Model.gameObject == candidate)) continue;
+            if (candidate.GetComponentInChildren<LAppModelProxy>(true) == null
+                && candidate.GetComponentInChildren<CubismModel>(true) == null) continue;
+            if (found != null) throw new InvalidDataException("看板区域存在多个模型，无法确定替换目标。");
+            found = candidate;
+        }
+        return found;
+    }
+
+    public void ReportUpdateFailure(Exception exception)
+    {
+        if (updateFailed) return;
+        updateFailed = true;
+        try { Dispose(); }
+        catch (Exception restoreError) { log.LogError($"Live2D restore after failure: {restoreError}"); }
+        Status("error", exception is MissingMethodException or TypeLoadException
+            ? "加载器与当前游戏接口不兼容，请更新加载器。"
+            : exception.Message);
+        log.LogError($"Live2D updates stopped after a runtime failure. Reapply the theme to retry: {exception}");
     }
 
     private Replacement Create(WidgetLive2dControl widget, GameObject original)

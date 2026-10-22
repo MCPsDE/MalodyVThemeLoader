@@ -243,7 +243,8 @@ raw Cubism model construction using the retained `CubismMoc.CreateFrom`,
 `CubismModel.InstantiateFrom` and render/mask controllers in Malody 6.7.
 The higher-level `CubismModel3Json.ToModel` importer is stripped from IL2CPP;
 calling it from the editor SDK would give a misleading successful editor test.
-The version-specific property adapter is isolated in `Cubism67Api.cs`.
+`Cubism67Api.cs` binds managed delegates by retained SDK accessor method names,
+so generated property aliases do not become source or runtime dependencies.
 
 The workspace discovers `.model3.json` recursively, verifies moc3 and texture
 dependencies (including references containing backslashes), and stores imports
@@ -252,7 +253,8 @@ relative model path and idle/tap motion paths to `displayed-character`. Imports
 validate before staging and replacing an existing model directory. External
 motions are offered for assignment without modifying the game's Animator.
 The original character must already have been instantiated by
-`WidgetLive2dControl`; the loader reads its visual fields, never selects a
+`WidgetLive2dControl`; the loader finds model components under its public
+container, excludes its own replacement and rejects ambiguous targets. It never selects a
 character or touches ownership. It constructs and fits a sibling visual, then
 hides original renderers only after successful creation. Reload/restore destroys
 the replacement before releasing moc/textures and restores renderer visibility.
@@ -268,6 +270,15 @@ Legacy replacements still use the original Resources paths. A compatible
 AssetBundle remains the extension path for complete Unity prefabs/controllers.
 `ThemeLoader/live2d-status.json` records waiting/applied/error for the manager;
 this output is outside the watched themes subtree to prevent reload loops.
+
+Version 2.3.1 removes direct references to obfuscated private widget fields.
+The plugin accepts `-p:GameInteropRoot=<interop-directory>` when building;
+release builds use the actual target cache instead of an older host snapshot.
+`test-interop-compatibility.ps1` resolves every compiled game/Unity member
+reference against the actual target interop directory without running the game.
+The release build runs this gate and packages that validated interop cache.
+An uncaught Live2D update fault now stops that service and writes an error status
+instead of logging the same failure every frame; reapplying the theme retries.
 Importing a ZIP with duplicate normalized entries uses the last entry, which
 matches ordinary overwrite semantics and handles Unicode Live2D archives.
 

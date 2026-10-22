@@ -72,3 +72,9 @@
 - 明暗切换递归遍历时，NumericUpDown 会先把新文字色传给内部编辑框。不能再次把这个文字色解释成背景 token（暗色文字和亮色画布同为 #F5F5F5），颜色转换需要区分前景和背景。
 - 插件目标是 .NET 6，SHA256.HashData(Stream) 重载不可用；流式哈希使用 SHA256.Create().ComputeHash(stream)。测试工程编译器版本较新并不意味着插件运行时 API 也较新。
 - 工具策略曾拒绝一条合并截图批量清理与构建的 PowerShell 命令，仅返回 blocked by policy，未说明细分原因。构建与验证改为独立调用即可继续；交付不要依赖可选清理成功，也不要把这类拒绝误报成代码构建失败。
+- 2.3.0 在真实游戏报 `WidgetLive2dControl.get_bkmv()` / `get_bkmw()` 不存在：编译缓存来自旧游戏，真实 interop 中私有角色字段已改名。用公开 container 下已实例化的组件查找目标，排除本加载器创建的对象，并在目标不唯一时拒绝替换；不能硬编码混淆字段。
+- 编译通过、GameAssembly 哈希检查和 Unity 编辑器样本渲染均不能证明 CLR 能链接真实 interop。发布前用 `test-interop-compatibility.ps1` 逐项解析发行插件的游戏/Unity MemberRef，指定正在使用的 interop 目录；2.3.0 的两个缺失引用可在不运行游戏的情况下复现。
+- Cubism 属性的显示别名可以变化，但其 accessor MethodDef 仍是 `get_TextureIndex`、`set_Material` 等 SDK 名称。以编译后实际 MemberRef 和方法签名为准，不要看到属性别名不同就改用未验证的裸指针调用。
+- 为了让源代码也能针对新旧缓存编译，Cubism 适配层按保留的 SDK accessor 方法名绑定托管委托。发布检查同时校验这些反射接口的返回值、参数及唯一性；仅检查直接 MemberRef 会漏掉反射绑定。
+- artifacts/interop-host 可能保留更新前的 GameAssembly，而 Data junction 指向更新后的数据，不能视为当前游戏版本的依据。2.3.1 发布包采用经校验的实际 interop 目录，不再复制旧 host 的接口缓存。
+- 顶层每帧捕获并打印同一个异常会把游戏日志刷到数百 MB，状态却停在 waiting。运行故障应停止该项更新、尝试恢复原模型、写入 error 状态；用户重新应用主题后才重试。

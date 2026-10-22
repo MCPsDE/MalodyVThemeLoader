@@ -22,7 +22,7 @@ if ($Mode -eq 'Record') {
             $path = $_.Path
             if (!$path.StartsWith($gamePrefix,[StringComparison]::OrdinalIgnoreCase)) { return $true }
             $relative = $path.Substring($gamePrefix.Length).Replace('\','/')
-            return !($relative -in @('chart.bin','score.bin','song.bin') -or
+            return !($relative -in @('chart.bin','score.bin','song.bin','BepInEx/LogOutput.log') -or
                 $relative.StartsWith('cache/') -or $relative.StartsWith('replay/') -or
                 $relative.StartsWith('BepInEx/plugins/MalodyVReworkOverlay/MalodyV.ReworkOverlay.exe.WebView2/'))
         })

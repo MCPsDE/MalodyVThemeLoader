@@ -109,7 +109,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         // CubismModel.Update reads its previous native parameter buffer. Write
         // animation values afterwards, before its PreLateUpdate model tick.
         try { runtime.Live2d.Tick(); }
-        catch (Exception e) { runtime.Log.LogWarning($"Live2D update failed: {e.Message}"); }
+        catch (Exception e) { runtime.Live2d.ReportUpdateFailure(e); }
     }
 
     private void CheckActiveScene()

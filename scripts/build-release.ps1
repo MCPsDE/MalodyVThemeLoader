@@ -2,7 +2,8 @@ param(
     [string]$SourceRoot = 'E:\UnityProjects\Emiria',
     [string]$InteropHost = '',
     [string]$Version = '',
-    [string]$ReleaseDirectory = ''
+    [string]$ReleaseDirectory = '',
+    [string]$ValidationInteropRoot = 'E:\Program Files (x86)\Steam\steamapps\common\MalodyV\BepInEx\interop'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -79,8 +80,17 @@ if (Test-Path $payloadZip) {
 dotnet build (Join-Path $repoRoot 'src\MalodyVThemeLoader.Plugin') `
     -c Release `
     --artifacts-path $pluginBuildRoot `
+    "-p:GameInteropRoot=$ValidationInteropRoot" `
     -p:UseSharedCompilation=false
 if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed.' }
+
+# Compilation against a previously generated cache alone cannot catch private
+# field renames after a game update. Check the actual target environment before
+# building an offline installer that would distribute an incompatible plugin.
+pwsh -NoProfile -File (Join-Path $repoRoot 'scripts\test-interop-compatibility.ps1') `
+    -PluginPath (Join-Path $pluginBuildRoot 'bin\MalodyVThemeLoader.Plugin\release\MalodyVThemeLoader.Plugin.dll') `
+    -InteropRoot $ValidationInteropRoot
+if ($LASTEXITCODE -ne 0) { throw 'Plugin is incompatible with the target game interop cache.' }
 
 Copy-Item -Path (Join-Path $vendorRoot '*') -Destination $payloadRoot -Recurse -Force
 $doorstopConfig = Join-Path $payloadRoot 'doorstop_config.ini'
@@ -95,8 +105,10 @@ Get-ChildItem -LiteralPath (Join-Path $payloadRoot 'BepInEx\core') `
     Remove-Item -Force
 
 $payloadBepInEx = Join-Path $payloadRoot 'BepInEx'
-Copy-Item -Path (Join-Path $InteropHost 'BepInEx\interop') `
-    -Destination $payloadBepInEx -Recurse -Force
+$payloadInterop = Join-Path $payloadBepInEx 'interop'
+New-Item -ItemType Directory -Path $payloadInterop -Force | Out-Null
+Copy-Item -Path (Join-Path $ValidationInteropRoot '*') `
+    -Destination $payloadInterop -Recurse -Force
 Copy-Item -Path (Join-Path $InteropHost 'BepInEx\unity-libs') `
     -Destination $payloadBepInEx -Recurse -Force
 New-Item -ItemType Directory -Force -Path (Join-Path $payloadBepInEx 'config') | Out-Null

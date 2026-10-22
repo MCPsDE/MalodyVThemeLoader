@@ -41,7 +41,17 @@
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
-本次版本：[v2.3.0](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.3.0)。
+本次版本：[v2.3.1](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.3.1)。
+
+## 2.3.1 真实运行接口故障
+
+真实游戏已加载 2.3.0，Murasame 的 replacement.json、活动主题和 realtime 均正确，但日志逐帧报 `WidgetLive2dControl.get_bkmv()` 不存在，状态文件仍为 waiting。实际 interop 缓存和编译缓存的私有字段不同；这次故障发生在模型创建之前。
+
+新增元数据链接检查，无需启动或写入游戏即可复现旧版两个失效引用。修正版移除这些引用，从公开角色容器查找已实例化的模型，并逐项校验插件对真实 interop 的游戏/Unity 成员引用。发布脚本执行同一检查，并将经过校验的当前接口缓存打包。顶层运行错误会停止 Live2D 更新并写 error 状态，防止逐帧重复刷日志。
+
+修正版分别针对旧编译缓存与真实游戏当前接口完成 Release 编译；210 项直接成员引用及 9 项 Cubism 委托接口签名在两套缓存中均通过校验。Cubism 适配层按保留的 SDK accessor 方法名绑定托管委托，不依赖显示属性别名或裸指针调用。
+
+此检查证明接口可解析，不能替代真实游戏内渲染验证；修正版仍需安装后重启游戏确认。真实安装目录保持只读。
 
 ## 2.3 外部 Cubism 模型与动画
 

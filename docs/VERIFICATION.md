@@ -1,4 +1,4 @@
-# 2.2.0 验证记录
+# 2.2.1 验证记录
 
 验证日期：2026-10-22。所有安装操作均针对仓库 `artifacts` 内的可丢弃假游戏目录，未启动游戏。
 
@@ -8,7 +8,7 @@
 - 发布自包含 x64 单文件安装器和主题管理器，使用固定 BepInEx `6.0.0-be.785`。
 - `verify-plugin.ps1` 检查实际插件程序集：引用 BepInEx IL2CPP、Il2CppInterop 和游戏互操作程序集，没有 UnityEditor 或已删除的授权类型。
 - `verify-payload.py` 检查离线 ZIP 的完整性和路径，逐一校验固定运行库文件。Default 目录中的 1,617 个资源文件与源工程逐字节哈希一致，包含 1,428 张目录图片；另有主题清单。
-- 最终 EXE、Default 目录、README 的 SHA-256 由发布脚本写入 `artifacts/release/SHA256SUMS.txt`。
+- 最终 EXE 和 README 的 SHA-256 由发布脚本写入 `artifacts/release-2.2.1/SHA256SUMS.txt`；Default 目录的资源哈希由 payload 检查覆盖。
 
 ## 安装与主题回归
 
@@ -24,6 +24,7 @@
 | Doorstop 禁用、Mono 入口、核心 DLL 缺失的环境保持不变并给出诊断 | 通过 |
 | ZIP 导入后提取为可编辑目录、旧 MTP 迁移、导出、激活、设置持久化 | 通过 |
 | 重复 Unicode Live2D ZIP 项导入采用最后一项并完成目录提取 | 通过 |
+| 同 ID 中文主题覆盖导入，以及中途解压失败保留已有主题 | 通过 |
 | Live2D 工作台模型目录、ZIP、动画和已有纹理替换路径 | 已编译并通过目录/压缩包校验；真实游戏内 rig/Animator 仍需逐模型验证 |
 | Default 目录完整导出、重新导入、移除后虚拟原始外观回退、模板导出 | 通过 |
 | 有效 manifest 配合路径穿越条目的压缩包被拒绝 | 通过 |
@@ -40,13 +41,19 @@
 
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
-当前公开 Release：[v2.2.0](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.2.0)。
+本次版本：[v2.2.1](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.2.1)。
 
 ## Fluent 2 视觉复核
 
 本轮按 Microsoft Fluent 2 公开规范重新检查了安装器、主题管理器和独立 BepInEx 安装器。官方参考见 `docs/FLUENT_2.md`。共享视觉 token 已切换为 Fluent 中性背景、brand blue、成功/危险状态；Windows 11 使用 DWM Mica，截图和旧系统安全回退为纯色背景。截图确认没有青绿色产品 chrome、渐变、发光或大胶囊按钮。
 
 ## 原生界面审查
+
+2.2.1 补齐了暗色默认、即时明暗切换、独立偏好持久化、指定作者水印、仅含“赞助支持”的多色按钮，以及 Live2D 简洁文案。执行了真实外观选择器切换、全部控件颜色往返比对和新进程亮色恢复；测试不打开浏览器，不覆盖真实用户偏好。
+
+明暗两组共 36 张窗口截图覆盖正常尺寸、最小尺寸、设置、Live2D、维护、空搜索、目录错误、切换/恢复和模拟 150% 布局。独立审查结论为 `ship`，见 [外观复核](../.impeccable/review/appearance-verdict.md)；配色记录和文档交接已完成。截图不验证物理显示器 DPI 或系统合成材质。
+
+Live2D 长篇格式/边界说明已从界面移除，技术资料留在开发文档中；GIF 文件类型显示为“GIF 首帧”。动画后缀修正由 `.motion3.json` 列表回归检查覆盖。
 
 使用全局 `impeccable` skill；原生截图从 Form.DrawToBitmap 获取，避免全屏游戏遮挡窗口。检查安装器、管理器和独立 BepInEx 安装器的正常尺寸、最小尺寸和 150% 布局缩放，以及设置、维护、搜索空结果和路径诊断，共 14 张截图。
 

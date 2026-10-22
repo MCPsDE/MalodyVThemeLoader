@@ -1,7 +1,8 @@
 param(
     [string]$SourceRoot = 'E:\UnityProjects\Emiria',
     [string]$InteropHost = '',
-    [string]$Version = ''
+    [string]$Version = '',
+    [string]$ReleaseDirectory = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,7 +11,9 @@ $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $artifactsRoot = Join-Path $repoRoot 'artifacts'
 $payloadRoot = Join-Path $artifactsRoot 'payload'
 $payloadZip = Join-Path $artifactsRoot 'payload.zip'
-$releaseRoot = Join-Path $artifactsRoot 'release'
+$releaseRoot = if ([string]::IsNullOrWhiteSpace($ReleaseDirectory)) {
+    Join-Path $artifactsRoot 'release'
+} else { [IO.Path]::GetFullPath($ReleaseDirectory) }
 $pluginBuildRoot = Join-Path $artifactsRoot 'plugin-build'
 $themeBuilderBuildRoot = Join-Path $artifactsRoot 'themebuilder-build'
 $managerBuildRoot = Join-Path $artifactsRoot 'manager-build'

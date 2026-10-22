@@ -47,7 +47,7 @@ internal sealed partial class ThemeManagerForm : Form
         themeList.EndUpdate();
 
         listState.Text = $"{themeList.Items.Count} 个主题";
-        ShowStatus($"当前主题：{active}。支持拖入 ZIP 主题包。文本框中可搜索名称和作者。");
+        ShowStatus($"当前主题：{active}");
         if (themeList.SelectedIndex < 0 && themeList.Items.Count > 0)
         {
             var activeIndex = themeList.Items.Cast<ThemeItem>().ToList()

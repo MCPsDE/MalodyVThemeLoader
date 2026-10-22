@@ -74,6 +74,7 @@ internal sealed class InstallerForm : Form
         installButton.Margin = new Padding(0,0,12,0);
         actions.Controls.Add(installButton); actions.Controls.Add(uninstallButton);
         AppVisuals.AddRow(footer,actions); shell.Controls.Add(footer,0,1); Controls.Add(shell);
+        Controls.Add(new BrandBar());
         installButton.Click += async (_,_) =>
         {
             if (MessageBox.Show(this,"重建运行时、配置与缓存？已有 plugins 将保留。","安装 BepInEx",MessageBoxButtons.YesNo,MessageBoxIcon.Question) != DialogResult.Yes) return;
@@ -92,6 +93,7 @@ internal sealed class InstallerForm : Form
         pathBox.Text = GameLocator.FindGameDirectory() ?? "";
         UpdatePathState();
         FormClosing += (_,e) => { if(busy) e.Cancel = true; };
+        AppAppearance.Initialize(this);
     }
 
     private void UpdatePathState()

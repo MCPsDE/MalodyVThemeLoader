@@ -20,4 +20,4 @@ Select game directory, inspect environment, install or repair. Browse themes, pr
 
 ## Evidence
 
-Existing native application, source artwork, catalog, packaging scripts and disposable installer tests. User requested a modern, clear, concise interface and thorough inspection. The light desktop layout is the implementation default pending optional user preference.
+Existing native application, source artwork, catalog, packaging scripts and disposable installer tests. User requested a modern, clear, concise interface and thorough inspection. Dark mode is the confirmed default, with a persistent light mode option. Shared author credit is `by 猫猫虫小窝(451586654)`; the multicolor `赞助支持` button opens `https://ifdian.net/a/mcpsde`. Live2D UI copy should describe tasks and results briefly, with detailed implementation limits kept in developer documentation.

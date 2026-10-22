@@ -226,6 +226,7 @@ internal sealed class ThemeLibrary
         var backupZip = legacyZipTarget + ".old-" + Guid.NewGuid().ToString("N");
         var movedDirectory = false;
         var movedZip = false;
+        var published = false;
         try
         {
             ThemePackage.ExtractToDirectory(sourcePath, temporary);
@@ -241,12 +242,13 @@ internal sealed class ThemeLibrary
                 movedZip = true;
             }
             Directory.Move(temporary, target);
-            DeleteDirectoryIfPresent(backupDirectory);
-            DeleteFileIfPresent(backupZip);
+            published = true;
         }
         catch
         {
-            DeleteDirectoryIfPresent(target);
+            // Extraction can fail before we move the existing theme. In that
+            // case the original target must remain completely untouched.
+            if (published) DeleteDirectoryIfPresent(target);
             DeleteDirectoryIfPresent(temporary);
             if (movedDirectory && Directory.Exists(backupDirectory))
                 Directory.Move(backupDirectory, target);
@@ -257,9 +259,12 @@ internal sealed class ThemeLibrary
         finally
         {
             DeleteDirectoryIfPresent(temporary);
-            DeleteDirectoryIfPresent(backupDirectory);
-            DeleteFileIfPresent(backupZip);
         }
+
+        // Never delete backups in a rollback's finally block: a failed restore
+        // must leave the backup available for recovery.
+        DeleteDirectoryIfPresent(backupDirectory);
+        DeleteFileIfPresent(backupZip);
 
         return new ThemeItem(
             info.Manifest.Id,

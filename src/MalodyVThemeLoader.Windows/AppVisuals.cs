@@ -18,26 +18,36 @@ public static class AppVisuals
     private static readonly Lazy<string> MonoFontFamily = new(() =>
         ResolveFontFamily("Cascadia Mono", "Consolas", "Courier New"));
 
-    // Fluent 2 light theme roles. These are deliberately neutral and blue;
-    // green/teal is reserved for theme artwork and never acts as product chrome.
-    public static readonly Color Ink = Color.FromArgb(36, 36, 36);
-    public static readonly Color MutedInk = Color.FromArgb(97, 97, 97);
-    public static readonly Color Canvas = Color.FromArgb(245, 245, 245);
-    public static readonly Color Surface = Color.FromArgb(255, 255, 255);
-    public static readonly Color SurfaceAlt = Color.FromArgb(250, 250, 250);
-    public static readonly Color SurfaceRaised = Color.FromArgb(255, 255, 255);
-    public static readonly Color Line = Color.FromArgb(225, 225, 225);
-    public static readonly Color Accent = Color.FromArgb(15, 108, 189);
-    public static readonly Color AccentHover = Color.FromArgb(17, 94, 163);
-    public static readonly Color AccentPressed = Color.FromArgb(0, 84, 147);
-    public static readonly Color AccentSoft = Color.FromArgb(229, 241, 251);
-    public static readonly Color Danger = Color.FromArgb(196, 49, 36);
-    public static readonly Color DangerHover = Color.FromArgb(164, 38, 28);
-    public static readonly Color DangerPressed = Color.FromArgb(139, 31, 23);
-    public static readonly Color Sidebar = Color.FromArgb(248, 248, 248);
-    public static readonly Color SidebarMuted = Color.FromArgb(97, 97, 97);
-    public static readonly Color SidebarSoft = Color.FromArgb(243, 243, 243);
-    public static readonly Color Success = Color.FromArgb(16, 124, 16);
+    internal static bool DarkMode { get; set; } = AppearancePreferences.LoadDarkMode();
+    public static Color Ink => Palette(DarkMode).Ink;
+    public static Color MutedInk => Palette(DarkMode).MutedInk;
+    public static Color Canvas => Palette(DarkMode).Canvas;
+    public static Color Surface => Palette(DarkMode).Surface;
+    public static Color SurfaceAlt => Palette(DarkMode).SurfaceAlt;
+    public static Color SurfaceRaised => Surface;
+    public static Color Line => Palette(DarkMode).Line;
+    public static Color Accent => Palette(DarkMode).Accent;
+    public static Color AccentHover => Color.FromArgb(17,94,163);
+    public static Color AccentPressed => Color.FromArgb(0,84,147);
+    public static Color AccentFill => Color.FromArgb(15,108,189);
+    public static Color AccentSoft => Palette(DarkMode).AccentSoft;
+    public static Color Danger => Palette(DarkMode).Danger;
+    public static Color DangerFill => Color.FromArgb(196,49,36);
+    public static Color DangerHover => Color.FromArgb(164,38,28);
+    public static Color DangerPressed => Color.FromArgb(139,31,23);
+    public static Color Sidebar => Surface;
+    public static Color SidebarMuted => MutedInk;
+    public static Color SidebarSoft => SurfaceAlt;
+    public static Color Success => Palette(DarkMode).Success;
+    public static Color ControlPressed => DarkMode ? Color.FromArgb(51,51,51) : Color.FromArgb(237,237,237);
+
+    internal static AppPalette Palette(bool dark) => dark
+        ? new(Color.FromArgb(245,245,245), Color.FromArgb(184,184,184), Color.FromArgb(24,24,24),
+            Color.FromArgb(32,32,32), Color.FromArgb(41,41,41), Color.FromArgb(68,68,68),
+            Color.FromArgb(105,175,237), Color.FromArgb(27,52,72), Color.FromArgb(244,149,142), Color.FromArgb(126,210,126))
+        : new(Color.FromArgb(36,36,36), Color.FromArgb(97,97,97), Color.FromArgb(245,245,245),
+            Color.White, Color.FromArgb(250,250,250), Color.FromArgb(225,225,225),
+            Color.FromArgb(15,108,189), Color.FromArgb(229,241,251), Color.FromArgb(196,49,36), Color.FromArgb(16,124,16));
 
     public static Font UiFont(float size = 10F, FontStyle style = FontStyle.Regular)
     {
@@ -110,9 +120,9 @@ public static class AppVisuals
             UseVisualStyleBackColor = false,
             TextAlign = ContentAlignment.MiddleCenter,
             BackColor = primary
-                ? Accent
+                ? AccentFill
                 : danger
-                    ? Danger
+                    ? DangerFill
                     : Surface,
             ForeColor = primary || danger ? Color.White : Ink
         };
@@ -128,7 +138,7 @@ public static class AppVisuals
             ? AccentPressed
             : danger
                 ? DangerPressed
-                : Color.FromArgb(237, 237, 237);
+                : ControlPressed;
         return button;
     }
 
@@ -197,6 +207,9 @@ public static class AppVisuals
         return FontFamily.GenericSansSerif.Name;
     }
 }
+
+internal sealed record AppPalette(Color Ink, Color MutedInk, Color Canvas, Color Surface,
+    Color SurfaceAlt, Color Line, Color Accent, Color AccentSoft, Color Danger, Color Success);
 
 public sealed class Separator : Control
 {

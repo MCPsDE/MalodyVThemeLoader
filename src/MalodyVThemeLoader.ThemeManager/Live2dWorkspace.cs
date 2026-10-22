@@ -170,12 +170,11 @@ internal static class Live2dWorkspace
 
     private static bool IsAnimation(string path)
     {
-        var extension = Path.GetExtension(path);
-        return extension.Equals(".motion3.json", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".mtn", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".bytes", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".anim", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".fade.asset", StringComparison.OrdinalIgnoreCase);
+        return path.EndsWith(".motion3.json", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".mtn", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".mtn.bytes", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".fade.asset", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ExtractArchive(string archivePath, string destination)

@@ -180,8 +180,32 @@ try {
         $null,
         [object[]]@([string]$gameRoot),
         $null)
+    $duplicateTheme = $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$duplicatePath,[bool]$false))
+    $duplicateTexture = Join-Path ([string]$duplicateTheme.SourcePath) 'live2d\模型\texture_00.png'
+    if ([IO.File]::ReadAllText($duplicateTexture) -ne 'new') { throw 'Unicode duplicate paths did not use the last entry.' }
+    # Re-import an updated ZIP with the same ID, then verify actual extracted bytes.
+    $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$duplicatePath,[bool]$true)) | Out-Null
+    if ([IO.File]::ReadAllText($duplicateTexture) -ne 'new') { throw 'Unicode theme update failed.' }
+    $brokenPath = Join-Path $testRoot 'file-directory-conflict.zip'
+    $brokenArchive = [IO.Compression.ZipFile]::Open($brokenPath,[IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach($pair in @(@('theme.json',($manifest | ConvertTo-Json -Depth 8)),@('conflict','file'),@('conflict/child','child'))) {
+            $writer = [IO.StreamWriter]::new($brokenArchive.CreateEntry($pair[0]).Open())
+            try { $writer.Write($pair[1]) } finally { $writer.Dispose() }
+        }
+    } finally { $brokenArchive.Dispose() }
+    $failedImport = $false
+    try { $libraryType.GetMethod('Import').Invoke($library,[object[]]@([string]$brokenPath,[bool]$true)) | Out-Null }
+    catch { $failedImport = $true }
+    if (!$failedImport -or !(Test-Path $duplicateTexture) -or [IO.File]::ReadAllText($duplicateTexture) -ne 'new') {
+        throw 'Failed ZIP update damaged the existing theme.'
+    }
+    $libraryType.GetMethod('Remove').Invoke($library,[object[]]@($duplicateTheme))
     $defaultTheme = @($libraryType.GetMethod('GetThemes').Invoke($library, [object[]]@())) | Where-Object { $_.IsDefault } | Select-Object -First 1
     if (!$defaultTheme -or $defaultTheme.IsVirtual) { throw 'Full editable Default directory is missing from the payload.' }
+    $workspace = $managerAssembly.GetType('MalodyVThemeLoader.ThemeManager.Live2dWorkspace',$true)
+    $motions = $workspace.GetMethod('GetAnimationPaths').Invoke($null,[object[]]@($defaultTheme.PSObject.BaseObject,[string]'marlo 2'))
+    if (!(@($motions) | Where-Object { $_.EndsWith('.motion3.json') })) { throw 'Compound Live2D motion extensions are missing from the list.' }
     $defaultExport = Join-Path $testRoot 'Default-exported.zip'
     $libraryType.GetMethod('Export').Invoke($library, [object[]]@($defaultTheme.PSObject.BaseObject,[string]$defaultExport))
     $defaultInfo = $packageType.GetMethod('Inspect').Invoke($null,[object[]]@([string]$defaultExport))

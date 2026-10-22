@@ -1,4 +1,4 @@
-Malody V ThemeLoader 2.0
+Malody V ThemeLoader 2.2.1
 =======================
 
 安装
@@ -19,8 +19,9 @@ cover.png / cover.jpg，或主题内的 mainlist_bg2.png。
 设置文件：ThemeLoader\settings.json
 
 设置
+默认使用暗黑模式。窗口底部“外观”可切换亮色模式，选择会自动保存。
 “实时更新主题”会在运行中重新加载变更。关闭时，下次启动游戏生效。
-管理器的 Live2D 工作台可以导入模型目录、Live2D ZIP、已有动画和纹理。真正的 Live2D 模型必须包含兼容的 model3/moc 或旧式 json/moc 文件；静态图和 GIF 不会凭空生成 rig，GIF 只使用第一帧替换已有纹理。
+Live2D 工作台支持模型目录、ZIP、动画和纹理导入。GIF 文件取首帧作为纹理。
 画面控制支持 Ctrl + WASD、鼠标和滚轮，并可设置底图和顶图。
 背景视频支持 .mp4、.webm、.ogv；沿用静态图片的逻辑路径并修改扩展名。
 例如 images/Textures/Malody/mainlist_bg2.mp4。
@@ -33,3 +34,6 @@ cover.png / cover.jpg，或主题内的 mainlist_bg2.png。
 
 日志：BepInEx\LogOutput.log
 第三方组件信息：THIRD_PARTY_NOTICES.txt
+
+by 猫猫虫小窝(451586654)
+赞助支持：https://ifdian.net/a/mcpsde

@@ -104,6 +104,7 @@ internal sealed class InstallerForm : Form
         AppVisuals.AddRow(footer, actions);
         layout.Controls.Add(footer, 0, 2);
         Controls.Add(layout);
+        Controls.Add(new BrandBar());
         installButton.Click += async (_, _) => await RunOperationAsync(false);
         uninstallButton.Click += async (_, _) =>
         {
@@ -122,6 +123,7 @@ internal sealed class InstallerForm : Form
         FormClosing += (_, e) => { if (busy) e.Cancel = true; };
         FormClosed += (_, _) => pathTimer.Dispose();
         AcceptButton = installButton;
+        AppAppearance.Initialize(this);
     }
 
     private void Browse()

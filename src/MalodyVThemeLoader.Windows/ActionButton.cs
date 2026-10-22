@@ -32,12 +32,12 @@ internal sealed class ActionButton : Button
             : pressed
                 ? (Primary ? AppVisuals.AccentPressed
                     : Danger ? AppVisuals.DangerPressed
-                    : Color.FromArgb(237, 237, 237))
+                    : AppVisuals.ControlPressed)
                 : hovered
                     ? (Primary ? AppVisuals.AccentHover
                         : Danger ? AppVisuals.DangerHover
                         : AppVisuals.SurfaceAlt)
-                    : BackColor;
+                    : Primary ? AppVisuals.AccentFill : Danger ? AppVisuals.DangerFill : BackColor;
         var ink = !Enabled
             ? AppVisuals.MutedInk
             : Primary || Danger ? Color.White : ForeColor;

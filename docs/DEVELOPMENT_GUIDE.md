@@ -351,3 +351,32 @@ pwsh -NoProfile -File scripts/inspect-ui.ps1
 ```
 
 See `docs/PITFALLS.md` before changing install, theme or UI code.
+
+## 17. Desktop appearance and copy
+
+The manager and both installers share `BrandBar` and `AppAppearance` from the
+Windows project. A fresh installation starts dark; the appearance selector applies
+colors immediately without rebuilding the library or changing the game theme.
+The preference is an atomic JSON file at
+`%LOCALAPPDATA%/MalodyVThemeLoader/appearance.json`, separate from game settings.
+`MALODY_THEMELOADER_PREFERENCES` redirects only that directory for isolated tests.
+Invalid or missing preferences fall back to dark. Failed writes retain the current
+selection and report a save error.
+
+The shared footer contains the exact credit and a `赞助支持` button. Its fixed
+URL opens only after a click; the multicolor fill is the user's explicit exception
+to the otherwise neutral Fluent surfaces. Native window themes and DWM follow the
+selected appearance where supported; older systems retain native scrollbars.
+Artwork is never recolored.
+
+Live2D screens show concise actions and results. Model format details stay here;
+the GIF picker calls its actual behavior `GIF 首帧`. Compound motion suffixes
+are matched with `EndsWith`, not `Path.GetExtension`, so `.motion3.json` and
+`.mtn.bytes` appear correctly in the animation list.
+
+Validate preference persistence in two separate processes:
+
+```powershell
+pwsh -NoProfile -File scripts/test-appearance.ps1 -Phase Write
+pwsh -NoProfile -File scripts/test-appearance.ps1 -Phase Reload
+```

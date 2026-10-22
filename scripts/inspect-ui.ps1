@@ -1,4 +1,4 @@
-param([string]$BuildRoot = '', [string]$OutputRoot = '', [switch]$Baseline)
+param([string]$BuildRoot = '', [string]$OutputRoot = '', [switch]$Baseline, [ValidateSet('dark','light')][string]$Appearance = 'dark')
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -6,11 +6,19 @@ Add-Type -AssemblyName System.Drawing
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (!$OutputRoot) { $OutputRoot = Join-Path ([IO.Path]::GetTempPath()) 'MalodyVThemeLoader-ui' }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
+$env:MALODY_THEMELOADER_DISABLE_UPDATES = '1'
+$env:MALODY_THEMELOADER_PREFERENCES = Join-Path $repo ('artifacts\ui-preferences-' + $Appearance)
+New-Item -ItemType Directory -Path $env:MALODY_THEMELOADER_PREFERENCES -Force | Out-Null
+[IO.File]::WriteAllText((Join-Path $env:MALODY_THEMELOADER_PREFERENCES 'appearance.json'), ('{"mode":"' + $Appearance + '"}'))
 $fakeGame = Join-Path $repo 'artifacts\ui-fixture\MalodyV'
 New-Item -ItemType Directory -Path (Join-Path $fakeGame 'ThemeLoader\themes'),(Join-Path $fakeGame 'Malody V_Data\il2cpp_data') -Force | Out-Null
 foreach($name in @('Malody V.exe','UnityPlayer.dll','GameAssembly.dll')) { [IO.File]::WriteAllBytes((Join-Path $fakeGame $name),[byte[]](1,2,3)) }
 if (Test-Path (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default')) {
-    Copy-Item -LiteralPath (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default') -Destination (Join-Path $fakeGame 'ThemeLoader\themes\Default') -Recurse -Force
+    $fixtureDefault = [IO.Path]::GetFullPath((Join-Path $fakeGame 'ThemeLoader\themes\Default'))
+    $fixtureAllowed = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')).TrimEnd('\') + '\'
+    if (!$fixtureDefault.StartsWith($fixtureAllowed,[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe UI fixture path.' }
+    if (Test-Path -LiteralPath $fixtureDefault) { Remove-Item -LiteralPath $fixtureDefault -Force -Recurse }
+    Copy-Item -LiteralPath (Join-Path $repo 'artifacts\payload\ThemeLoader\themes\Default') -Destination $fixtureDefault -Recurse -Force
 } elseif (Test-Path (Join-Path $repo 'Default.mtp')) {
     Copy-Item -LiteralPath (Join-Path $repo 'Default.mtp') -Destination (Join-Path $fakeGame 'ThemeLoader\themes\Default.mtp') -Force
 }
@@ -82,6 +90,20 @@ foreach ($name in $assemblies.Keys) {
                 (Get-Field $form 'pathBox').Text = $fakeGame
                 Invoke-Method $form 'UpdatePathState'
             }
+        }
+        if ($isManager -and !$Baseline) {
+            Invoke-Method $form 'Navigate' @('live2d')
+            $form.Size = $form.MinimumSize
+            Capture $form 'manager-live2d-minimum'
+            $windows = [AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq 'MalodyVThemeLoader.Windows' } | Select-Object -First 1
+            $switcher = $windows.GetType('MalodyVThemeLoader.Windows.AppAppearance')
+            $switcher.GetMethod('SetDarkMode').Invoke($null, [object[]]@([bool]($Appearance -ne 'dark'),[bool]$false))
+            Capture $form 'manager-switched'
+            $switcher.GetMethod('SetDarkMode').Invoke($null, [object[]]@([bool]($Appearance -eq 'dark'),[bool]$false))
+            Capture $form 'manager-restored'
+        }
+        if (!$Baseline) {
+            $form.ClientSize = [Drawing.Size]::new($(if ($isManager) {1120} else {880}), $(if ($isManager) {800} else {720}))
             $form.Scale([Drawing.SizeF]::new(1.5,1.5))
             Capture $form "$label-scale150"
         }

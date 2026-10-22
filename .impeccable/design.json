@@ -1,162 +1,126 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-21T12:09:32.766Z",
+  "generatedAt": "2026-10-22T00:16:26.894Z",
   "title": "Design System: Malody V ThemeLoader",
   "extensions": {
     "colorMeta": {
       "accent": {
-        "role": "primary",
-        "displayName": "Brand Blue",
-        "tonalRamp": [
-          "oklch(15.00% 0.08300 209.85)",
-          "oklch(26.43% 0.08300 209.85)",
-          "oklch(37.86% 0.08300 209.85)",
-          "oklch(49.29% 0.08300 209.85)",
-          "oklch(60.71% 0.08300 209.85)",
-          "oklch(72.14% 0.08300 209.85)",
-          "oklch(83.57% 0.08300 209.85)",
-          "oklch(95.00% 0.08300 209.85)"
-        ]
+        "displayName": "Readable Brand Blue · dark",
+        "role": "primary"
+      },
+      "accent-light": {
+        "displayName": "Readable Brand Blue · light",
+        "role": "primary"
+      },
+      "accent-fill": {
+        "displayName": "Action Blue",
+        "role": "primary"
       },
       "accent-hover": {
-        "role": "primary",
-        "displayName": "Deep Brand Blue",
-        "tonalRamp": [
-          "oklch(15.00% 0.07015 208.90)",
-          "oklch(26.43% 0.07015 208.90)",
-          "oklch(37.86% 0.07015 208.90)",
-          "oklch(49.29% 0.07015 208.90)",
-          "oklch(60.71% 0.07015 208.90)",
-          "oklch(72.14% 0.07015 208.90)",
-          "oklch(83.57% 0.07015 208.90)",
-          "oklch(95.00% 0.07015 208.90)"
-        ]
+        "displayName": "Action Blue hover",
+        "role": "primary"
+      },
+      "accent-pressed": {
+        "displayName": "Action Blue pressed",
+        "role": "primary"
       },
       "accent-soft": {
-        "role": "primary",
-        "displayName": "Soft Brand Blue",
-        "tonalRamp": [
-          "oklch(15.00% 0.01434 207.50)",
-          "oklch(26.43% 0.01434 207.50)",
-          "oklch(37.86% 0.01434 207.50)",
-          "oklch(49.29% 0.01434 207.50)",
-          "oklch(60.71% 0.01434 207.50)",
-          "oklch(72.14% 0.01434 207.50)",
-          "oklch(83.57% 0.01434 207.50)",
-          "oklch(95.00% 0.01434 207.50)"
-        ]
+        "displayName": "Soft Selection Blue · dark",
+        "role": "primary"
+      },
+      "accent-soft-light": {
+        "displayName": "Soft Selection Blue · light",
+        "role": "primary"
       },
       "danger": {
-        "role": "primary",
-        "displayName": "Removal Red",
-        "tonalRamp": [
-          "oklch(15.00% 0.15522 17.54)",
-          "oklch(26.43% 0.15522 17.54)",
-          "oklch(37.86% 0.15522 17.54)",
-          "oklch(49.29% 0.15522 17.54)",
-          "oklch(60.71% 0.15522 17.54)",
-          "oklch(72.14% 0.15522 17.54)",
-          "oklch(83.57% 0.15522 17.54)",
-          "oklch(95.00% 0.15522 17.54)"
-        ]
+        "displayName": "Removal feedback · dark"
+      },
+      "danger-light": {
+        "displayName": "Removal feedback · light"
+      },
+      "danger-fill": {
+        "displayName": "Removal fill"
       },
       "danger-hover": {
-        "role": "primary",
-        "displayName": "Deep Removal Red",
-        "tonalRamp": [
-          "oklch(15.00% 0.13962 18.35)",
-          "oklch(26.43% 0.13962 18.35)",
-          "oklch(37.86% 0.13962 18.35)",
-          "oklch(49.29% 0.13962 18.35)",
-          "oklch(60.71% 0.13962 18.35)",
-          "oklch(72.14% 0.13962 18.35)",
-          "oklch(83.57% 0.13962 18.35)",
-          "oklch(95.00% 0.13962 18.35)"
-        ]
+        "displayName": "Removal hover"
+      },
+      "danger-pressed": {
+        "displayName": "Removal pressed"
+      },
+      "success": {
+        "displayName": "Success feedback · dark"
+      },
+      "success-light": {
+        "displayName": "Success feedback · light"
       },
       "canvas": {
-        "role": "neutral",
-        "displayName": "Quiet Canvas",
-        "tonalRamp": [
-          "oklch(15.00% 0.00250 165.08)",
-          "oklch(26.43% 0.00250 165.08)",
-          "oklch(37.86% 0.00250 165.08)",
-          "oklch(49.29% 0.00250 165.08)",
-          "oklch(60.71% 0.00250 165.08)",
-          "oklch(72.14% 0.00250 165.08)",
-          "oklch(83.57% 0.00250 165.08)",
-          "oklch(95.00% 0.00250 165.08)"
-        ]
+        "displayName": "Quiet Canvas · dark",
+        "role": "neutral"
+      },
+      "canvas-light": {
+        "displayName": "Quiet Canvas · light",
+        "role": "neutral"
       },
       "surface": {
-        "role": "neutral",
-        "displayName": "Working White",
-        "tonalRamp": [
-          "oklch(15.00% 0.00000 89.88)",
-          "oklch(26.43% 0.00000 89.88)",
-          "oklch(37.86% 0.00000 89.88)",
-          "oklch(49.29% 0.00000 89.88)",
-          "oklch(60.71% 0.00000 89.88)",
-          "oklch(72.14% 0.00000 89.88)",
-          "oklch(83.57% 0.00000 89.88)",
-          "oklch(95.00% 0.00000 89.88)"
-        ]
+        "displayName": "Working Surface · dark",
+        "role": "neutral"
+      },
+      "surface-light": {
+        "displayName": "Working Surface · light",
+        "role": "neutral"
       },
       "surface-alt": {
-        "role": "neutral",
-        "displayName": "Inset Neutral",
-        "tonalRamp": [
-          "oklch(15.00% 0.00593 170.45)",
-          "oklch(26.43% 0.00593 170.45)",
-          "oklch(37.86% 0.00593 170.45)",
-          "oklch(49.29% 0.00593 170.45)",
-          "oklch(60.71% 0.00593 170.45)",
-          "oklch(72.14% 0.00593 170.45)",
-          "oklch(83.57% 0.00593 170.45)",
-          "oklch(95.00% 0.00593 170.45)"
-        ]
+        "displayName": "Inset Neutral · dark",
+        "role": "neutral"
+      },
+      "surface-alt-light": {
+        "displayName": "Inset Neutral · light",
+        "role": "neutral"
       },
       "ink": {
-        "role": "neutral",
-        "displayName": "Deep Ink",
-        "tonalRamp": [
-          "oklch(15.00% 0.02518 187.39)",
-          "oklch(26.43% 0.02518 187.39)",
-          "oklch(37.86% 0.02518 187.39)",
-          "oklch(49.29% 0.02518 187.39)",
-          "oklch(60.71% 0.02518 187.39)",
-          "oklch(72.14% 0.02518 187.39)",
-          "oklch(83.57% 0.02518 187.39)",
-          "oklch(95.00% 0.02518 187.39)"
-        ]
+        "displayName": "Primary Ink · dark",
+        "role": "neutral"
+      },
+      "ink-light": {
+        "displayName": "Primary Ink · light",
+        "role": "neutral"
       },
       "muted-ink": {
-        "role": "neutral",
-        "displayName": "Secondary Ink",
-        "tonalRamp": [
-          "oklch(15.00% 0.02364 181.14)",
-          "oklch(26.43% 0.02364 181.14)",
-          "oklch(37.86% 0.02364 181.14)",
-          "oklch(49.29% 0.02364 181.14)",
-          "oklch(60.71% 0.02364 181.14)",
-          "oklch(72.14% 0.02364 181.14)",
-          "oklch(83.57% 0.02364 181.14)",
-          "oklch(95.00% 0.02364 181.14)"
-        ]
+        "displayName": "Secondary Ink · dark",
+        "role": "neutral"
+      },
+      "muted-ink-light": {
+        "displayName": "Secondary Ink · light",
+        "role": "neutral"
       },
       "line": {
-        "role": "neutral",
-        "displayName": "Fine Rule",
-        "tonalRamp": [
-          "oklch(15.00% 0.00947 171.78)",
-          "oklch(26.43% 0.00947 171.78)",
-          "oklch(37.86% 0.00947 171.78)",
-          "oklch(49.29% 0.00947 171.78)",
-          "oklch(60.71% 0.00947 171.78)",
-          "oklch(72.14% 0.00947 171.78)",
-          "oklch(83.57% 0.00947 171.78)",
-          "oklch(95.00% 0.00947 171.78)"
-        ]
+        "displayName": "Fine Rule · dark",
+        "role": "neutral"
+      },
+      "line-light": {
+        "displayName": "Fine Rule · light",
+        "role": "neutral"
+      },
+      "control-pressed": {
+        "displayName": "Pressed Neutral · dark",
+        "role": "neutral"
+      },
+      "control-pressed-light": {
+        "displayName": "Pressed Neutral · light",
+        "role": "neutral"
+      },
+      "on-fill": {
+        "displayName": "White on filled actions",
+        "role": "neutral"
+      },
+      "sponsor-start": {
+        "displayName": "Sponsor violet"
+      },
+      "sponsor-middle": {
+        "displayName": "Sponsor magenta"
+      },
+      "sponsor-end": {
+        "displayName": "Sponsor blue"
       }
     },
     "typographyMeta": {
@@ -166,23 +130,27 @@
       },
       "selected-title": {
         "displayName": "Selected theme title",
-        "purpose": "The selected theme name in the detail pane."
+        "purpose": "Selected theme name in the detail pane."
       },
       "section-title": {
         "displayName": "Section title",
-        "purpose": "Native section headings."
+        "purpose": "Native section headings; maintenance also has local 12 pt headings."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Chinese interface copy and button labels."
+        "purpose": "Chinese interface copy and normal button labels."
       },
       "label": {
         "displayName": "Secondary label",
-        "purpose": "Metadata, version and compact labels; search label can be bold."
+        "purpose": "Metadata, author credit, version and appearance labels."
+      },
+      "sponsor-label": {
+        "displayName": "Sponsor label",
+        "purpose": "Bold 赞助支持 action text."
       },
       "diagnostic": {
         "displayName": "Diagnostic",
-        "purpose": "Read-only installation logs and raw JSON."
+        "purpose": "Read-only logs, raw JSON and animation filenames."
       }
     },
     "shadows": [],
@@ -194,74 +162,91 @@
       "name": "Primary action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Documentation rendering of the native ActionButton; WinForms source defines actual painting and DPI behavior.",
-      "html": "<button class=\"ds-button-primary\">应用主题</button>",
-      "css": ".ds-button-primary{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#0F6CBD;color:#FFFFFF;}.ds-button-primary:hover{background:#115EA3;}.ds-button-primary:active{background:#E5F1FB;color:#242424;}.ds-button-primary:focus-visible{outline:1px dotted #242424;outline-offset:-4px;}.ds-button-primary:disabled{background:#FAFAFA;color:#616161;cursor:default;}"
+      "description": "Paired documentation specimens of native ActionButton states. WinForms painting, font metrics and DPI behavior remain authoritative; these HTML samples are illustrative.",
+      "html": "<div class=\"ds-primary-dark\" aria-label=\"暗黑模式\"><button>应用主题</button></div><div class=\"ds-primary-light\" aria-label=\"亮色模式\"><button>应用主题</button></div>",
+      "css": ".ds-primary-dark{padding:12px;background:#181818;}.ds-primary-dark button{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#0F6CBD;color:#FFFFFF;}.ds-primary-dark button:hover{background:#115EA3;}.ds-primary-dark button:active{background:#005493;}.ds-primary-dark button:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-4px;}.ds-primary-dark button:disabled{background:#292929;color:#B8B8B8;cursor:default;}.ds-primary-light{padding:12px;background:#F5F5F5;}.ds-primary-light button{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#0F6CBD;color:#FFFFFF;}.ds-primary-light button:hover{background:#115EA3;}.ds-primary-light button:active{background:#005493;}.ds-primary-light button:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-4px;}.ds-primary-light button:disabled{background:#FAFAFA;color:#616161;cursor:default;}"
     },
     {
       "name": "Secondary action",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Documentation rendering of the native ActionButton; WinForms source defines actual painting and DPI behavior.",
-      "html": "<button class=\"ds-button-secondary\">导出 ZIP</button>",
-      "css": ".ds-button-secondary{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#FFFFFF;color:#242424;border:1px solid #E1E1E1;}.ds-button-secondary:hover{background:#FAFAFA;}.ds-button-secondary:active{background:#E5F1FB;color:#242424;}.ds-button-secondary:focus-visible{outline:1px dotted #242424;outline-offset:-4px;}.ds-button-secondary:disabled{background:#FAFAFA;color:#616161;cursor:default;}"
+      "description": "Paired documentation specimens of native ActionButton states. WinForms painting, font metrics and DPI behavior remain authoritative; these HTML samples are illustrative.",
+      "html": "<div class=\"ds-secondary-dark\" aria-label=\"暗黑模式\"><button>导出 ZIP</button></div><div class=\"ds-secondary-light\" aria-label=\"亮色模式\"><button>导出 ZIP</button></div>",
+      "css": ".ds-secondary-dark{padding:12px;background:#181818;}.ds-secondary-dark button{height:36px;padding:0 12px;border:1px solid #444444;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#202020;color:#F5F5F5;}.ds-secondary-dark button:hover{background:#292929;}.ds-secondary-dark button:active{background:#333333;}.ds-secondary-dark button:focus-visible{outline:1px dotted #F5F5F5;outline-offset:-4px;}.ds-secondary-dark button:disabled{background:#292929;color:#B8B8B8;cursor:default;}.ds-secondary-light{padding:12px;background:#F5F5F5;}.ds-secondary-light button{height:36px;padding:0 12px;border:1px solid #E1E1E1;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#FFFFFF;color:#242424;}.ds-secondary-light button:hover{background:#FAFAFA;}.ds-secondary-light button:active{background:#EDEDED;}.ds-secondary-light button:focus-visible{outline:1px dotted #242424;outline-offset:-4px;}.ds-secondary-light button:disabled{background:#FAFAFA;color:#616161;cursor:default;}"
     },
     {
       "name": "Destructive action",
       "kind": "button",
       "refersTo": "button-danger",
-      "description": "Documentation rendering of the native ActionButton; WinForms source defines actual painting and DPI behavior.",
-      "html": "<button class=\"ds-button-danger\">卸载 ThemeLoader</button>",
-      "css": ".ds-button-danger{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#C43124;color:#FFFFFF;}.ds-button-danger:hover{background:#A4261C;}.ds-button-danger:active{background:#E5F1FB;color:#242424;}.ds-button-danger:focus-visible{outline:1px dotted #242424;outline-offset:-4px;}.ds-button-danger:disabled{background:#FAFAFA;color:#616161;cursor:default;}"
+      "description": "Paired documentation specimens of native ActionButton states. WinForms painting, font metrics and DPI behavior remain authoritative; these HTML samples are illustrative.",
+      "html": "<div class=\"ds-danger-dark\" aria-label=\"暗黑模式\"><button>卸载 ThemeLoader</button></div><div class=\"ds-danger-light\" aria-label=\"亮色模式\"><button>卸载 ThemeLoader</button></div>",
+      "css": ".ds-danger-dark{padding:12px;background:#181818;}.ds-danger-dark button{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#C43124;color:#FFFFFF;}.ds-danger-dark button:hover{background:#A4261C;}.ds-danger-dark button:active{background:#8B1F17;}.ds-danger-dark button:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-4px;}.ds-danger-dark button:disabled{background:#292929;color:#B8B8B8;cursor:default;}.ds-danger-light{padding:12px;background:#F5F5F5;}.ds-danger-light button{height:36px;padding:0 12px;border:0;border-radius:4px;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;background:#C43124;color:#FFFFFF;}.ds-danger-light button:hover{background:#A4261C;}.ds-danger-light button:active{background:#8B1F17;}.ds-danger-light button:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-4px;}.ds-danger-light button:disabled{background:#FAFAFA;color:#616161;cursor:default;}"
     },
     {
       "name": "Native search field",
       "kind": "input",
-      "description": "Persistent label and cue from the native search TextBox. Browser sample is illustrative; native border, caret and focus remain platform-owned.",
-      "html": "<label class=\"ds-search\"><span>搜索主题</span><input aria-label=\"搜索主题名称或作者\" placeholder=\"搜索名称或作者\"></label>",
-      "css": ".ds-search{display:grid;gap:12px;color:#242424;font:700 9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-search input{font:400 10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;min-width:0;}.ds-search input:hover{border-color:#616161;}.ds-search input:focus-visible{outline:1px dotted #242424;outline-offset:2px;}"
+      "description": "Paired color specimens for the persistently labeled native TextBox. Browser border, caret and focus are illustrations; Windows owns the actual input chrome.",
+      "html": "<div class=\"ds-search-dark\" aria-label=\"暗黑模式\"><label>搜索主题<input aria-label=\"搜索主题名称或作者\" placeholder=\"搜索名称或作者\"></label></div><div class=\"ds-search-light\" aria-label=\"亮色模式\"><label>搜索主题<input aria-label=\"搜索主题名称或作者\" placeholder=\"搜索名称或作者\"></label></div>",
+      "css": ".ds-search-dark{padding:12px;background:#181818;}.ds-search-dark label{display:grid;gap:12px;color:#F5F5F5;font:700 9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-search-dark input{padding:3px;color:#F5F5F5;background:#202020;border:1px solid #444444;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-search-dark input::placeholder{color:#B8B8B8;}.ds-search-dark input:focus-visible{outline:1px dotted #F5F5F5;outline-offset:2px;}.ds-search-light{padding:12px;background:#F5F5F5;}.ds-search-light label{display:grid;gap:12px;color:#242424;font:700 9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-search-light input{padding:3px;color:#242424;background:#FFFFFF;border:1px solid #E1E1E1;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-search-light input::placeholder{color:#616161;}.ds-search-light input:focus-visible{outline:1px dotted #242424;outline-offset:2px;}"
     },
     {
       "name": "Task navigation",
       "kind": "nav",
       "refersTo": "navigation-item",
-      "description": "Native left navigation with soft brand-blue selected state. The sample represents existing control states without a browser runtime.",
-      "html": "<nav class=\"ds-nav\" aria-label=\"任务\"><button aria-current=\"page\">主题库</button><button>设置</button><button>维护</button></nav>",
-      "css": ".ds-nav{display:grid;gap:8px;background:#FFFFFF;width:140px;}.ds-nav button{height:46px;padding:0 12px;border:0;border-radius:4px;text-align:left;background:#FFFFFF;color:#616161;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-nav button[aria-current]{background:#E5F1FB;color:#0F6CBD;font-weight:700;}.ds-nav button:hover{background:#FAFAFA;}.ds-nav button:active{background:#E5F1FB;color:#242424;}.ds-nav button:focus-visible{outline:1px dotted #242424;outline-offset:-4px;}"
+      "description": "Paired specimens of all four native task destinations. Selected text and fill follow the appearance; hover and pressed neutrals follow ActionButton.",
+      "html": "<div class=\"ds-nav-dark\" aria-label=\"暗黑模式\"><nav aria-label=\"任务\"><button aria-current=\"page\">主题库</button><button>Live2D</button><button>设置</button><button>维护</button></nav></div><div class=\"ds-nav-light\" aria-label=\"亮色模式\"><nav aria-label=\"任务\"><button aria-current=\"page\">主题库</button><button>Live2D</button><button>设置</button><button>维护</button></nav></div>",
+      "css": ".ds-nav-dark{padding:12px;background:#181818;}.ds-nav-dark nav{display:grid;gap:8px;width:140px;background:#202020;}.ds-nav-dark button{height:46px;padding:0 12px;border:0;border-radius:4px;text-align:left;background:#202020;color:#B8B8B8;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-nav-dark button[aria-current]{background:#1B3448;color:#69AFED;font-weight:700;}.ds-nav-dark button:hover{background:#292929;}.ds-nav-dark button:active{background:#333333;}.ds-nav-dark button:focus-visible{outline:1px dotted #F5F5F5;outline-offset:-4px;}.ds-nav-light{padding:12px;background:#F5F5F5;}.ds-nav-light nav{display:grid;gap:8px;width:140px;background:#FFFFFF;}.ds-nav-light button{height:46px;padding:0 12px;border:0;border-radius:4px;text-align:left;background:#FFFFFF;color:#616161;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-nav-light button[aria-current]{background:#E5F1FB;color:#0F6CBD;font-weight:700;}.ds-nav-light button:hover{background:#FAFAFA;}.ds-nav-light button:active{background:#EDEDED;}.ds-nav-light button:focus-visible{outline:1px dotted #242424;outline-offset:-4px;}"
     },
     {
       "name": "Selected theme row",
       "kind": "custom",
       "refersTo": "theme-row",
-      "description": "Two-line fixed-height owner-drawn native ListBox row with name, active/author line, single selection and keyboard focus; horizontal scrolling is disabled.",
-      "html": "<div class=\"ds-theme-row\" tabindex=\"0\" role=\"option\" aria-selected=\"true\"><strong>Default</strong><span>正在使用</span></div>",
-      "css": ".ds-theme-row{display:flex;flex-direction:column;height:64px;padding:9px 10px 0;background:#E5F1FB;color:#242424;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-theme-row strong{font-weight:700;}.ds-theme-row span{margin-top:5px;font-size:9pt;color:#0F6CBD;}.ds-theme-row:focus-visible{outline:1px dotted #0F6CBD;outline-offset:-2px;}"
+      "description": "Paired specimens of a selected owner-drawn native ListBox row. Actual rows are 64 logical pixels, single-select, vertically scrollable and horizontally bounded.",
+      "html": "<div class=\"ds-row-dark\" aria-label=\"暗黑模式\"><div class=\"ds-row-item\" tabindex=\"0\" role=\"option\" aria-selected=\"true\"><strong>Default</strong><span>正在使用</span></div></div><div class=\"ds-row-light\" aria-label=\"亮色模式\"><div class=\"ds-row-item\" tabindex=\"0\" role=\"option\" aria-selected=\"true\"><strong>Default</strong><span>正在使用</span></div></div>",
+      "css": ".ds-row-dark{padding:12px;background:#181818;}.ds-row-dark .ds-row-item{display:flex;flex-direction:column;min-height:55px;padding:9px 10px 0;background:#1B3448;color:#F5F5F5;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-row-dark strong{font-weight:700;}.ds-row-dark span{margin-top:5px;font-size:9pt;color:#69AFED;}.ds-row-dark .ds-row-item:focus-visible{outline:1px dotted #69AFED;outline-offset:-2px;}.ds-row-light{padding:12px;background:#F5F5F5;}.ds-row-light .ds-row-item{display:flex;flex-direction:column;min-height:55px;padding:9px 10px 0;background:#E5F1FB;color:#242424;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-row-light strong{font-weight:700;}.ds-row-light span{margin-top:5px;font-size:9pt;color:#0F6CBD;}.ds-row-light .ds-row-item:focus-visible{outline:1px dotted #0F6CBD;outline-offset:-2px;}"
     },
     {
       "name": "Preview empty state",
       "kind": "custom",
       "refersTo": "preview",
-      "description": "Text-only documentation sample of ThemePreviewSurface's genuine missing-preview state. Real previews use source or imported theme artwork with aspect ratio preserved.",
-      "html": "<div class=\"ds-preview\" role=\"img\" aria-label=\"所选主题预览\">此主题未提供预览图</div>",
-      "css": ".ds-preview{display:flex;align-items:center;justify-content:center;min-height:184px;background:#FAFAFA;color:#616161;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}"
+      "description": "Paired text-only specimens of the genuine missing-preview state. Real previews use source or imported artwork, preserving aspect ratio; no replacement artwork is invented here.",
+      "html": "<div class=\"ds-preview-dark\" aria-label=\"暗黑模式\"><div class=\"ds-preview-item\" role=\"img\" aria-label=\"所选主题预览\">此主题未提供预览图</div></div><div class=\"ds-preview-light\" aria-label=\"亮色模式\"><div class=\"ds-preview-item\" role=\"img\" aria-label=\"所选主题预览\">此主题未提供预览图</div></div>",
+      "css": ".ds-preview-dark{padding:12px;background:#181818;}.ds-preview-dark .ds-preview-item{display:flex;align-items:center;justify-content:center;min-height:184px;background:#292929;color:#B8B8B8;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-preview-light{padding:12px;background:#F5F5F5;}.ds-preview-light .ds-preview-item{display:flex;align-items:center;justify-content:center;min-height:184px;background:#FAFAFA;color:#616161;font:10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}"
     },
     {
       "name": "Diagnostic log",
       "kind": "custom",
       "refersTo": "diagnostic-log",
-      "description": "Documentation sample of the read-only native log TextBox. Actual scrollbars and selection use Windows controls.",
-      "html": "<textarea class=\"ds-log\" readonly aria-label=\"安装详细记录\">准备就绪。安装过程中可在这里查看详细进度。</textarea>",
-      "css": ".ds-log{height:100px;width:100%;padding:0;border:0;resize:none;background:#FFFFFF;color:#616161;font:9pt \"Cascadia Mono\",Consolas,\"Courier New\",monospace;}.ds-log:focus-visible{outline:1px dotted #242424;outline-offset:2px;}"
+      "description": "Paired specimens of the read-only native installation log. Actual selection, font metrics and scrollbars use Windows controls.",
+      "html": "<div class=\"ds-log-dark\" aria-label=\"暗黑模式\"><textarea readonly aria-label=\"安装详细记录\">准备就绪。安装过程中可在这里查看详细进度。</textarea></div><div class=\"ds-log-light\" aria-label=\"亮色模式\"><textarea readonly aria-label=\"安装详细记录\">准备就绪。安装过程中可在这里查看详细进度。</textarea></div>",
+      "css": ".ds-log-dark{padding:12px;background:#181818;}.ds-log-dark textarea{height:100px;width:100%;padding:0;border:0;resize:none;background:#202020;color:#B8B8B8;font:9pt \"Cascadia Mono\",Consolas,\"Courier New\",monospace;}.ds-log-dark textarea:focus-visible{outline:1px dotted #F5F5F5;outline-offset:2px;}.ds-log-light{padding:12px;background:#F5F5F5;}.ds-log-light textarea{height:100px;width:100%;padding:0;border:0;resize:none;background:#FFFFFF;color:#616161;font:9pt \"Cascadia Mono\",Consolas,\"Courier New\",monospace;}.ds-log-light textarea:focus-visible{outline:1px dotted #242424;outline-offset:2px;}"
+    },
+    {
+      "name": "Author credit and appearance",
+      "kind": "custom",
+      "refersTo": "brand-bar",
+      "description": "Paired footer content specimens with the exact credit and appearance labels. Native BrandBar includes the separate 124-pixel sponsor action; this sample does not implement preference persistence.",
+      "html": "<div class=\"ds-appearance-dark\" aria-label=\"暗黑模式\"><div class=\"ds-appearance-row\"><span>by 猫猫虫小窝(451586654)</span><label>外观 <select aria-label=\"外观模式\"><option selected>暗黑模式</option><option>亮色模式</option></select></label></div></div><div class=\"ds-appearance-light\" aria-label=\"亮色模式\"><div class=\"ds-appearance-row\"><span>by 猫猫虫小窝(451586654)</span><label>外观 <select aria-label=\"外观模式\"><option>暗黑模式</option><option selected>亮色模式</option></select></label></div></div>",
+      "css": ".ds-appearance-dark{padding:12px;background:#181818;}.ds-appearance-dark .ds-appearance-row{display:flex;align-items:center;justify-content:space-between;gap:24px;color:#B8B8B8;font:9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-appearance-dark label{display:flex;align-items:center;gap:8px;}.ds-appearance-dark select{background:#202020;color:#F5F5F5;border:1px solid #444444;font:9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-appearance-dark select:focus-visible{outline:1px dotted #F5F5F5;outline-offset:2px;}.ds-appearance-light{padding:12px;background:#F5F5F5;}.ds-appearance-light .ds-appearance-row{display:flex;align-items:center;justify-content:space-between;gap:24px;color:#616161;font:9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-appearance-light label{display:flex;align-items:center;gap:8px;}.ds-appearance-light select{background:#FFFFFF;color:#242424;border:1px solid #E1E1E1;font:9pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;}.ds-appearance-light select:focus-visible{outline:1px dotted #242424;outline-offset:2px;}"
+    },
+    {
+      "name": "Sponsor action",
+      "kind": "button",
+      "refersTo": "sponsor",
+      "description": "The explicit user-requested gradient exception. Native SponsorButton uses GDI+ angle 12°, stops 0/0.52/1, white hover alpha 16/255 and black pressed alpha 35/255. CSS angle 102° illustrates the direction; it does not verify native rasterization. The exact destination opens through the default browser.",
+      "html": "<a class=\"ds-sponsor\" href=\"https://ifdian.net/a/mcpsde\">赞助支持</a>",
+      "css": ".ds-sponsor{display:inline-flex;align-items:center;justify-content:center;width:124px;height:38px;border:0;border-radius:4px;text-decoration:none;background:linear-gradient(102deg,#642BB1 0%,#A61D58 52%,#18488F 100%);color:#FFFFFF;font:700 10pt \"Microsoft YaHei UI\",\"Segoe UI Variable Text\",\"Segoe UI\",sans-serif;cursor:pointer;}.ds-sponsor:hover{background:linear-gradient(rgba(255,255,255,0.0627451),rgba(255,255,255,0.0627451)),linear-gradient(102deg,#642BB1 0%,#A61D58 52%,#18488F 100%);}.ds-sponsor:active{background:linear-gradient(rgba(0,0,0,0.1372549),rgba(0,0,0,0.1372549)),linear-gradient(102deg,#642BB1 0%,#A61D58 52%,#18488F 100%);}.ds-sponsor:focus-visible{outline:1px dotted #FFFFFF;outline-offset:-4px;}"
     }
   ],
   "narrative": {
-    "northStar": "Quiet Windows utility",
-    "overview": "The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral surfaces, restrained brand-blue actions and familiar Windows controls keep attention on the next task. Brand appears through the existing logo and real theme artwork.\n\nThe native Windows typography, frame, dialogs, scrollbars and focus cues are intentional. This system records the implemented WinForms application; the surface brief owns its workflow composition and the disclosed concept-workflow deviation.",
+    "northStar": "Fluent 2 Windows utility",
+    "overview": "The interface is a clear, concise working environment for Chinese-speaking Malody V players and theme authors. Neutral layers, restrained blue actions and familiar Windows controls keep attention on the next task. Dark mode is the default; a saved light option preserves the same hierarchy.\n\nThe existing logo and real theme artwork carry the product identity. A shared footer adds the exact author credit, appearance selector and user-requested multicolor sponsorship action. This document records the WinForms implementation; workflow composition remains in the surface brief.",
     "keyCharacteristics": [
-      "Quiet light surfaces with a restrained brand-blue accent.",
+      "Quiet dark and light neutral layers with restrained blue actions.",
       "Native Chinese typography and keyboard affordances.",
       "Persistent task labels and truthful operation states.",
-      "Real source artwork with proportion-preserving previews."
+      "Real source artwork with proportion-preserving previews.",
+      "One vivid sponsorship control in the shared footer."
     ],
     "rules": [
       {
@@ -276,17 +261,18 @@
       }
     ],
     "dos": [
-      "Do keep the shared palette, native type chain and point-based text sizing consistent.",
+      "Do use the paired appearance tokens and keep readable accent text separate from solid button fills.",
+      "Do keep the exact author credit, appearance labels, sponsor label and destination.",
       "Do keep labels visible and provide distinct empty, invalid, busy and disabled states.",
-      "Do keep theme rows within the list width and retain vertical scrolling at supported minimum sizes.",
-      "Do preserve keyboard focus, accessible names and Ctrl+F, Ctrl+O and F5 shortcuts.",
-      "Do use real theme artwork and preserve its aspect ratio."
+      "Do preserve keyboard focus, native behavior and Ctrl+F, Ctrl+O and F5 shortcuts.",
+      "Do use real theme artwork and preserve its aspect ratio.",
+      "Do keep Live2D interface copy focused on tasks and results."
     ],
     "donts": [
-      "Don't add gradients, decorative cards or an oversized empty branding panel to this working utility.",
+      "Don't extend the sponsor gradient into other actions or workspace surfaces.",
       "Don't use generated or substituted artwork for the Default theme.",
       "Don't style unavailable actions as enabled or expose empty metadata as a selected theme.",
-      "Don't treat synthetic 150% captures as physical DPI verification."
+      "Don't treat synthetic 150% captures as physical DPI verification or bitmap captures as Mica verification."
     ]
   }
 }

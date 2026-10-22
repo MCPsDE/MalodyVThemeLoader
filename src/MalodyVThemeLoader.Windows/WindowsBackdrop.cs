@@ -21,7 +21,7 @@ public static class WindowsBackdrop
         try
         {
             form.BackColor = AppVisuals.Canvas;
-            var dark = 0;
+            var dark = AppVisuals.DarkMode ? 1 : 0;
             var backdrop = DwmsbtMica;
             _ = DwmSetWindowAttribute(form.Handle, DwmwaUseImmersiveDarkMode,
                 ref dark, sizeof(int));

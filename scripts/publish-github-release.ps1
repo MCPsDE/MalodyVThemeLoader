@@ -1,12 +1,15 @@
 param(
     [string]$Version = '',
+    [string]$ReleaseDirectory = '',
     [switch]$SkipBuild,
     [switch]$Draft
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$releaseRoot = Join-Path $repoRoot 'artifacts\release'
+$releaseRoot = if ([string]::IsNullOrWhiteSpace($ReleaseDirectory)) {
+    Join-Path $repoRoot 'artifacts\release'
+} else { [IO.Path]::GetFullPath($ReleaseDirectory) }
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $versionNode = Select-Xml -Path (Join-Path $repoRoot 'Directory.Build.props') `
@@ -15,7 +18,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 }
 
 if (-not $SkipBuild) {
-    pwsh -NoProfile -File (Join-Path $repoRoot 'scripts\build-release.ps1')
+    pwsh -NoProfile -File (Join-Path $repoRoot 'scripts\build-release.ps1') -Version $Version -ReleaseDirectory $releaseRoot
     if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
 }
 

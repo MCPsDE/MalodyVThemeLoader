@@ -87,6 +87,7 @@ internal static class SceneSongStartThemePatch
 {
     private static void Postfix()
     {
+        EntranceIconSlideController.Bind(SceneManager.GetActiveScene());
         SceneStartThemePatch.Apply("SceneSong");
     }
 }

@@ -109,6 +109,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
     private void LateUpdate()
     {
         if (runtime == null) return;
+        EntranceIconSlideController.Tick();
         // CubismModel.Update reads its previous native parameter buffer. Write
         // animation values afterwards, before its PreLateUpdate model tick.
         try { runtime.Live2d.Tick(); }

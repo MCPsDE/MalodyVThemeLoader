@@ -128,3 +128,6 @@
 - PowerShell 的 $Host 是只读自动变量，测试变量用 inputViewport 等专用名；插值字符串中变量后接冒号要写 ${caseName}:，否则解析为作用域变量并失败。
 - 原始 PNG 可能带有旧的 iCCP 色彩配置，解码会输出 libpng warning。不要为消除测试日志修改 Default 美术；保留原图哈希，分别确认解码和界面断言是否真正失败。
 - 用户在验证途中自行重启游戏时，BepInEx 也会重写 ErrorLog.log、chainloader_typeloader.dat 和 BepInEx.cfg，游戏另写 log/*.log；时间与实际进程启动相符。本次完整差异照常保留，VerifyStable 精确识别这些运行文件，不泛化排除 BepInEx 目录，并明确不保证配置内容未变。不要修改、还原配置或重录基线来让检查通过。
+- Unity Animator 每帧都会重写它绑定的 RectTransform 属性；同一帧直接固定动画中的锚点会让动画失效。需要把动画采样值当作进度，在 LateUpdate 转换为位置，并在动画回到无 Motion 的状态后保留最终进度，否则离场动画结束时可能突然恢复显示。定位动画目标要使用完整场景层级，不能把同名 Prefab 实例一并改动。
+- 游戏场景会销毁并重建看板 Widget；需要跨场景播放的 IL2CPP AudioSource 不要挂在游戏 Widget 上。使用加载器自己持有的 DontDestroyOnLoad 宿主，先 Stop 并清空 clip 再延迟 Destroy 宿主与 AudioClip；播放期对象失效时只停用音频，不能连带中断模型动画。
+- Unity 2022.3 编辑器的脚本编译器使用 C# 9，即使插件项目使用较新的语言版本；把插件源文件拷入 Unity 测试工程时需用兼容命名空间包装，并补全项目隐式导入的 using。`Unity.exe` 是 GUI 子系统程序，PowerShell 直接调用不会可靠等待或提供 `$LASTEXITCODE`；用 `Start-Process -PassThru` 获取主进程并 `WaitForExit()`，不要用会等整个子进程树的 `Start-Process -Wait`。

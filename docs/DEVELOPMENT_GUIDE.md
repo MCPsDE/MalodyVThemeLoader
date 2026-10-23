@@ -322,7 +322,8 @@ handles late panel visibility and realtime theme reload.
 OGG Vorbis and PCM/float WAV are decoded by shared code; imports validate before
 copying into an audio directory with a source-name/hash filename. Preview converts
 decoded samples to WAV for SoundPlayer. The plugin creates its own AudioClips and
-AudioSource on the displayed widget. Each activation plays sound once; another
+an AudioSource on a loader-owned persistent host, independent from the displayed
+widget's scene lifetime. Each activation plays sound once; another
 action interrupts it, action completion stops it and resumes idle audio, and
 hide/dispose stops playback. Audio is separate from the game's SoundManager and
 global settings. Payload includes NVorbis; manager single-file output embeds

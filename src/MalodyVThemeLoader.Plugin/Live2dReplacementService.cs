@@ -240,7 +240,7 @@ internal sealed class Live2dReplacementService : IDisposable
                     .Concat(binding.ResultMotions.Values).Where(file => file.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(file => file, file => LoadMotion(file)!, StringComparer.OrdinalIgnoreCase), binding.IdleMotion,
                 binding.MotionAudio.Where(pair => pair.Value.Length > 0).ToDictionary(pair => pair.Key,
-                    pair => Live2dAudio.Decode(Live2dModelDocument.Resolve(theme.Live2dDirectory, pair.Value)), StringComparer.OrdinalIgnoreCase));
+                    pair => Live2dAudio.Decode(Live2dModelDocument.Resolve(theme.Live2dDirectory, pair.Value)), StringComparer.OrdinalIgnoreCase), log);
             prepared = replacement;
             replacement.Animate();
             // Commit only after the replacement has valid geometry, materials,
@@ -327,7 +327,11 @@ internal sealed class Live2dReplacementService : IDisposable
         private readonly Dictionary<string, CubismMotion> actions;
         private readonly Dictionary<string, AudioClip> clips = new(StringComparer.OrdinalIgnoreCase);
         private readonly string idleFile;
+        private readonly ManualLogSource log;
+        private GameObject? audioOwner;
         private AudioSource? audioSource;
+        private bool audioDisabled;
+        private bool audioFailureLogged;
         private CubismMotion? action;
         public string PlayedResult { get; set; } = "";
         private readonly Dictionary<string, CubismParameter> parameters;
@@ -343,9 +347,10 @@ internal sealed class Live2dReplacementService : IDisposable
 
         public Replacement(WidgetLive2dControl widget, GameObject original, CubismVisual visual,
             List<Texture2D> textures, CubismMotion? idle, Dictionary<string, CubismMotion> actions, string idleFile,
-            Dictionary<string, Live2dAudio> audio)
+            Dictionary<string, Live2dAudio> audio, ManualLogSource log)
         {
             Widget = widget; Original = original; Visual = visual; this.textures = textures; this.idle = idle; this.actions = actions;
+            this.log = log;
             parameters = visual.Model.GetComponentsInChildren<CubismParameter>(true).ToDictionary(p => p.name, StringComparer.Ordinal);
             defaults = parameters.ToDictionary(p => p.Key, p => p.Value.Value, StringComparer.Ordinal);
             parts = visual.Model.GetComponentsInChildren<CubismPart>(true).ToDictionary(p => p.name, StringComparer.Ordinal);
@@ -365,7 +370,11 @@ internal sealed class Live2dReplacementService : IDisposable
                 }
                 if (clips.Count > 0)
                 {
-                    audioSource = widget.gameObject.AddComponent<AudioSource>();
+                    // The game recreates and destroys its Live2D widget as scenes
+                    // change. Keep the audio component on our own persistent host.
+                    audioOwner = new GameObject("ThemeLoader Live2D Audio") { hideFlags = HideFlags.HideAndDontSave };
+                    UnityEngine.Object.DontDestroyOnLoad(audioOwner);
+                    audioSource = audioOwner.AddComponent<AudioSource>();
                     audioSource.playOnAwake = false; audioSource.loop = false; audioSource.spatialBlend = 0;
                 }
             }
@@ -396,16 +405,60 @@ internal sealed class Live2dReplacementService : IDisposable
         private void PlayAudio(string file)
         {
             StopAudio();
-            if (audioSource != null && clips.TryGetValue(file, out var clip)) { audioSource.clip = clip; audioSource.Play(); }
+            if (audioDisabled || !clips.TryGetValue(file, out var clip)) return;
+            var source = audioSource;
+            if (source is null) return;
+            try
+            {
+                source.clip = clip;
+                source.Play();
+            }
+            catch (Exception e) { DisableAudio(e); }
         }
 
         public void StartIdleAudio() { idleAt = Time.unscaledTime; StopAudio(); if (idle != null) PlayAudio(idleFile); }
-        public void StopAudio() { if (audioSource != null) audioSource.Stop(); }
+        public void StopAudio()
+        {
+            if (audioDisabled) return;
+            var source = audioSource;
+            if (source is null) return;
+            try { source.Stop(); }
+            catch (Exception e) { DisableAudio(e); }
+        }
+
+        private void DisableAudio(Exception exception)
+        {
+            if (!audioFailureLogged)
+            {
+                audioFailureLogged = true;
+                log.LogWarning($"Live2D animation audio stopped; model animation remains active: {exception}");
+            }
+            audioDisabled = true;
+            DisposeAudio();
+        }
+
         private void DisposeAudio()
         {
-            StopAudio(); if (audioSource != null) UnityEngine.Object.DestroyImmediate(audioSource);
-            foreach (var clip in clips.Values) if (clip != null) UnityEngine.Object.DestroyImmediate(clip);
-            clips.Clear(); audioSource = null;
+            var source = audioSource;
+            audioSource = null;
+            if (source is not null)
+            {
+                try { source.Stop(); source.clip = null; }
+                catch { }
+            }
+            var owner = audioOwner;
+            audioOwner = null;
+            if (owner is not null)
+            {
+                try { UnityEngine.Object.Destroy(owner); }
+                catch { }
+            }
+            foreach (var clip in clips.Values)
+            {
+                try { UnityEngine.Object.Destroy(clip); }
+                catch { }
+            }
+            clips.Clear();
         }
 
         public void Animate()

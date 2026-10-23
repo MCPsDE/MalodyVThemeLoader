@@ -1,4 +1,4 @@
-param([ValidateSet('dark','light')][string]$Appearance='dark')
+param([ValidateSet('dark','light')][string]$Appearance='dark',[string]$CaptureDirectory='')
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -26,7 +26,7 @@ function Assert($value,$text){if(!$value){throw $text}}
 function Await($task){while(!$task.IsCompleted){[Windows.Forms.Application]::DoEvents();Start-Sleep -Milliseconds 15};$task.GetAwaiter().GetResult()|Out-Null}
 function Create($name){[Activator]::CreateInstance($shared.GetType('MalodyVThemeLoader.Shared.'+$name))}
 . (Join-Path $repo 'scripts/assert-ui-fit.ps1')
-$out=Join-Path $repo ('.impeccable\review\inspector-'+$Appearance)
+$out=if($CaptureDirectory){[IO.Path]::GetFullPath((Join-Path $repo $CaptureDirectory))}else{Join-Path $repo ('.impeccable\review\inspector-'+$Appearance)}
 New-Item -ItemType Directory -Path $out -Force | Out-Null
 function Capture($form,$name){[Windows.Forms.Application]::DoEvents();Assert-UiFits $form $name;$b=[Drawing.Bitmap]::new($form.Width,$form.Height);try{$form.DrawToBitmap($b,[Drawing.Rectangle]::new(0,0,$form.Width,$form.Height));$b.Save((Join-Path $out ($name+'.png')))}finally{$b.Dispose()}}
 $form=[Activator]::CreateInstance($manager.GetType('MalodyVThemeLoader.ThemeManager.ThemeManagerForm'),@([string]$fake))

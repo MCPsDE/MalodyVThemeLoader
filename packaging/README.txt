@@ -1,4 +1,4 @@
-Malody V ThemeLoader 2.6.1
+Malody V ThemeLoader 2.6.2
 =======================
 
 安装

@@ -1,247 +1,129 @@
-using System.Net;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
-using MalodyVThemeLoader.Shared;
 
 namespace MalodyVThemeLoader.ThemeManager;
 
 internal static class UpdateService
 {
-    private const string Repository = "MCPsDE/MalodyVThemeLoader";
-    private static readonly Uri LatestReleaseUri = new(
-        $"https://api.github.com/repos/{Repository}/releases/latest");
-
-    public static async Task<UpdateResult> CheckAndStartAsync(
-        string gameRoot,
-        IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+    private static readonly Uri LatestReleaseUri = new("https://api.github.com/repos/MCPsDE/MalodyVThemeLoader/releases/latest");
+    public static async Task<UpdateResult> CheckAndStartAsync(string gameRoot, IProgress<UpdateProgress>? progress = null,
+        CancellationToken cancellationToken = default, Func<Task<bool>>? beforeInstall = null)
     {
-        if (string.Equals(
-                Environment.GetEnvironmentVariable("MALODY_THEMELOADER_DISABLE_UPDATES"),
-                "1",
-                StringComparison.Ordinal))
-        {
-            return UpdateResult.None;
-        }
-
+        if (Environment.GetEnvironmentVariable("MALODY_THEMELOADER_DISABLE_UPDATES") == "1") return UpdateResult.None;
+        using var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MalodyVThemeLoader", CurrentVersion().ToString(3)));
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        return await RunAsync(client, LatestReleaseUri, CurrentVersion(), gameRoot, progress, cancellationToken, beforeInstall,
+            start => Process.Start(start) != null);
+    }
+    internal static async Task<UpdateResult> RunAsync(HttpClient client, Uri releaseUri, Version currentVersion, string gameRoot,
+        IProgress<UpdateProgress>? progress, CancellationToken cancellationToken, Func<Task<bool>>? beforeInstall,
+        Func<ProcessStartInfo, bool> launch)
+    {
+        string? temporaryRoot = null; var started = false;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        lifetime.CancelAfter(TimeSpan.FromMinutes(30));
+        var token = lifetime.Token;
         try
         {
-            using var client = new HttpClient
-            {
-                Timeout = TimeSpan.FromSeconds(8)
-            };
-            client.DefaultRequestHeaders.UserAgent.Add(
-                new ProductInfoHeaderValue("MalodyVThemeLoader", CurrentVersion()));
-            client.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-
-            using var response = await client.GetAsync(
-                LatestReleaseUri,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                return UpdateResult.None;
-            }
-            if (response.StatusCode is HttpStatusCode.Forbidden or (HttpStatusCode)429)
-            {
-                // GitHub's anonymous API limit is external state; do not turn it
-                // into a scary error in the manager or block theme work.
-                return UpdateResult.None;
-            }
+            progress?.Report(new("正在检查更新…"));
+            using var checkTimeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            checkTimeout.CancelAfter(TimeSpan.FromSeconds(15));
+            using var response = await client.GetAsync(releaseUri, checkTimeout.Token);
             response.EnsureSuccessStatusCode();
-            await using var releaseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var releaseDocument = await JsonDocument.ParseAsync(
-                releaseStream,
-                cancellationToken: cancellationToken);
-            var root = releaseDocument.RootElement;
-            var tag = root.TryGetProperty("tag_name", out var tagProperty)
-                ? tagProperty.GetString()
-                : null;
-            if (!TryParseVersion(tag, out var latestVersion)
-                || latestVersion <= CurrentVersionInfo())
-            {
-                return UpdateResult.None;
-            }
-
-            var assets = root.TryGetProperty("assets", out var assetsProperty)
-                ? assetsProperty.EnumerateArray().ToList()
-                : new List<JsonElement>();
-            var installerName = $"MalodyVThemeLoader-Setup-{latestVersion}.exe";
-            var installerAsset = assets.FirstOrDefault(asset =>
-                string.Equals(
-                    asset.GetProperty("name").GetString(),
-                    installerName,
-                    StringComparison.OrdinalIgnoreCase));
-            if (installerAsset.ValueKind == JsonValueKind.Undefined)
-            {
-                return UpdateResult.Failed($"GitHub Release 缺少 {installerName}。");
-            }
-
-            var checksumAsset = assets.FirstOrDefault(asset =>
-                string.Equals(
-                    asset.GetProperty("name").GetString(),
-                    "SHA256SUMS.txt",
-                    StringComparison.OrdinalIgnoreCase));
-            if (checksumAsset.ValueKind == JsonValueKind.Undefined)
-            {
-                return UpdateResult.Failed("GitHub Release 缺少 SHA256SUMS.txt，已停止更新。");
-            }
-
-            var temporaryRoot = Path.Combine(
-                Path.GetTempPath(), "MalodyVThemeLoader-update-" + Guid.NewGuid().ToString("N"));
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(checkTimeout.Token));
+            var root = document.RootElement;
+            if (root.TryGetProperty("draft", out var draft) && draft.GetBoolean()
+                || root.TryGetProperty("prerelease", out var pre) && pre.GetBoolean()) return UpdateResult.None;
+            var tag = root.GetProperty("tag_name").GetString();
+            if (!Version.TryParse(tag?.TrimStart('v', 'V'), out var latest) || latest <= currentVersion) return UpdateResult.None;
+            var installerName = $"MalodyVThemeLoader-Setup-{latest}.exe";
+            var assets = root.GetProperty("assets").EnumerateArray().ToList();
+            string AssetUrl(string name) => assets.FirstOrDefault(a => a.GetProperty("name").GetString() == name)
+                is var asset && asset.ValueKind != JsonValueKind.Undefined
+                ? asset.GetProperty("browser_download_url").GetString() ?? throw new InvalidDataException("下载地址为空。")
+                : throw new InvalidDataException($"GitHub Release 缺少 {name}。");
+            var installerUrl = AssetUrl(installerName); var checksumUrl = AssetUrl("SHA256SUMS.txt");
+            temporaryRoot = Path.Combine(Path.GetTempPath(), "MalodyVThemeLoader-update-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(temporaryRoot);
             var installerPath = Path.Combine(temporaryRoot, installerName);
             var checksumPath = Path.Combine(temporaryRoot, "SHA256SUMS.txt");
-            try
-            {
-                progress?.Report($"发现 ThemeLoader {latestVersion}，正在下载并校验…");
-                await DownloadAsync(
-                    client,
-                    installerAsset.GetProperty("browser_download_url").GetString()
-                        ?? throw new InvalidDataException("安装器下载地址为空。"),
-                    installerPath,
-                    cancellationToken);
-                await DownloadAsync(
-                    client,
-                    checksumAsset.GetProperty("browser_download_url").GetString()
-                        ?? throw new InvalidDataException("校验文件下载地址为空。"),
-                    checksumPath,
-                    cancellationToken);
-
-                var expected = FindExpectedHash(checksumPath, installerName);
-                var actual = ComputeSha256(installerPath);
-                if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
-                {
-                    return UpdateResult.Failed("更新安装器 SHA-256 校验失败，已停止更新。");
-                }
-
-                progress?.Report("校验通过。管理器将关闭并启动更新安装器…");
-                var start = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = installerPath,
-                    WorkingDirectory = temporaryRoot,
-                    UseShellExecute = true,
-                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal
-                };
-                start.ArgumentList.Add("--install");
-                start.ArgumentList.Add(Path.GetFullPath(gameRoot));
-                _ = System.Diagnostics.Process.Start(start)
-                    ?? throw new InvalidOperationException("无法启动更新安装器。");
-                return UpdateResult.Started(latestVersion);
-            }
-            catch
-            {
-                TryDeleteDirectory(temporaryRoot);
-                throw;
-            }
+            await DownloadAsync(client, checksumUrl, checksumPath, null, token);
+            var expected = FindExpectedHash(checksumPath, installerName);
+            await DownloadAsync(client, installerUrl, installerPath, progress, token, latest.ToString());
+            progress?.Report(new("正在校验安装包…"));
+            var actual = await Task.Run(() => ComputeSha256(installerPath, token), token);
+            if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
+                return UpdateResult.Failed("安装包校验失败 · 请重试更新");
+            token.ThrowIfCancellationRequested();
+            progress?.Report(new("更新已就绪 · 正在准备安装…"));
+            if (beforeInstall != null && !await beforeInstall()) return UpdateResult.Cancelled;
+            token.ThrowIfCancellationRequested();
+            var start = new ProcessStartInfo { FileName = installerPath, WorkingDirectory = temporaryRoot, UseShellExecute = true };
+            start.ArgumentList.Add("--install"); start.ArgumentList.Add(Path.GetFullPath(gameRoot));
+            if (!launch(start)) throw new InvalidOperationException("无法启动更新安装器。");
+            started = true; return new(UpdateState.Started, $"已启动 ThemeLoader {latest} 更新。", latest);
         }
-        catch (OperationCanceledException)
-        {
-            return UpdateResult.None;
-        }
-        catch (Exception exception) when (
-            exception is HttpRequestException
-                or IOException
-                or InvalidDataException
-                or JsonException
-                or TaskCanceledException)
-        {
-            return UpdateResult.Failed($"自动更新检查失败：{exception.Message}");
-        }
+        catch (OperationCanceledException) { return cancellationToken.IsCancellationRequested ? UpdateResult.Cancelled : UpdateResult.Failed("更新连接超时 · 请重试更新"); }
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or JsonException
+            or InvalidOperationException or KeyNotFoundException or System.ComponentModel.Win32Exception or UnauthorizedAccessException)
+        { return UpdateResult.Failed("更新失败：" + e.Message); }
+        finally { if (!started && temporaryRoot != null) { try { Directory.Delete(temporaryRoot, true); } catch { } } }
     }
-
-    private static async Task DownloadAsync(
-        HttpClient client,
-        string url,
-        string destination,
-        CancellationToken cancellationToken)
+    private static async Task DownloadAsync(HttpClient client, string url, string destination, IProgress<UpdateProgress>? progress,
+        CancellationToken token, string version = "")
     {
-        using var response = await client.GetAsync(
-            url,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+        using var idle = CancellationTokenSource.CreateLinkedTokenSource(token);
+        idle.CancelAfter(TimeSpan.FromSeconds(45));
+        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, idle.Token);
         response.EnsureSuccessStatusCode();
-        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await using var destinationStream = new FileStream(
-            destination,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            128 * 1024,
-            useAsync: true);
-        await source.CopyToAsync(destinationStream, cancellationToken);
+        await using var source = await response.Content.ReadAsStreamAsync(idle.Token);
+        await using var target = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, true);
+        var total = response.Content.Headers.ContentLength; long received = 0; var buffer = new byte[131072];
+        var clock = Stopwatch.StartNew(); long lastReport = -250;
+        progress?.Report(new($"正在下载 {version}", 0, total));
+        while (true)
+        {
+            idle.CancelAfter(TimeSpan.FromSeconds(45));
+            var read = await source.ReadAsync(buffer.AsMemory(), idle.Token);
+            if (read == 0) break;
+            await target.WriteAsync(buffer.AsMemory(0, read), idle.Token); received += read;
+            if (clock.ElapsedMilliseconds - lastReport >= 100)
+            { lastReport = clock.ElapsedMilliseconds; progress?.Report(new($"正在下载 {version}", received, total)); }
+        }
+        if (total.HasValue && total != received) throw new InvalidDataException("安装包下载不完整，请重试。");
+        progress?.Report(new($"正在下载 {version}", received, total));
     }
-
-    private static string FindExpectedHash(string path, string fileName)
+    private static string ComputeSha256(string path, CancellationToken token)
+    {
+        using var stream = File.OpenRead(path); using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = new byte[131072]; int read;
+        while ((read = stream.Read(buffer)) > 0) { token.ThrowIfCancellationRequested(); hash.AppendData(buffer, 0, read); }
+        return Convert.ToHexString(hash.GetHashAndReset());
+    }
+    private static string FindExpectedHash(string path, string name)
     {
         foreach (var line in File.ReadLines(path))
         {
-            var parts = line.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 2
-                && string.Equals(
-                    Path.GetFileName(parts[^1].TrimStart('*')),
-                    fileName,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return parts[0];
-            }
+            var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2 && parts[1].TrimStart('*') == name && parts[0].Length == 64 && parts[0].All(Uri.IsHexDigit)) return parts[0];
         }
-
-        throw new InvalidDataException($"SHA256SUMS.txt 中没有 {fileName} 的条目。");
+        throw new InvalidDataException($"校验文件中没有 {name} 的有效条目。");
     }
-
-    private static string ComputeSha256(string path)
-    {
-        using var stream = File.OpenRead(path);
-        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-    }
-
-    private static Version CurrentVersionInfo() =>
-        Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
-
-    private static string CurrentVersion() => CurrentVersionInfo().ToString(3);
-
-    private static bool TryParseVersion(string? value, out Version version)
-    {
-        version = new Version();
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        var normalized = value.Trim().TrimStart('v', 'V');
-        var dash = normalized.IndexOf('-');
-        if (dash >= 0) normalized = normalized[..dash];
-        if (!Version.TryParse(normalized, out var parsed) || parsed is null)
-            return false;
-        version = parsed;
-        return true;
-    }
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            if (Directory.Exists(path)) Directory.Delete(path, true);
-        }
-        catch { }
-    }
+    private static Version CurrentVersion() => Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
 }
-
-internal sealed record UpdateResult(
-    UpdateState State,
-    string Message,
-    Version? Version = null)
+internal sealed record UpdateProgress(string Message, long? Received = null, long? Total = null)
+{
+    public int? Percent => Total > 0 && Received.HasValue ? (int)Math.Clamp(Received.Value * 100d / Total.Value, 0, 100) : null;
+    public string Detail => Received.HasValue ? (Percent.HasValue ? $"{Percent}% · {Received.Value / 1048576d:F1} / {Total!.Value / 1048576d:F1} MiB" : $"已下载 {Received.Value / 1048576d:F1} MiB") : "";
+}
+internal sealed record UpdateResult(UpdateState State, string Message, Version? Version = null)
 {
     public static UpdateResult None => new(UpdateState.None, "");
-    public static UpdateResult Started(Version version) =>
-        new(UpdateState.Started, $"已启动 ThemeLoader {version} 更新。", version);
-    public static UpdateResult Failed(string message) =>
-        new(UpdateState.Failed, message);
+    public static UpdateResult Cancelled => new(UpdateState.Cancelled, "已取消本次更新");
+    public static UpdateResult Failed(string message) => new(UpdateState.Failed, message);
 }
-
-internal enum UpdateState
-{
-    None,
-    Started,
-    Failed
-}
+internal enum UpdateState { None, Started, Failed, Cancelled }

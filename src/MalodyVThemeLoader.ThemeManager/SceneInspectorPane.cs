@@ -10,6 +10,7 @@ internal sealed class SceneInspectorPane : UserControl
     private readonly ThemeLibrary library;
     private readonly Action<string> report;
     private readonly InspectorControl control = new() { Client = Guid.NewGuid().ToString("N") };
+    private readonly InspectorHeartbeat heartbeat;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 500 };
     private readonly CheckBox connect = Check("连接游戏");
     private readonly CheckBox frames = Check("层级边框", true);
@@ -57,6 +58,7 @@ internal sealed class SceneInspectorPane : UserControl
     public SceneInspectorPane(string gameRoot, ThemeLibrary library, Action<string> report)
     {
         loaderRoot = Path.Combine(gameRoot, "ThemeLoader"); this.library = library; this.report = report;
+        heartbeat = new InspectorHeartbeat(loaderRoot);
         Font = AppVisuals.UiFont(); BackColor = AppVisuals.Canvas; ForeColor = AppVisuals.Ink;
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = Padding.Empty };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); shell.RowStyles.Add(new RowStyle(SizeType.AutoSize)); shell.RowStyles.Add(new RowStyle(SizeType.AutoSize)); shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -139,10 +141,8 @@ internal sealed class SceneInspectorPane : UserControl
     {
         try
         {
-            var owner = InspectorFiles.Read<InspectorControl>(loaderRoot, InspectorFiles.ControlName);
-            if (owner?.IsLive == true && owner.Client != control.Client) return;
             control.Enabled = connect.Checked; control.LeaseUtc = DateTime.UtcNow; control.ShowFrames = frames.Checked; control.ShowNames = names.Checked; control.IncludeInactive = inactive.Checked;
-            InspectorFiles.Write(loaderRoot, InspectorFiles.ControlName, control);
+            heartbeat.Update(control);
         }
         catch (Exception e) { connection.Text = "无法连接：" + e.Message; }
     }
@@ -311,7 +311,7 @@ internal sealed class SceneInspectorPane : UserControl
     }
     protected override void Dispose(bool disposing)
     {
-        if (disposing) { timer.Stop(); timer.Dispose(); control.Enabled = false; try { if (InspectorFiles.Read<InspectorControl>(loaderRoot, InspectorFiles.ControlName)?.Client == control.Client) InspectorFiles.Write(loaderRoot, InspectorFiles.ControlName, control); } catch { } tips.Dispose(); }
+        if (disposing) { timer.Stop(); timer.Dispose(); heartbeat.Dispose(); tips.Dispose(); }
         base.Dispose(disposing);
     }
 }

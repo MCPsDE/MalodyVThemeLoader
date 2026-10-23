@@ -60,20 +60,9 @@ internal static class SceneNodeLocator
         }
         truncated = limit; return result;
     }
-    internal static bool IsOwn(Transform t) => t.name.StartsWith(OwnPrefix, StringComparison.Ordinal) || t.name == "BepInEx_Manager";
-    internal static string AddressOf(Transform target)
-    {
-        var segments = new List<string>(); var current = target;
-        while (current != null && segments.Count < 96)
-        {
-            var siblings = new List<Transform>(); var parent = current.parent;
-            if (parent != null) { for (var i = 0; i < parent.childCount; i++) { var child = parent.GetChild(i); if (child.name == current.name) siblings.Add(child); } }
-            else foreach (var root in current.gameObject.scene.GetRootGameObjects()) if (root.name == current.name) siblings.Add(root.transform);
-            siblings = siblings.OrderBy(t => t.GetSiblingIndex()).ToList();
-            segments.Add(SceneNodeAddress.Segment(current.name, siblings.FindIndex(t => t == current), siblings.Count)); current = parent;
-        }
-        segments.Reverse(); return string.Join("/", segments);
-    }
+    internal static bool IsOwnName(string name) => name.StartsWith(OwnPrefix, StringComparison.Ordinal) || name == "BepInEx_Manager";
+    internal static bool IsOwn(Transform t) => IsOwnName(t.name);
+    internal static string AddressOf(Transform target) => new SceneAddressIndex().AddressOf(target);
 
     internal static Camera? CameraFor(RectTransform rect)
     {

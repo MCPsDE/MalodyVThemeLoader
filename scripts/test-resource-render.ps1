@@ -10,7 +10,7 @@ $projectXml=@'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><AssemblyName>ThemeLoaderResourceValidation</AssemblyName><LangVersion>latest</LangVersion><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><EnableDefaultCompileItems>false</EnableDefaultCompileItems><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies><NoWarn>CS8602</NoWarn></PropertyGroup>
   <ItemGroup>
-    <Compile Include="Store.cs"/><Compile Include="Images.cs"/><Compile Include="Stubs.cs"/>
+    <Compile Include="Store.cs"/><Compile Include="Images.cs"/><Compile Include="AddressIndex.cs"/><Compile Include="Stubs.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/AssetCatalog.cs"/>
     <Compile Include="Resources.cs"/><Compile Include="Inspector.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/ThemeManifest.cs"/>
@@ -27,6 +27,7 @@ $store=[IO.File]::ReadAllText((Join-Path $repo 'src\MalodyVThemeLoader.Plugin\Th
 $store=$store.Replace('using Il2CppInterop.Runtime.InteropTypes.Arrays;','').Replace('Il2CppStructArray<byte> il2CppBytes = bytes;','var il2CppBytes = bytes;').Replace('Convert.ToHexString(sha256.ComputeHash(stream))','BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", "")')
 [IO.File]::WriteAllText((Join-Path $build 'Store.cs'),$store)
 Copy-Item -LiteralPath (Join-Path $repo 'src\MalodyVThemeLoader.Plugin\ThemeResourceImages.cs') -Destination (Join-Path $build 'Images.cs') -Force
+Copy-Item -LiteralPath (Join-Path $repo 'src\MalodyVThemeLoader.Plugin\SceneAddressIndex.cs') -Destination (Join-Path $build 'AddressIndex.cs') -Force
 # The validation calls Read/Resolve only. The .NET 6 atomic writer is covered by
 # test-resource-editor; adapt its uncalled overload for Unity's Mono compiler.
 $resourceSource=[IO.File]::ReadAllText((Join-Path $repo 'src\MalodyVThemeLoader.Shared\ThemeResources.cs')).Replace('File.Move(temporary, target, true);','File.Copy(temporary, target, true); File.Delete(temporary);')
@@ -40,7 +41,7 @@ namespace BepInEx.Logging { public sealed class ManualLogSource {
   public void LogInfo(object value) { UnityEngine.Debug.Log(value); }
   public void LogWarning(object value) { UnityEngine.Debug.LogWarning(value); }
 } }
-namespace MalodyVThemeLoader.Plugin { internal sealed record LoadedTheme(string ThemeDirectory, MalodyVThemeLoader.Shared.ThemeManifest Manifest) {
+namespace MalodyVThemeLoader.Plugin { internal static class SceneNodeLocator { internal static bool IsOwnName(string name) => name.StartsWith("ThemeLoader.", System.StringComparison.Ordinal) || name == "BepInEx_Manager"; } internal sealed record LoadedTheme(string ThemeDirectory, MalodyVThemeLoader.Shared.ThemeManifest Manifest) {
   public string ImageDirectory => MalodyVThemeLoader.Shared.PathRules.GetSafeCombinedPath(ThemeDirectory,Manifest.ImageRoot);
   public string Live2dDirectory => MalodyVThemeLoader.Shared.PathRules.GetSafeCombinedPath(ThemeDirectory,Manifest.Live2dRoot);
 } }

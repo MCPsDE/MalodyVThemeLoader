@@ -28,6 +28,12 @@ internal sealed class SceneThemeApplier
 
     public void ApplyScene(string sceneName)
     {
+        assets.BeginAddressBatch();
+        try { ApplySceneCore(sceneName); }
+        finally { assets.EndAddressBatch(); }
+    }
+    private void ApplySceneCore(string sceneName)
+    {
         if (!IsAllowedScene(sceneName))
         {
             return;
@@ -88,7 +94,7 @@ internal sealed class SceneThemeApplier
                 continue;
             }
 
-            var replacement = assets.ResolveTexture(rawImage.texture, rawImage.gameObject.scene.name, GetHierarchy(rawImage.transform), "RawImage", SceneNodeLocator.AddressOf(rawImage.transform));
+            var replacement = assets.ResolveTexture(rawImage.texture, rawImage.gameObject.scene.name, GetHierarchy(rawImage.transform), "RawImage", assets.NodeAddress(rawImage.transform));
             if (replacement != null && rawImage.texture != replacement)
             {
                 ThemeReplacementRegistry.TrackRawImage(rawImage);
@@ -122,7 +128,7 @@ internal sealed class SceneThemeApplier
             }
 
             var hierarchy = GetHierarchy(renderer.transform);
-            var address = SceneNodeLocator.AddressOf(renderer.transform);
+            var address = assets.NodeAddress(renderer.transform);
             var replacement = assets.ResolveSprite(renderer.sprite.name, renderer.sprite, renderer.gameObject.scene.name, hierarchy, "SpriteRenderer", address);
             var imageMode = replacement == null ? "" : assets.GetImageMode(replacement, renderer.gameObject.scene.name, hierarchy, "SpriteRenderer", address);
             var desiredMode = imageMode.Length == 0 ? renderer.drawMode : imageMode == "sliced" ? SpriteDrawMode.Sliced : SpriteDrawMode.Simple;
@@ -258,7 +264,7 @@ internal sealed class SceneThemeApplier
         }
 
         var hierarchy = GetHierarchy(image.transform);
-        var address = SceneNodeLocator.AddressOf(image.transform);
+        var address = assets.NodeAddress(image.transform);
         var replacement = assets.ResolveSprite(original.name, original, image.gameObject.scene.name, hierarchy, "Image", address);
         if (replacement == null)
         {

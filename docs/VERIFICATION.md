@@ -39,6 +39,12 @@
 
 ## GitHub 自动更新验证
 
+2.6.2 增加 `test-update-service.ps1`，48 项断言用本地 HttpMessageHandler 和替代启动器验证真实更新服务，不连接 GitHub、不启动安装器。覆盖流式字节与百分比、未知长度、SHA-256 不匹配、缺失校验文件、截断下载、取消、拒绝关闭未保存编辑、启动失败、当前版本、HTTP/格式失败和失败清理；另在无 UI 消息泵超过六秒时检查后台租约续期、其他客户端所有权和关闭断开。`test-update-ui.ps1` 在两个外观、正常/最小窗口、合成 150% 和 125% 字体下验证更新条、取消/重试、可访问值和文本尺寸。新截图为 `.impeccable/review/update-dark` 与 `update-light`，均为合成更新数据；不代表真实网络测速或物理 DPI/屏幕阅读器实测。
+
+2.6.2 制谱器性能与调试恢复：`test-inspector-runtime.ps1 -Standalone` 通过 4,842 项断言，含 2,400 同名同级节点按线性读取构建精确地址、无节点规则时不建立索引、重排/改名的新批次无旧缓存、销毁自有 CanvasRenderer 后重建、瞬时故障后重试和恢复后的最终屏幕线框像素。仍是 Unity Windows Mono 隔离播放器，不能冒充已安装 IL2CPP 游戏的端到端复测。此前真实游戏冻结时的主线程栈已指向逐图重复地址计算，本次代码移除此无条件路径。明暗两套在线调试编辑器回归和共享控件约束通过。参考目录始终只读，生成数据均位于仓库。
+
+2.6.2 全目录元数据审计仍保留失败：运行游戏生成了空 `chart.bin_unqlite_journal`，并改写 BetterMalodyV 的配置文件时间戳；没有为此扩大通用排除列表或重录基线。完整差异保存在 `artifacts/reference-changes.json`。单独精确检查源工程全树、所有游戏 DLL/EXE、MalodyV_Data、所有插件二进制和用户主题均为 0 项变化，记录在 `artifacts/reference-protected-2.6.2.json`。这不声称整个活动游戏目录完全未变。
+
 管理器请求 `MCPsDE/MalodyVThemeLoader` 的 latest release，只在版本高于当前程序集时下载对应安装器和 `SHA256SUMS.txt`。校验成功后以 `--install <game-dir>` 启动安装器并关闭管理器，避免文件锁。更新失败、仓库没有 release、缺失校验条目或 SHA-256 不匹配都会停止更新。发布脚本为 `scripts/publish-github-release.ps1`。
 
 本次版本：[v2.4.0](https://github.com/MCPsDE/MalodyVThemeLoader/releases/tag/v2.4.0)。

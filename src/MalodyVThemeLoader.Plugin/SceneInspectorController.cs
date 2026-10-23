@@ -34,6 +34,8 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private bool missingFontLogged;
     private readonly List<Text> labels = new();
     private bool failed;
+    private float retryAt;
+    private float nextFailureLog;
     private bool snapshotTruncated;
     internal static bool IsInspecting { get; private set; }
     public SceneInspectorController(IntPtr pointer) : base(pointer) { }
@@ -50,10 +52,11 @@ internal sealed class SceneInspectorController : MonoBehaviour
             if (now >= nextPoll)
             {
                 nextPoll = now + .25f;
-                var next = InspectorFiles.Read<InspectorControl>(loaderRoot, InspectorFiles.ControlName) ?? new InspectorControl();
+                var next = InspectorFiles.Read<InspectorControl>(loaderRoot, InspectorFiles.ControlName) ?? control;
                 if (next.Client != control.Client || next.IsLive && !control.IsLive) { failed = false; request = 0; selected = 0; revision = 0; }
                 control = next;
             }
+            if (failed && now >= retryAt) { failed = false; nextSnapshot = 0; }
             IsInspecting = !failed && control.IsLive;
             if (!IsInspecting)
             {
@@ -83,8 +86,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
         }
         catch (Exception e)
         {
-            failed = true; IsInspecting = false; if (overlay != null) overlay.SetActive(false);
-            Plugin.Log.LogWarning("Scene inspector stopped: " + e);
+            Recover(e);
         }
     }
     private void Publish(bool truncated)
@@ -127,11 +129,21 @@ internal sealed class SceneInspectorController : MonoBehaviour
     {
         if (!IsInspecting) return;
         try { Draw(); }
-        catch (Exception e) { failed = true; IsInspecting = false; if (overlay != null) overlay.SetActive(false); Plugin.Log.LogWarning("Inspector drawing stopped: " + e); }
+        catch (Exception e) { Recover(e); }
+    }
+    private void Recover(Exception exception)
+    {
+        failed = true; IsInspecting = false; retryAt = Time.realtimeSinceStartup + 1;
+        nodes.Clear(); ResetOverlay();
+        if (Time.realtimeSinceStartup >= nextFailureLog)
+        { nextFailureLog = Time.realtimeSinceStartup + 10; Plugin.Log.LogWarning("Scene inspector will retry: " + exception); }
     }
     private void EnsureOverlay()
     {
-        if (overlay != null) { overlay.SetActive(true); return; }
+        if (overlay != null && material != null && meshBatches.All(value => value != null)
+            && rendererBatches.Count > 0 && rendererBatches.All(value => value != null) && labels.All(value => value != null))
+        { overlay.SetActive(true); return; }
+        ResetOverlay();
         overlay = new GameObject(SceneNodeLocator.OwnPrefix + "Inspector"); UnityEngine.Object.DontDestroyOnLoad(overlay);
         var canvas = overlay.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = short.MaxValue;
         overlay.AddComponent<GraphicRaycaster>();
@@ -166,7 +178,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
             try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
             if (font == null) { try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
         }
-        if (font != null) { foreach (var label in labels) label.font = font; missingFontLogged = false; }
+        if (font != null) { foreach (var label in labels) if (label != null) label.font = font; missingFontLogged = false; }
         else if (!missingFontLogged)
         { missingFontLogged = true; Plugin.Log.LogWarning("Inspector label font unavailable; bounds remain active and font lookup will retry."); }
     }
@@ -250,13 +262,16 @@ internal sealed class SceneInspectorController : MonoBehaviour
         for (var i = 0; i < 4; i++) colors.Add(color);
         indices.AddRange(new[] { first, first + 1, first + 2, first, first + 2, first + 3 });
     }
-    private void OnDestroy()
+    private void ResetOverlay()
     {
-        IsInspecting = false;
-        if (overlay != null) UnityEngine.Object.Destroy(overlay); foreach (var batch in meshBatches) UnityEngine.Object.Destroy(batch);
+        if (overlay != null) { overlay.SetActive(false); UnityEngine.Object.Destroy(overlay); }
+        foreach (var batch in meshBatches) if (batch != null) UnityEngine.Object.Destroy(batch);
         // The label font belongs to the game or Unity's built-in resources.
         if (material != null) UnityEngine.Object.Destroy(material);
+        overlay = null; mesh = null; material = null; canvasRenderer = null;
+        meshBatches.Clear(); rendererBatches.Clear(); labels.Clear();
     }
+    private void OnDestroy() { IsInspecting = false; ResetOverlay(); }
     [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);

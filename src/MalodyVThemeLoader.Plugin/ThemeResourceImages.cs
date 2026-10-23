@@ -9,6 +9,20 @@ internal sealed partial class ThemeAssetStore
     private readonly Dictionary<int, SpriteOrigin> spriteOrigins = new();
     private readonly Dictionary<int, TextureOrigin> textureOrigins = new();
     private readonly HashSet<string> imageFailures = new(StringComparer.OrdinalIgnoreCase);
+    private SceneAddressIndex? addressIndex;
+    private int addressFrame = -1;
+    private int addressBatchDepth;
+    internal void BeginAddressBatch() { if (addressBatchDepth++ == 0) addressIndex = null; }
+    internal void EndAddressBatch() { if (--addressBatchDepth == 0) { addressIndex = null; addressFrame = -1; } }
+    internal string NodeAddress(Transform target)
+    {
+        // Most themes have no exact-node image rules. Avoid every native
+        // hierarchy call on this path, even for thousands of editor notes.
+        if (!ResourceRules.Images.Any(rule => rule.NodeAddress.Length > 0 && rule.Scene == target.gameObject.scene.name)) return "";
+        var frame = Time.frameCount;
+        if (addressIndex == null || addressBatchDepth == 0 && addressFrame != frame) { addressIndex = new SceneAddressIndex(); addressFrame = frame; }
+        return addressIndex.AddressOf(target);
+    }
 
     public Sprite? GetOriginalSprite(Sprite? sprite) => sprite != null && spriteOrigins.TryGetValue(sprite.GetInstanceID(), out var origin) ? origin.Sprite : sprite;
     public Texture? GetOriginalTexture(Texture? texture) => texture != null && textureOrigins.TryGetValue(texture.GetInstanceID(), out var origin) ? origin.Texture : texture;

@@ -1,5 +1,13 @@
 # 开发踩坑记录（持续维护）
 
+- 在线调试不能把一次 MissingReferenceException 锁存为永久停绘。切场景可能销毁节点、标签或加载器的网格/renderer；清理自有覆盖层后限频重试，重建全部渲染资源，保留借用字体。独立播放器应检查恢复后的最终屏幕像素，而不只检查 IsInspecting。
+- 调试连接的五秒租约不能只靠 WinForms Timer 续期。阻塞界面、文件对话框或长操作会让框消失；用独立线程计时器写加锁的控制快照，后台不读控件，关闭时停止续期并断开，只更新自己持有的连接。测试无 UI 消息泵超过五秒。
+- HttpClient 八秒总超时不适合约 300 MiB 的更新包。下载按流读取并报告实际字节，区分已知/未知长度，单次网络停顿限时、整次下载另设上限，哈希放后台执行；未通过校验、用户取消、未保存修改拒绝退出时都不能启动安装器。成功、失败与取消都要正确清理暂存文件。
+- 合成字体放大也会挤掉底栏“外观”二字，固定 44px 列在正常字体下通过并不足够。短标签同样用共享 SingleLineLabel 和内容列测量；不要缩字或折行。自动更新的百分比测试使用准确字节比例，避免把 36.9997% 截断当成可访问性失败。
+
+- 2.6.1 进入制谱器出现长时间无响应，现场主线程栈为 ThemeRescanScheduler.Update → ApplyScene → ApplyImageSprite → SceneNodeLocator.AddressOf → UnityEngine.Object.get_name。编辑层约 1,589 个 Image，AddressOf 对每张图、每级父节点都重新遍历全部同级节点并反复跨 IL2CPP 读 name，另有多次延迟扫描，形成近似平方级成本。现场主题没有 resources.json、实时与在线调试均关闭，仍无条件算精确地址；不能把实时开关当成此路径的开关。后续应只在确有节点地址规则时计算地址，并在一次扫描中缓存/批量构建同级索引。第二次采样进程自行恢复，属于严重主线程阻塞，不能仅凭窗口无响应称为永久死锁。
+- 多插件诊断必须采集卡住时的调用栈，不能因最后一条警告来自另一插件就归责。此次 Rework Overlay 的编辑器元数据警告被局部捕获并返回；现场实际耗时栈在 ThemeLoader 的节点地址计算。没有同一现场线程栈或隔离对照时，不把日志先后当作因果证明。
+
 - 生成的 IL2CPP API 能编译、能 Resolve，不代表能调用。2.6.0 的 Font.CreateDynamicFontFromOSFont(string,int) 在真实 interop 中只有“Method unstripping failed”异常体，令整个调试层停绘。调试标签复用已加载字体/内置字体，字体失败只影响文字；接口检查拒绝没有局部失败回退的异常桩调用。不能在清理时 Destroy 借用的游戏字体。
 - 从 Library/ScriptAssemblies 复制的 UnityEngine.UI.dll 含 UNITY_EDITOR 引用，可以做编辑器验证，但不能直接打进独立播放器。播放器测试应从 com.unity.ugui 包编译运行版本，不能为了让构建通过关闭程序集校验。
 - Windows Unity 播放器以 SW_HIDE 隐藏窗口启动时，正常屏幕呈现可能整帧为黑，离屏 Camera.Render 却正常。验证真正的 ScreenSpaceOverlay 时，测试播放器使用从不切换到的独立 Windows desktop，保持其自身窗口正常呈现，既不显示在用户桌面，也不触碰真实游戏。检查原界面和覆盖层像素，不能把隐藏窗口的黑帧直接判成覆盖层缺陷。

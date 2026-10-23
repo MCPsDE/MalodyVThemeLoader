@@ -70,6 +70,20 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         File.Copy(Path.Combine(Environment.GetEnvironmentVariable("MALODY_INSPECTOR_MEDIA"), "vp8.webm"), Path.Combine(themeRoot, "images/video.webm"), true);
         var catalog = new AssetCatalog(); catalog.Images.Add(new ImageCatalogEntry { LogicalId = "Textures/icon.png", RuntimeName = "source_icon", Width = 4, Height = 4 });
         var theme = new LoadedTheme(themeRoot, new ThemeManifest()); var store = new ThemeAssetStore(Plugin.Log, theme, catalog);
+        var wide = Rect("Editor stress", canvas.transform, Vector2.one, Vector2.zero);
+        var siblings = Enumerable.Range(0, 2400).Select(i => Rect("Repeated", wide, Vector2.one, Vector2.zero)).ToArray();
+        store.BeginAddressBatch();
+        foreach (var sibling in siblings) Require(store.NodeAddress(sibling) == "", "A theme without node rules computed an address.");
+        Require(typeof(ThemeAssetStore).GetField("addressIndex", Flags).GetValue(store) == null, "Unneeded native hierarchy index was allocated.");
+        store.EndAddressBatch();
+        var addressIndex = new SceneAddressIndex();
+        for (var i = 0; i < siblings.Length; i++) Require(addressIndex.AddressOf(siblings[i]).EndsWith("Repeated#" + i + ":2400"), "Duplicate ordering changed.");
+        Require(addressIndex.SiblingReads < 2450, "Wide hierarchy address reads are not linear: " + addressIndex.SiblingReads);
+        siblings[0].SetAsLastSibling();
+        Require(new SceneAddressIndex().AddressOf(siblings[0]).EndsWith("Repeated#2399:2400"), "New batches reused stale sibling ordering.");
+        siblings[0].name = "Renamed";
+        Require(new SceneAddressIndex().AddressOf(siblings[0]).EndsWith("Renamed#0:1"), "Renamed nodes retained stale addresses.");
+        Destroy(wide.gameObject); yield return null;
         var nodes = SceneNodeLocator.Collect(store, out var truncated);
         var ai = nodes.Single(n => n.Transform == a.transform); var bi = nodes.Single(n => n.Transform == b.transform); var ci = nodes.Single(n => n.Transform == container);
         Require(!truncated && ai.Info.Address != bi.Info.Address && ai.Info.Address == SceneNodeLocator.AddressOf(a.transform), "Duplicate addresses are unstable.");
@@ -172,6 +186,30 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         typeof(ControlModeController).GetField("controlMode", Flags).SetValue(projection, false); Destroy(projection.gameObject); Destroy(quad); Destroy(projectionCamera.gameObject);
         control.LeaseUtc = DateTime.UtcNow.AddSeconds(-30); InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector);
         Require(!overlay.activeSelf && !SceneInspectorController.IsInspecting, "Expired connection did not remove debug overlay.");
+        control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
+        Require(SceneInspectorController.IsInspecting && overlay.activeSelf, "Renewed lease did not restore bounds.");
+        // Simulate an owned renderer being destroyed during a scene transition.
+        DestroyImmediate(inspector.GetType().GetField("canvasRenderer", Flags).GetValue(inspector) as CanvasRenderer);
+        Call(inspector, "LateUpdate"); yield return null;
+        overlay = inspector.GetType().GetField("overlay", Flags).GetValue(inspector) as GameObject;
+        Require(overlay != null && overlay.GetComponent<Canvas>().renderMode == RenderMode.ScreenSpaceOverlay, "Destroyed overlay renderer was not rebuilt.");
+        Call(inspector, "Recover", new MissingReferenceException("Scene transition fixture"));
+        Require(!SceneInspectorController.IsInspecting, "Recovery did not pause drawing.");
+        yield return new WaitForSecondsRealtime(1.1f);
+        control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
+        overlay = inspector.GetType().GetField("overlay", Flags).GetValue(inspector) as GameObject;
+        mesh = inspector.GetType().GetField("mesh", Flags).GetValue(inspector) as Mesh;
+        Require(SceneInspectorController.IsInspecting && overlay.activeSelf && mesh.vertexCount > 16, "Transient failure permanently disabled drawing.");
+        if (!Application.isEditor)
+        {
+            camera.targetTexture = null; yield return null; yield return new WaitForEndOfFrame();
+            var recovered = ScreenCapture.CaptureScreenshotAsTexture(); File.WriteAllBytes(Path.Combine(output, "overlay-recovered.png"), recovered.EncodeToPNG());
+            var corners = SceneNodeLocator.Corners(ai); var edgeCount = 0;
+            for (var x = (int)corners.Min(p => p.x); x < (int)corners.Max(p => p.x); x++)
+                for (var y = (int)corners.Max(p => p.y) - 1; y <= (int)corners.Max(p => p.y) + 1; y++)
+                { var pixel = recovered.GetPixel(x, y); if (pixel.b > .35f && pixel.r < .85f) edgeCount++; }
+            Require(edgeCount > 10, "Recovered overlay has no visible bounds pixels."); Destroy(recovered); camera.targetTexture = target;
+        }
         service.Dispose(); yield return null;
         Require(container.Find("ThemeLoader.Decoration") == null && caption.enabled && a.sprite == b.sprite, "Disposal did not restore the original hierarchy.");
         var invalid = new ThemeResources(); invalid.Nodes.Add(new ThemeNodeRule { Scene = "SceneSong", Address = ci.Info.Address, Hierarchy = ci.Info.Hierarchy, ImageFile = "missing.png" });

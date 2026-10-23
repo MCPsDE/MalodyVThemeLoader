@@ -30,11 +30,12 @@ public sealed class BrandBar : UserControl
         Controls.Add(row);
         if (!showManagerActions) return;
 
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,44));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,108));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,124));
-        var label = new Label { Text = "外观", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft,
-            ForeColor = AppVisuals.MutedInk, Font = AppVisuals.UiFont(9F), Margin = Padding.Empty };
+        var label = AppVisuals.SingleLineText("外观", 9F);
+        label.Dock = DockStyle.Fill; label.TextAlign = ContentAlignment.MiddleLeft;
+        label.ForeColor = AppVisuals.MutedInk; label.Margin = new Padding(0, 0, 12, 0);
         appearance = new AppearanceToggle
         {
             Name = "appearanceToggle", Dock = DockStyle.Fill,

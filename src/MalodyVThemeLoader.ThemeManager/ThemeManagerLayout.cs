@@ -14,6 +14,9 @@ internal sealed partial class ThemeManagerForm
     private readonly Dictionary<string, Control> pages = new();
     private readonly Dictionary<string, Button> navigation = new();
     private bool themeOperationBusy;
+    private readonly UpdateStrip updateStrip = new() { Visible = false };
+    private CancellationTokenSource? updateCancellation;
+    private bool updateReadyToClose;
     private TableLayoutPanel? shell;
     private Panel? navigationPanel;
     private readonly List<Control> navigationLabels = new();
@@ -46,13 +49,14 @@ internal sealed partial class ThemeManagerForm
         exportButton.Click += (_, _) => ExportSelected();
         activateButton.Click += (_, _) => ActivateSelected();
         removeButton.Click += (_, _) => RemoveSelected();
-        shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 3, Margin = Padding.Empty };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 208));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        shell.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         shell.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         shell.Controls.Add(BuildNavigation(), 0, 0);
-        shell.SetRowSpan(shell.GetControlFromPosition(0, 0)!, 2);
+        shell.SetRowSpan(shell.GetControlFromPosition(0, 0)!, 3);
         shell.Controls.Add(pageHost, 1, 0);
         statusLabel.Dock = DockStyle.Fill;
         statusLabel.AutoSize = false;
@@ -62,7 +66,9 @@ internal sealed partial class ThemeManagerForm
         statusLabel.BackColor = AppVisuals.Surface;
         statusLabel.UseMnemonic = false;
         statusLabel.AccessibleName = "操作结果";
-        shell.Controls.Add(statusLabel, 1, 1);
+        shell.Controls.Add(updateStrip, 1, 1);
+        shell.Controls.Add(statusLabel, 1, 2);
+        updateStrip.ActionRequested += async () => { if (updateCancellation != null) updateCancellation.Cancel(); else await CheckForUpdatesAsync(); };
         pages["themes"] = BuildThemePage();
         pages["resources"] = BuildResourcesPage();
         pages["live2d"] = BuildLive2dPage();
@@ -81,8 +87,8 @@ internal sealed partial class ThemeManagerForm
             RefreshThemes();
             await CheckForUpdatesAsync();
         };
-        FormClosed += (_, _) => { preview.Image?.Dispose(); };
-        FormClosing += (_,e) => { if (themeOperationBusy || resourceEditor?.ConfirmLeave() == false) e.Cancel = true; };
+        FormClosed += (_, _) => { updateCancellation?.Cancel(); preview.Image?.Dispose(); };
+        FormClosing += (_,e) => { if (themeOperationBusy || !updateReadyToClose && resourceEditor?.ConfirmLeave() == false) e.Cancel = true; };
         KeyPreview = true;
         KeyDown += (_, e) =>
         {
@@ -162,17 +168,24 @@ internal sealed partial class ThemeManagerForm
 
     private async Task CheckForUpdatesAsync()
     {
-        var result = await UpdateService.CheckAndStartAsync(
-            gameRoot,
-            new Progress<string>(ShowStatus));
-        if (result.State == UpdateState.Started)
+        if (updateCancellation != null) return;
+        using var cancellation = new CancellationTokenSource(); updateCancellation = cancellation;
+        try
         {
-            BeginInvoke(Close);
+            var result = await UpdateService.CheckAndStartAsync(gameRoot,
+                new Progress<UpdateProgress>(value => { if (!IsDisposed && updateCancellation == cancellation) updateStrip.ShowProgress(value); }), cancellation.Token,
+                async () =>
+                {
+                    while (themeOperationBusy || resourceEditor?.IsBusy == true) await Task.Delay(250, cancellation.Token);
+                    if (IsDisposed || resourceEditor?.ConfirmLeave() == false) return false;
+                    updateReadyToClose = true; return true;
+                });
+            if (IsDisposed) return;
+            if (result.State == UpdateState.Started) BeginInvoke(Close);
+            else if (result.State == UpdateState.None) updateStrip.Visible = false;
+            else { updateReadyToClose = false; updateStrip.ShowResult(result); }
         }
-        else if (result.State == UpdateState.Failed)
-        {
-            ShowStatus(result.Message);
-        }
+        finally { updateCancellation = null; }
     }
 
     private Control BuildThemePage()

@@ -212,6 +212,10 @@ internal sealed class Live2dReplacementService : IDisposable
     private Replacement Create(WidgetLive2dControl widget, GameObject original)
     {
         var document = Live2dModelDocument.Read(theme.Live2dDirectory, binding!.Model);
+        // Finish managed decoding before constructing the Unity model. Voice
+        // playback itself is lazy and cannot fail its creation transaction.
+        var audioData = binding.MotionAudio.Where(pair => pair.Value.Length > 0).ToDictionary(pair => pair.Key,
+            pair => Live2dAudio.Decode(Live2dModelDocument.Resolve(theme.Live2dDirectory, pair.Value)), StringComparer.OrdinalIgnoreCase);
         var textures = new List<Texture2D>();
         CubismVisual? visual = null;
         Replacement? prepared = null;
@@ -233,8 +237,7 @@ internal sealed class Live2dReplacementService : IDisposable
                 LoadMotion(binding.IdleMotion), new[] { binding.TapMotion }.Concat(binding.ClickRegions.Select(region => region.Motion))
                     .Concat(binding.ResultMotions.Values).Where(file => file.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(file => file, file => LoadMotion(file)!, StringComparer.OrdinalIgnoreCase), binding.IdleMotion,
-                binding.MotionAudio.Where(pair => pair.Value.Length > 0).ToDictionary(pair => pair.Key,
-                    pair => Live2dAudio.Decode(Live2dModelDocument.Resolve(theme.Live2dDirectory, pair.Value)), StringComparer.OrdinalIgnoreCase), log);
+                audioData, log);
             prepared = replacement;
             replacement.Animate();
             // Commit only after the replacement has valid geometry, materials,

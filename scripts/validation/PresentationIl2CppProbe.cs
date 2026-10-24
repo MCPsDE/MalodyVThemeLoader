@@ -3,10 +3,8 @@ using BepInEx.Unity.IL2CPP;
 using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.Runtime;
 using System.Runtime.InteropServices;
-using System.Reflection;
 using System.Text.Json;
 using MalodyVThemeLoader.Shared;
-using Il2CppInterop.Runtime.InteropTypes;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -34,14 +32,15 @@ public sealed class PresentationDriver : MonoBehaviour
     private readonly List<object> motionFrames = new();
     private AnimationAudioPlayer? voices;
     private Dictionary<string, Live2dAudio> voiceData = null!;
+    private MutedVoiceOutput? voiceOutput;
+    private AudioClip factoryClip = null!;
+    private GameObject unrelatedAudioOwner = null!;
     private int checks;
     private int audioPlays;
     private int intermediateFrames;
     private int siblingFrames;
     private readonly List<(Animator Animator, RectTransform Mask)> siblings = new();
-    private int recoveredHandles;
     private bool finished;
-    private static readonly BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     private bool managedCastWorks;
     private bool initialSlideWorks;
     private int tick;
@@ -140,7 +139,7 @@ public sealed class PresentationDriver : MonoBehaviour
             tick++;
             if (tick == (baseline ? 120 : 240))
             {
-                if (!baseline) Require(intermediateFrames > 4 && recoveredHandles == 2 && audioPlays > 20, "Required animation/audio recovery coverage was not executed.");
+                if (!baseline) Require(intermediateFrames > 4 && audioPlays > 20, "Required animation/audio coverage was not executed.");
                 if (!baseline) Require(siblingFrames > 20, "Repeated entrances were not exercised through animation.");
                 Finish(true, "");
             }
@@ -158,13 +157,18 @@ public sealed class PresentationDriver : MonoBehaviour
             for (var i = 0; i < 4410; i++) writer.Write((short)(i % 2 == 0 ? 16384 : -16384));
         }
         voiceData = new() { ["idle"] = Live2dAudio.Decode(wave), ["tap"] = Live2dAudio.Decode(Path.Combine(Paths.GameRootPath, "voice.ogg")), ["result"] = Live2dAudio.Decode(wave) };
-        voices = new AnimationAudioPlayer(BepInEx.Logging.Logger.CreateLogSource("Voice validation"), voiceData);
-        var actual = CachedClips()["idle"]; var samples = new Il2CppStructArray<float>(actual.samples);
+        voices = NewVoicePlayer();
+        unrelatedAudioOwner = new GameObject("Unrelated Unity audio");
+        unrelatedAudioOwner.AddComponent<AudioSource>();
+        var actual = factoryClip = UnityAudioClipFactory.Create("UI factory validation", voiceData["idle"]);
+        var samples = new Il2CppStructArray<float>(actual.samples);
         Require(actual.GetData(samples, 0) && Mathf.Abs(samples[0] - .5f) < .001f && Mathf.Abs(samples[1] + .5f) < .001f, "PCM samples were not copied into native audio.");
     }
-    private T Field<T>(string name) => (T)typeof(AnimationAudioPlayer).GetField(name, Private)!.GetValue(voices)!;
     [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
-    private Dictionary<string, AudioClip> CachedClips() => Field<Dictionary<string, AudioClip>>("clips");
+    private AnimationAudioPlayer NewVoicePlayer() => new(BepInEx.Logging.Logger.CreateLogSource("Voice validation"), voiceData,
+        CreateVoiceOutput);
+    [Il2CppInterop.Runtime.Attributes.HideFromIl2Cpp]
+    private NAudio.Wave.IWavePlayer CreateVoiceOutput() => voiceOutput = new MutedVoiceOutput();
     private void ValidateAudio()
     {
         if (tick == 1 || tick == 70) animator.Play("hover", 0, 0);
@@ -178,43 +182,23 @@ public sealed class PresentationDriver : MonoBehaviour
         }
         if (tick == 20 || tick == 90 || tick == 160) Resources.UnloadUnusedAssets();
         if (tick % 10 == 0) { GC.Collect(); IL2CPP.il2cpp_gc_collect(0); GC.WaitForPendingFinalizers(); }
-        if (tick == 40) UnityEngine.Object.Destroy(CachedClips()["result"]);
-        if (tick == 60) UnityEngine.Object.Destroy(Field<GameObject>("owner"));
+        if (tick == 40) UnityEngine.Object.Destroy(factoryClip);
+        if (tick == 60) UnityEngine.Object.Destroy(unrelatedAudioOwner);
         if (tick == 100)
         {
             var previous = SceneManager.GetActiveScene(); SceneManager.SetActiveScene(SceneManager.CreateScene("SceneVoiceTransition"));
             SceneManager.UnloadSceneAsync(previous);
         }
-        if (tick == 120)
-        {
-            var clip = CachedClips()["tap"]; keepers.Add(new AudioClip(clip.Pointer)); InvalidateHandle(clip);
-        }
-        if (tick == 140)
-        {
-            var source = Field<AudioSource>("source"); keepers.Add(new AudioSource(source.Pointer)); InvalidateHandle(source);
-        }
         if (tick % 5 != 0) return;
         var file = tick == 45 ? "result" : tick == 120 ? "tap" : tick % 10 == 0 ? "idle" : "tap";
-        voices!.Play(file); audioPlays++;
-        var active = Field<AudioSource>("source");
-        Require(active != null && !active.WasCollected && active.clip != null && active.clip.samples == voiceData[file].Samples.Length / voiceData[file].Channels, "Bound voice did not recover after destruction, GC or scene change.");
-        Require((active.clip.hideFlags & HideFlags.DontUnloadUnusedAsset) != 0, "Cached audio is not retained by Unity.");
-        foreach (var pair in CachedClips())
-            if (tick != 40 || pair.Key != "result") Require(!pair.Value.WasCollected && pair.Value != null, "An inactive cached voice was unloaded.");
+        Require(voices!.Play(file), "Windows voice failed after GC, resource unload or scene change."); audioPlays++;
+        Require(voiceOutput is { Disposed: false } && voiceOutput.OutputWaveFormat.SampleRate == voiceData[file].SampleRate,
+            "Voice output did not retain the bound format.");
         if (tick >= 180 && tick % 10 == 0)
         {
-            voices.Stop(); Require(active.clip == null, "Stopping voice kept the native clip bound.");
-            voices.Dispose(); voices.Dispose(); voices = new AnimationAudioPlayer(BepInEx.Logging.Logger.CreateLogSource("Reload validation"), voiceData);
+            voices.Stop(); Require(voiceOutput!.Disposed, "Stopping voice kept the Windows output open.");
+            voices.Dispose(); voices.Dispose(); voices = NewVoicePlayer();
         }
-    }
-    private void InvalidateHandle(Il2CppObjectBase value)
-    {
-        // Fault injection for the user's exact exception. This is not a claim
-        // that the isolated f3 player naturally reproduces the f2 failure.
-        var field = typeof(Il2CppObjectBase).GetField("myGcHandle", Private)!;
-        IL2CPP.il2cpp_gchandle_free((IntPtr)field.GetValue(value)!); field.SetValue(value, IntPtr.Zero);
-        try { _ = value.Pointer; throw new Exception("Fault injection did not invalidate the native handle."); }
-        catch (Il2CppInterop.Runtime.ObjectCollectedException) { recoveredHandles++; }
     }
     private void Require([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string message) { checks++; if (!condition) throw new Exception(message); }
     private static AudioClip CreateLikeGame(string name)
@@ -228,8 +212,8 @@ public sealed class PresentationDriver : MonoBehaviour
         if (finished) return; finished = true;
         voices?.Dispose(); foreach (var keeper in keepers) if (!keeper.WasCollected && keeper != null) UnityEngine.Object.Destroy(keeper);
         File.WriteAllText(Environment.GetEnvironmentVariable("MALODY_PRESENTATION_RESULT")!, JsonSerializer.Serialize(new {
-            passed, error, baseline, managedCastWorks, initialSlideWorks, audioErrors, checks, audioPlays, intermediateFrames, siblingFrames, recoveredHandles,
-            scope = "isolated Unity f3 IL2CPP; WAV/OGG; GC, unused-asset unload, scene changes and explicit collected-handle fault injection; not actual f2 game"
+            passed, error, baseline, managedCastWorks, initialSlideWorks, audioErrors, checks, audioPlays, intermediateFrames, siblingFrames,
+            scope = "isolated Unity f3 IL2CPP; real Windows voice output (software muted); WAV/OGG; GC, unused-asset unload, scene changes; not actual f2 game"
         }, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.Combine(Paths.GameRootPath, "motion-frames.json"), JsonSerializer.Serialize(motionFrames));
         enabled = false; Application.Quit(passed ? 0 : 1);

@@ -325,18 +325,24 @@ handles late panel visibility and realtime theme reload.
 `motionAudio` maps full motion paths to imported audio paths within live2dRoot.
 OGG Vorbis and PCM/float WAV are decoded by shared code; imports validate before
 copying into an audio directory with a source-name/hash filename. Preview converts
-decoded samples to WAV for SoundPlayer. The plugin creates its own AudioClips and
-an AudioSource on a loader-owned persistent host, independent from the displayed
-widget's scene lifetime. Each activation plays sound once; another
+decoded samples to WAV for SoundPlayer. Since 2.6.10, animation voices use
+NAudio.WinMM/Core 2.2.1 and an independent Windows output, with no Unity
+AudioClip, AudioSource or IL2CPP wrapper in the voice player. Decoding happens
+before Unity model construction; the output opens lazily after the model has
+committed. Output failures log the full motion path and allow another trigger
+to retry without rejecting the model. Worker callbacks only log; replacing a
+voice disposes its output before releasing its reader. Each activation plays sound once; another
 action interrupts it, action completion stops it and resumes idle audio, and
 hide/dispose stops playback. Audio is separate from the game's SoundManager and
-global settings. Payload includes NVorbis; manager single-file output embeds
+global settings. Payload includes NVorbis, NAudio.Core and NAudio.WinMM; manager single-file output embeds
 SkiaSharp native assets. Component licenses live in ThemeLoader/docs/licenses.
 
 Editor completion returns a draft to the workbench; Save/Apply atomically writes
 the complete binding. Closing the editor discards its binding edits (copied audio
 may remain as an unreferenced authoring file). Existing version-1 bindings remain
-valid; the manager requires loader 2.4 when regions, result actions or audio exist.
+valid; regions/result actions require loader 2.4, and bound audio requires 2.6.10.
+The manager compares the running status version as well as the installed DLL,
+so an already-running older game asks for a restart after updating the files.
 Importing a ZIP with duplicate normalized entries uses the last entry, which
 matches ordinary overwrite semantics and handles Unicode Live2D archives.
 

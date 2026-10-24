@@ -223,3 +223,14 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - 保留历史输入基线，没有重录或扩大排除。源工程与实际游戏核心 exe/Data、BepInEx core/interop/unity-libs 的变化记录均为 0；完整历史差异 4,575 条仍包含玩家主题、旧加载器、其他插件与运行数据，VerifyStable 并非全树通过。完整与范围审计位于 `artifacts/recheck-2.6.9/reference-changes.json`、`reference-scoped.json`。
 - 最终安装包 `MalodyVThemeLoader-Setup-2.6.9.exe` 为 314,202,057 bytes，SHA-256 `1cbecb249d1e35f05097446f0a6ece245f2b6ccd678c6230e0296d81bbe3f0fd`。ProductVersion 为 `2.6.9+50c3477381588404a30a721da1155462bcab472a`；该源提交同时用于 v2.6.9 标签，随后只补充发布审计文档。
 - GitHub v2.6.9 于 2026-10-24 正式发布，Release ID 422601396，draft/prerelease 均为 false，`/releases/latest` 返回 v2.6.9。三个附件的 state、size、SHA-256 digest 均逐项与本地相同；记录于 `artifacts/recheck-2.6.9/release-assets.json`、`published-release.json`、`latest-release.json`。源代码与标签均已推送到公开仓库。
+
+## 2.6.10 动画语音独立输出
+
+验证日期：2026-10-24。用户反馈旧 ObjectCollectedException 仍会在绑定语音后出现；现有日志未保留对应现场栈，不宣称已自然复现其 f2 现场异常。
+
+- 语音绑定的最低运行插件为 2.6.10。管理器同时检查已安装 DLL 和游戏状态中的运行版本：即便磁盘上已经更新，游戏仍加载 2.6.9 时明确提示重新启动；已有纯区域/成绩动作继续使用其原最低版本。
+
+- 动画语音不再创建或持有 Unity AudioClip / AudioSource，改用固定 NAudio.WinMM/Core 2.2.1 的独立 Windows 输出。语音解码提前至 Unity 模型创建之前；输出设备在模型提交后首次触发时打开，失败不使模型创建失败，下次触发可重试。连续动作先释放旧输出再释放读取流；工作线程只记录携带原动作路径的异常，不访问 Unity 或修改下一轮播放状态。原有界面音效仍使用独立的 Unity 音频工厂。
+- 新增 `test-animation-voice.ps1`：调用管理器真实 ImportAudio 方法导入样本 Murasame 的 12 段 WAV 及 OGG，保存/重新读取 replacement.json，并用真实 Windows 音频设备确认消耗 PCM。通过 333 项检查、178 次成功播放（120 次快速切换、20 次主题重载），覆盖 .NET GC、格式保持、自然结束、停止与释放，以及一次主动设备不可用后的下一次触发恢复。构造阶段未打开设备。测试仅在 PCM 提供器内归零，不调系统/游戏音量。证据：`artifacts/recheck-2.6.10/voice-binding.json`。
+- `test-presentation-il2cpp.ps1 -SkipPlayerBuild`：原生隔离播放器通过 1,082 项检查、48 次 Windows 语音触发，包含 WAV/OGG、双端 GC、UnusedAssets 卸载、销毁无关 Unity 音频对象及切场景；入口平移回归保留 44/220 个中间帧。旧版强行失效语音句柄测试已删除，因为新语音播放器没有这类句柄；没有把该通过描述为原错误的自然复现。证据：`artifacts/recheck-2.6.10/native-presentation.json`。
+- Live2D 编辑器预览、OGG/WAV 导入、绑定保存、五档成绩与点击区域、全部 12 个模型动作、覆盖导入、主题应用与恢复回归通过。全部项目 Release 构建零警告零错误。隔离播放器为 Unity 2022.3.62f3，实际游戏为 f2；实际游戏仅只读检查，未启动或写入。

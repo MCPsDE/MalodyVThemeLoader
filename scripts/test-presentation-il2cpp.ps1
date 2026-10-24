@@ -33,16 +33,17 @@ if($Baseline){
     [IO.File]::WriteAllText($controllerSource,($oldSource -join "`n"))
 }
 $sources='<Compile Include="'+[Security.SecurityElement]::Escape($controllerSource)+'"/>'
+$sources+='<Compile Include="'+[Security.SecurityElement]::Escape((Join-Path $PSScriptRoot 'validation\MutedVoiceOutput.cs'))+'"/>'
 foreach($name in @('UnityAudioClipFactory','AnimationAudioPlayer','BuiltInOverlayVisibility')) {
     $sources+='<Compile Include="'+[Security.SecurityElement]::Escape((Join-Path $repo "src\MalodyVThemeLoader.Plugin\$name.cs"))+'"/>'
 }
-$xml='<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net6.0</TargetFramework><LangVersion>latest</LangVersion><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies></PropertyGroup><ItemGroup><PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.785"/>'+($references -join '')+$sources+'<ProjectReference Include="'+[Security.SecurityElement]::Escape((Join-Path $repo 'src\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj'))+'"/></ItemGroup></Project>'
+$xml='<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net6.0</TargetFramework><LangVersion>latest</LangVersion><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies></PropertyGroup><ItemGroup><PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.785"/><PackageReference Include="NAudio.WinMM" Version="2.2.1"/>'+($references -join '')+$sources+'<ProjectReference Include="'+[Security.SecurityElement]::Escape((Join-Path $repo 'src\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj'))+'"/></ItemGroup></Project>'
 [IO.File]::WriteAllText((Join-Path $build 'Probe.csproj'),$xml)
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'validation\PresentationIl2CppProbe.cs') -Destination (Join-Path $build 'Probe.cs') -Force
 dotnet build (Join-Path $build 'Probe.csproj') -c Release -o (Join-Path $build 'output') -p:UseSharedCompilation=false -v quiet
 if($LASTEXITCODE -ne 0){throw 'Presentation probe compile failed.'}
 $plugin=Join-Path $playerRoot 'BepInEx\plugins\Probe'; New-Item -ItemType Directory -Force -Path $plugin | Out-Null
-foreach($name in @('Probe.dll','MalodyVThemeLoader.Shared.dll','NVorbis.dll','NLayer.dll')) {
+foreach($name in @('Probe.dll','MalodyVThemeLoader.Shared.dll','NVorbis.dll','NLayer.dll','NAudio.Core.dll','NAudio.WinMM.dll')) {
     Copy-Item -LiteralPath (Join-Path $build ('output\'+$name)) -Destination $plugin -Force
 }
 $env:MALODY_PRESENTATION_RESULT=Join-Path $project 'result.json'

@@ -29,9 +29,12 @@ required = ['winhttp.dll', 'doorstop_config.ini', '.doorstop_version',
     'ThemeLoader/themes/Default/theme.json', 'ThemeLoader/active-theme.txt', 'ThemeLoader/settings.json']
 required.extend(['BepInEx/plugins/MalodyVThemeLoader/NVorbis.dll',
     'BepInEx/plugins/MalodyVThemeLoader/NLayer.dll',
+    'BepInEx/plugins/MalodyVThemeLoader/NAudio.Core.dll',
+    'BepInEx/plugins/MalodyVThemeLoader/NAudio.WinMM.dll',
     'BepInEx/interop/UnityEngine.AudioModule.dll',
     'ThemeLoader/docs/licenses/SkiaSharp-LICENSE.txt', 'ThemeLoader/docs/licenses/NVorbis-LICENSE.txt',
     'ThemeLoader/docs/licenses/NLayer-LICENSE.txt',
+    'ThemeLoader/docs/licenses/NAudio-LICENSE.txt',
     'ThemeLoader/docs/licenses/Skia-THIRD-PARTY-NOTICES.txt'])
 for name in required:
     assert (payload / name).is_file(), f'Missing offline file: {name}'

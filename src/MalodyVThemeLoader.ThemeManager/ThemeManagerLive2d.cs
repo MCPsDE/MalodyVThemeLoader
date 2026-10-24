@@ -308,8 +308,9 @@ internal sealed partial class ThemeManagerForm
             var binding = Live2dWorkspace.GetBinding(item);
             if (binding == null) { live2dState.Text = "选择模型和动画，然后点击“保存并应用模型”。"; return; }
             var plugin = Path.Combine(gameRoot, "BepInEx", "plugins", "MalodyVThemeLoader", "MalodyVThemeLoader.Plugin.dll");
-            var required = binding.ClickRegions.Count > 0 || binding.ResultMotions.Values.Any(value => value.Length > 0)
-                || binding.MotionAudio.Count > 0 ? new Version(2, 4, 0) : new Version(2, 3, 0);
+            var required = binding.MotionAudio.Values.Any(value => value.Length > 0) ? new Version(2, 6, 10)
+                : binding.ClickRegions.Count > 0 || binding.ResultMotions.Values.Any(value => value.Length > 0)
+                    ? new Version(2, 4, 0) : new Version(2, 3, 0);
             if (!File.Exists(plugin) || new Version(FileVersionInfo.GetVersionInfo(plugin).FileVersion ?? "0.0") < required)
             { live2dState.Text = $"配置已保存 · 请安装 {required.ToString(3)} 或更新版加载器，再重新启动游戏一次。"; return; }
             var path = Path.Combine(gameRoot, "ThemeLoader", "live2d-status.json");

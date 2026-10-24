@@ -132,6 +132,20 @@ try {
         ConvertTo-Json | Set-Content -LiteralPath $statusPath -Encoding utf8
     $formType.GetMethod('RefreshLive2dStatus', $flags).Invoke($form, @()) | Out-Null
     Assert ($statusLabel.Text -eq '模型已在游戏中显示。') 'Current runtime success was not displayed.'
+    $draft = $formType.GetField('live2dEditingBinding', $flags).GetValue($form)
+    $voiceSample = Get-ChildItem -LiteralPath (Join-Path $modelRoot 'sounds') -Filter '*.wav' | Select-Object -First 1
+    Assert ($null -ne $voiceSample) 'The actual sample voice is missing.'
+    $draft.MotionAudio[$draft.TapMotion] = Call 'ImportAudio' @((Join-Path $theme 'characters'), $voiceSample.FullName)
+    $formType.GetMethod('ApplyLive2dModel', $flags).Invoke($form, @()) | Out-Null
+    $saved = Call 'GetBinding' @($item)
+    @{ pluginVersion = '2.6.9'; theme = 'murasame'; model = $saved.Model; state = 'applied'; message = '模型已在游戏中显示。'; updatedAt = [DateTimeOffset]::UtcNow } |
+        ConvertTo-Json | Set-Content -LiteralPath $statusPath -Encoding utf8
+    $formType.GetMethod('RefreshLive2dStatus', $flags).Invoke($form, @()) | Out-Null
+    Assert ($statusLabel.Text.Contains('重新启动游戏') -and $statusLabel.Text.Contains('2.6.10')) 'Voice bindings accepted the previous running audio implementation.'
+    @{ pluginVersion = '2.6.10'; theme = 'murasame'; model = $saved.Model; state = 'applied'; message = '模型已在游戏中显示。'; updatedAt = [DateTimeOffset]::UtcNow } |
+        ConvertTo-Json | Set-Content -LiteralPath $statusPath -Encoding utf8
+    $formType.GetMethod('RefreshLive2dStatus', $flags).Invoke($form, @()) | Out-Null
+    Assert ($statusLabel.Text -eq '模型已在游戏中显示。') 'The current voice implementation was not recognized.'
     $formType.GetMethod('RestoreLive2dModel', $flags).Invoke($form, @()) | Out-Null
     Assert (!(Test-Path (Join-Path $theme 'characters/replacement.json'))) 'Form restore left a model binding behind.'
 } finally { $form.Dispose() }

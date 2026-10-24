@@ -41,3 +41,9 @@ NLayer
 Copyright (c) 2018 Mark Heath, Andrew Ward & Contributors.
 Licensed under the MIT License.
 https://github.com/naudio/NLayer
+
+NAudio Core and WinMM 2.2.1
+Copyright 2020 Mark Heath.
+Licensed under the MIT License.
+https://github.com/naudio/NAudio
+Live2D animation voices use an independent Windows audio output.

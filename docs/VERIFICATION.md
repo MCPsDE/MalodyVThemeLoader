@@ -202,3 +202,7 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - `test-inspector-runtime.ps1 -Standalone` 通过 5,020 项断言，新增遮罩验证包含实际渲染：先读取原始黑色半透明背景的中心像素，清透明后确认底色露出，再通过生产 NodeDecorationService 添加相同 Alpha 的 PNG，重建像素误差小于 0.025。验证透明节点保留在树中、可穿透选中、可编辑、可添加底图，保留文字和裁剪；同名其他路径、重复兄弟/根、真实图片和自定义底图不会被清除。原有视频、粗框、名称、穿透搜索、热重载与制谱器性能回归也通过。
 - `test-inspector-il2cpp.ps1 -SkipPlayerBuild` 在原生 IL2CPP 中通过新增的 18 项节点/组件断言，以及 600 次拾取、100 次底图重载。实际像素比较在独立 Mono 播放器执行；原生测试为 Unity 2022.3.62f3 / 固定 BepInEx 785，不等于实际游戏 f2 的现场测试。结果分别保存在 `artifacts/recheck-2.6.8/inspector-runtime.json` 和 `native-inspector.json`。
 - 全解决方案 Release 构建零警告零错误。源工程与真实游戏仍为只读输入；生成 PNG 和测试节点只存在于仓库内的隔离播放器、假主题目录。
+- 发布构建与实际游戏 interop 检查通过，插件仅引用 IL2CPP/BepInEx 运行时。离线载荷的 1,626 份源资源保持原样，1,428 个目录图像有效；最终安装器的假游戏 dry-run、安装、验证、修复、卸载、外部 BepInEx 复用/所有权、文件锁回滚及不兼容环境拒绝全部通过。原始五处 Image 的 raycastTarget 均为 0，清透明不移除其他组件或更改输入参数。
+- 保留历史输入基线；源工程与游戏核心 exe/Data、BepInEx core/interop/unity-libs 变化记录均为 0。完整 VerifyStable 仍因历史加载器、玩家内容和其他插件变化失败，没有重录基线、扩大排除或回滚玩家文件。范围统计和全差异位于 `artifacts/recheck-2.6.8/reference-scoped.json`、`reference-changes.json`。
+- 最终安装器 `MalodyVThemeLoader-Setup-2.6.8.exe`，314,202,057 bytes，SHA-256 `fd74c4e0341e3fbe38180d6e9981eea160f2ade9622e3dc64a3086f7f4a9469c`，ProductVersion 为 `2.6.8+1dcf7b3b4083511737aa0ab20b828f60d238f937`。源代码在构建前提交，该源提交同时用于 v2.6.8 标签。
+- GitHub v2.6.8 已于 2026-10-24 正式发布，Release ID 为 422577521，draft/prerelease 均为 false；`/releases/latest` 已返回 v2.6.8，供管理器自动更新。三个附件逐一核对大小及 SHA-256 digest，与本地一致；记录在 `artifacts/recheck-2.6.8/release-assets.json`、`published-release.json`、`latest-release.json`。

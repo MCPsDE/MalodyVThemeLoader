@@ -19,6 +19,7 @@
 
 - PowerShell 调用 rg 时不要把 README* 或 src/Foo*.cs 当作路径参数：通配符不一定由 shell 展开，Windows 会报文件名语法错误。传真实目录，再用 -g 'README*' / -g 'Foo*.cs' 过滤；先用 rg --files 确认文件名，避免猜测协议类的文件路径。
 - GitHub 草稿 Release 已存在且附件上传完成时，按 /releases/tags/<tag> 查询仍可能返回 404，gh create 还会打印 untagged 草稿地址。这不等于创建失败；用授权后的 releases 列表按 tag_name 定位，再按 release ID 校验附件的 state/size/digest。不要重复创建或重传；核对完成再发布，随后用 /releases/latest 确认正式标签。
+- releases 列表也不能只检查第一页十条：新建的 2.6.10 草稿被排在已发布版本之后，per_page=10 未返回它，而 per_page=100 才能找到。列表必须遍历分页（或先增大页面并按需继续），不能因首屏没有目标就创建第二个草稿。
 
 - 即使在线调试已关闭，只要主题存在一条 nodes 规则，旧 NodeDecorationService 仍每 0.5 秒 Collect 所有已加载场景。现场 murasame 只有 SceneResult 的底图规则，却在 SceneEditor 持续遍历约 1.2 万 Image / 1.2 万 TMP 的 EditModeKeyV2。节点装饰必须预编译规则路径，只检查对应已加载场景及路径经过的同级集合；目标场景未加载时，不读取任何 Transform。每次重新验证同名数量，不能为提速按 basename 或旧实例缓存猜测目标。
 - 只在拿到 Resources.FindObjectsOfTypeAll 数组后按 scene 过滤，仍然会全局搜索并创建包含音符池的大数组。普通主题与 Live2D 补漏查询应先定位已加载场景根，再 GetComponentsInChildren；制谱 UI 的 SceneEditor / SceneEditorSkin 保留支持，EditMode* 音符层与 PlayMode* 一样排除。避免为一条结算底图规则重建整份调试树；用大型无关分支和缺席场景的零节点读取断言验证。

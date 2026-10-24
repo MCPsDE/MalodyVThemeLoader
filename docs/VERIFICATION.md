@@ -219,3 +219,7 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - `test-presentation-il2cpp.ps1`：1,225 项断言，原入口 44 个中间帧、其余入口共 220 个独立中间帧；旧语音生命周期回归继续通过，48 次播放及 2 次主动失效句柄恢复。证据：`artifacts/recheck-2.6.9/native-presentation.json`。
 - `test-inspector-runtime.ps1 -Standalone`：5,042 项断言，包含实际像素检查：复现蓝色清屏与 .447 图片合成，修复后不透明替换 PNG 的 RGB 与参考渲染误差小于 .025，PNG 自身透明度仍有效。原有半透明底图重建、视频、节点粗框、穿透搜索和性能回归通过。证据：`artifacts/recheck-2.6.9/inspector-runtime.json`。
 - Live2D 编辑器/工作台测试通过，覆盖五档绑定保存、50 组普通/Clone 名称解析、所有 12 个样本动作、导入覆盖、音频、预览和恢复；全解决方案 Release 构建零警告零错误。隔离原生播放器为 Unity 2022.3.62f3，实际游戏为 f2；没有启动或写入真实游戏，没有把这些结果声称为用户现场的多插件端到端验证。
+- 最终发行安装器的假游戏 dry-run、安装、验证、修复和卸载全部通过；外部 BepInEx 复用、所有权、故意锁定目标文件后的回滚与不兼容环境拒绝通过。相关错误输出是主动故障测试。离线载荷校验通过：1,626 份源资源保持原样，1,428 个图像目录项有效；331 个实际游戏/Unity 引用均可解析，没有未防护的 unstripping 异常桩。安装器嵌入 ZIP 的 SHA-256 与最终 payload.zip 一致，记录于 `artifacts/recheck-2.6.9/embedded-payload.json`。
+- 保留历史输入基线，没有重录或扩大排除。源工程与实际游戏核心 exe/Data、BepInEx core/interop/unity-libs 的变化记录均为 0；完整历史差异 4,575 条仍包含玩家主题、旧加载器、其他插件与运行数据，VerifyStable 并非全树通过。完整与范围审计位于 `artifacts/recheck-2.6.9/reference-changes.json`、`reference-scoped.json`。
+- 最终安装包 `MalodyVThemeLoader-Setup-2.6.9.exe` 为 314,202,057 bytes，SHA-256 `1cbecb249d1e35f05097446f0a6ece245f2b6ccd678c6230e0296d81bbe3f0fd`。ProductVersion 为 `2.6.9+50c3477381588404a30a721da1155462bcab472a`；该源提交同时用于 v2.6.9 标签，随后只补充发布审计文档。
+- GitHub v2.6.9 于 2026-10-24 正式发布，Release ID 422601396，draft/prerelease 均为 false，`/releases/latest` 返回 v2.6.9。三个附件的 state、size、SHA-256 digest 均逐项与本地相同；记录于 `artifacts/recheck-2.6.9/release-assets.json`、`published-release.json`、`latest-release.json`。源代码与标签均已推送到公开仓库。

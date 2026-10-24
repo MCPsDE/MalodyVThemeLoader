@@ -47,7 +47,7 @@ internal sealed class SceneThemeApplier
         var legacyTextCount = 0;
         var cubismRendererCount = 0;
 
-        foreach (var image in Resources.FindObjectsOfTypeAll<Image>())
+        foreach (var image in SceneComponentQuery.Find<Image>(sceneName))
         {
             if (!IsSceneComponent(image, sceneName)
                 || (image.sprite == null && image.overrideSprite == null))
@@ -74,7 +74,7 @@ internal sealed class SceneThemeApplier
             }
         }
 
-        foreach (var rawImage in Resources.FindObjectsOfTypeAll<RawImage>())
+        foreach (var rawImage in SceneComponentQuery.Find<RawImage>(sceneName))
         {
             if (!IsSceneComponent(rawImage, sceneName) || rawImage.texture == null)
             {
@@ -107,7 +107,7 @@ internal sealed class SceneThemeApplier
             }
         }
 
-        foreach (var renderer in Resources.FindObjectsOfTypeAll<SpriteRenderer>())
+        foreach (var renderer in SceneComponentQuery.Find<SpriteRenderer>(sceneName))
         {
             if (!IsSceneComponent(renderer, sceneName) || renderer.sprite == null)
             {
@@ -145,7 +145,7 @@ internal sealed class SceneThemeApplier
             }
         }
 
-        foreach (var text in Resources.FindObjectsOfTypeAll<TMP_Text>())
+        foreach (var text in SceneComponentQuery.Find<TMP_Text>(sceneName))
         {
             if (!IsSceneComponent(text, sceneName))
             {
@@ -162,7 +162,7 @@ internal sealed class SceneThemeApplier
             }
         }
 
-        foreach (var text in Resources.FindObjectsOfTypeAll<Text>())
+        foreach (var text in SceneComponentQuery.Find<Text>(sceneName))
         {
             if (!IsSceneComponent(text, sceneName))
             {
@@ -179,7 +179,7 @@ internal sealed class SceneThemeApplier
             }
         }
 
-        foreach (var renderer in Resources.FindObjectsOfTypeAll<CubismRenderer>())
+        foreach (var renderer in SceneComponentQuery.Find<CubismRenderer>(sceneName))
         {
             if (!IsSceneComponent(renderer, sceneName) || renderer._mainTexture == null)
             {
@@ -294,11 +294,7 @@ internal sealed class SceneThemeApplier
             return false;
         }
 
-        return !sceneName.Equals("ScenePlay", StringComparison.OrdinalIgnoreCase)
-               && !sceneName.Equals("SceneReplay", StringComparison.OrdinalIgnoreCase)
-               && !sceneName.Equals("SceneRoomWatch", StringComparison.OrdinalIgnoreCase)
-               && !sceneName.Equals("SceneWatchSub", StringComparison.OrdinalIgnoreCase)
-               && !sceneName.StartsWith("PlayMode", StringComparison.OrdinalIgnoreCase);
+        return SceneComponentQuery.IsAllowedScene(sceneName);
     }
 
     internal static bool IsSceneComponent(Component component, string? sceneName = null)

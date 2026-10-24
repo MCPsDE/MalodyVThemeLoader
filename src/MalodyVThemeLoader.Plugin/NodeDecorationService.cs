@@ -12,10 +12,12 @@ internal sealed class NodeDecorationService : IDisposable
     private readonly ManualLogSource log;
     private readonly LoadedTheme theme;
     private readonly ThemeResources rules;
+    private readonly SceneNodeTargets targetsQuery;
     private readonly Dictionary<string, Decoration> active = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> states = new(StringComparer.Ordinal);
     private float nextScan;
-    internal NodeDecorationService(ManualLogSource log, LoadedTheme theme, ThemeResources rules) { this.log = log; this.theme = theme; this.rules = rules; }
+    internal NodeDecorationService(ManualLogSource log, LoadedTheme theme, ThemeResources rules)
+    { this.log = log; this.theme = theme; this.rules = rules; targetsQuery = new SceneNodeTargets(rules.Nodes); }
     internal string Status(string scene, string address) => states.TryGetValue(scene + "|" + address, out var state) ? state : "";
     internal void Tick()
     {
@@ -26,7 +28,7 @@ internal sealed class NodeDecorationService : IDisposable
         }
         if (rules.Nodes.Count == 0 || Time.realtimeSinceStartup < nextScan) return;
         nextScan = Time.realtimeSinceStartup + .5f;
-        var nodes = SceneNodeLocator.Collect(null, out _);
+        var nodes = targetsQuery.Resolve();
         var targets = nodes.ToLookup(n => n.Info.Scene + "|" + n.Info.Address, StringComparer.Ordinal);
         foreach (var key in active.Where(p => p.Value.Target == null || !targets[p.Key].Any(n => n.Transform == p.Value.Target)).Select(p => p.Key).ToArray())
         { active[key].Dispose(); active.Remove(key); states.Remove(key); }

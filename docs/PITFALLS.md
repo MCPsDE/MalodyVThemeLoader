@@ -1,5 +1,11 @@
 # 开发踩坑记录（持续维护）
 
+- PowerShell 调用 rg 时不要把 README* 或 src/Foo*.cs 当作路径参数：通配符不一定由 shell 展开，Windows 会报文件名语法错误。传真实目录，再用 -g 'README*' / -g 'Foo*.cs' 过滤；先用 rg --files 确认文件名，避免猜测协议类的文件路径。
+
+- 即使在线调试已关闭，只要主题存在一条 nodes 规则，旧 NodeDecorationService 仍每 0.5 秒 Collect 所有已加载场景。现场 murasame 只有 SceneResult 的底图规则，却在 SceneEditor 持续遍历约 1.2 万 Image / 1.2 万 TMP 的 EditModeKeyV2。节点装饰必须预编译规则路径，只检查对应已加载场景及路径经过的同级集合；目标场景未加载时，不读取任何 Transform。每次重新验证同名数量，不能为提速按 basename 或旧实例缓存猜测目标。
+- 只在拿到 Resources.FindObjectsOfTypeAll 数组后按 scene 过滤，仍然会全局搜索并创建包含音符池的大数组。普通主题与 Live2D 补漏查询应先定位已加载场景根，再 GetComponentsInChildren；制谱 UI 的 SceneEditor / SceneEditorSkin 保留支持，EditMode* 音符层与 PlayMode* 一样排除。避免为一条结算底图规则重建整份调试树；用大型无关分支和缺席场景的零节点读取断言验证。
+- 扫描范围收窄应放在运行时查询入口，不能直接收紧 ThemeResources 的格式校验：旧主题可能保存过 EditMode* 规则，直接拒绝会连带整份主题无法加载。旧配置保持可读，运行时跳过音符层，并验证旧规则不会触发节点遍历。
+
 - 对可见顶层 Form 调用 Scale(2) 时，Windows 会按当前桌面的最大跟踪尺寸限制窗口；此时子控件已放大，窗口却没放大，截图会误成“200% 布局”，树和内容区还可能被挤成一条线。大于桌面的合成检查应把已缩放的客户端控件移到指定尺寸的离屏画布，断言候选树仍有可用高度；与物理显示器 DPI 检查分别记录。
 
 - 多文件 apply-patch 不保证整批原子完成；后面的文件匹配失败时，前面的文件可能已经写入。先检查 git diff 和目标内容，再只补失败部分，避免整批重跑造成重复段落或覆盖已完成修改。

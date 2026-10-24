@@ -6,7 +6,7 @@ $build=Join-Path $project 'validation-build'
 $plugins=Join-Path $project 'Assets\Plugins'
 New-Item -ItemType Directory -Path $build,$plugins,(Join-Path $project 'Assets\Editor'),(Join-Path $project 'Packages'),(Join-Path $project 'ProjectSettings') -Force|Out-Null
 $managed=Join-Path (Split-Path $UnityExe) 'Data\Managed\UnityEngine'
-$sources=@('ThemeAssetStore','ThemeResourceImages','SceneNodeLocator','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ControlModeController','InspectorInputFence')
+$sources=@('ThemeAssetStore','ThemeResourceImages','SceneNodeLocator','SceneNodeTargets','SceneComponentQuery','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ControlModeController','InspectorInputFence')
 foreach($name in $sources){
     $source=[IO.File]::ReadAllText((Join-Path $repo "src\MalodyVThemeLoader.Plugin\$name.cs"))
     $source=$source.Replace('using Il2CppInterop.Runtime.InteropTypes.Arrays;','').Replace('using BepInEx.Unity.IL2CPP.Utils.Collections;','').Replace('.WrapToIl2Cpp()','')
@@ -49,7 +49,7 @@ namespace MalodyVThemeLoader.Plugin {
    public static MalodyVThemeLoader.Shared.ThemeLoaderSettings ReadSettings(string root) => new();
  }
  internal static class SceneThemeApplier {
-   public static bool IsAllowedScene(string s) => MalodyVThemeLoader.Shared.ThemeResources.IsAllowedScene(s);
+   public static bool IsAllowedScene(string s) => SceneComponentQuery.IsAllowedScene(s);
    public static string GetHierarchy(UnityEngine.Transform t) { var parts=new System.Collections.Generic.List<string>(); while(t != null){parts.Add(t.name); t=t.parent;} parts.Reverse(); return string.Join("/",parts); }
  }
 }

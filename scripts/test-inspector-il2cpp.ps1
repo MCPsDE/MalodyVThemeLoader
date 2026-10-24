@@ -21,7 +21,7 @@ Copy-Item -Path (Join-Path $repo 'vendor\bepinex\*') -Destination $playerRoot -R
 $references=Get-ChildItem (Join-Path $repo 'generated\game-libs') -Filter '*.dll' | Where-Object Name -Match '^(UnityEngine|Il2Cpp)' | ForEach-Object {
     '<Reference Include="'+$_.BaseName+'"><HintPath>'+[Security.SecurityElement]::Escape($_.FullName)+'</HintPath><Private>false</Private></Reference>'
 }
-$sources=@('InspectorInputFence','SceneNodeLocator','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ThemeAssetStore','ThemeResourceImages') | ForEach-Object {
+$sources=@('InspectorInputFence','SceneNodeLocator','SceneNodeTargets','SceneComponentQuery','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ThemeAssetStore','ThemeResourceImages') | ForEach-Object {
     '<Compile Include="'+[Security.SecurityElement]::Escape((Join-Path $repo "src\MalodyVThemeLoader.Plugin\$_.cs"))+'"/>'
 }
 $xml='<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net6.0</TargetFramework><LangVersion>latest</LangVersion><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.785"/>'+($references -join '')+($sources -join '')+'<ProjectReference Include="'+[Security.SecurityElement]::Escape((Join-Path $repo 'src\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj'))+'"/></ItemGroup></Project>'

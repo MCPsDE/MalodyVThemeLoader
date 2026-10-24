@@ -74,9 +74,9 @@ internal sealed class Live2dReplacementService : IDisposable
         }
         if (Time.unscaledTime < nextScan) return;
         nextScan = Time.unscaledTime + .4f;
-        foreach (var panel in Resources.FindObjectsOfTypeAll<PanelResultScore>()) ObserveResult(panel);
+        foreach (var panel in SceneComponentQuery.Find<PanelResultScore>("SceneResult")) ObserveResult(panel);
         if (replacements.Count == 0 && failed.Count == 0) Status("waiting", "等待游戏显示看板角色。");
-        foreach (var widget in Resources.FindObjectsOfTypeAll<WidgetLive2dControl>())
+        foreach (var widget in SceneComponentQuery.Find<WidgetLive2dControl>())
             ApplyNow(widget);
     }
 
@@ -167,7 +167,7 @@ internal sealed class Live2dReplacementService : IDisposable
             if (rankImage == null || !rankImage.gameObject.activeSelf || rankImage.sprite == null) return;
             var result = Live2dEvents.ResultFromSprite(rankImage.sprite.name);
             if (result.Length == 0) return;
-            foreach (var scene in Resources.FindObjectsOfTypeAll<SceneResult>())
+            foreach (var scene in SceneComponentQuery.Find<SceneResult>("SceneResult"))
             {
                 if (!SceneThemeApplier.IsSceneComponent(scene, panel.gameObject.scene.name)
                     || scene.gameObject.scene.handle != panel.gameObject.scene.handle || scene.marloControl == null) continue;

@@ -1,5 +1,7 @@
 # Malody V ThemeLoader Development Guide
 
+2.6.6 bounds background work to scene-local component queries and exact node-rule paths. Do not use a full inspector hierarchy scan for decoration discovery or enumerate global component arrays before filtering scenes. Keep SceneEditor / SceneEditorSkin UI supported, skip EditMode* note pools at runtime, and leave saved theme-rule validation compatible. The editor performance fixture checks absent-scene zero reads and unrelated large pools; isolated timings are not real-game FPS. The optional pointer-through search from 2.6.5 remains available.
+
 2.6.4 narrows the live inspector to the current scene and selected node, adds readable label plates and saved resource-scope navigation, and revises decoration and raycast-filter lifetimes. See `SCENE_INSPECTOR.md` for the native IL2CPP stress test and its game-version limits, and `PITFALLS.md` for the captured GC finalizer failures and temporary IPC-lock handling. The original multi-plugin crash was not reproduced in the isolated player; do not describe its stack as proof of a specific plugin's fault.
 
 ## 1. Scope

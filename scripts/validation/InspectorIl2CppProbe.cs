@@ -26,7 +26,7 @@ internal sealed class ThemeRuntime
 }
 internal static class SceneThemeApplier
 {
-    public static bool IsAllowedScene(string scene) => ThemeResources.IsAllowedScene(scene);
+    public static bool IsAllowedScene(string scene) => SceneComponentQuery.IsAllowedScene(scene);
     public static string GetHierarchy(Transform target)
     { var names = new List<string>(); while (target != null) { names.Add(target.name); target = target.parent; } names.Reverse(); return string.Join("/", names); }
 }
@@ -84,6 +84,8 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
         {
             if (inspector == null) return;
             if (tick % 10 == 0) Renew();
+            if (tick % 10 == 0 && !SceneComponentQuery.Find<Text>("SceneSong").Any(text => text.name == "Caption"))
+                throw new Exception("Scene-local native component discovery lost the game UI.");
             typeof(SceneInspectorController).GetField("nextPoll", Flags)!.SetValue(inspector, 0f);
             typeof(SceneInspectorController).GetField("nextSnapshot", Flags)!.SetValue(inspector, 0f);
             Call("Update"); Call("Pick", new Vector2(Screen.width / 2, Screen.height / 2)); Call("LateUpdate");

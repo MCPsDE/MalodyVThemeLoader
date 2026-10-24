@@ -164,3 +164,17 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - `verify-payload.py` 确认离线 BepInEx 文件与路径、1,428 张目录图片、Default 的 1,626 个资源与源工程一致。最终安装器的 dry-run、内嵌离线安装、修复、验证、卸载、外部 BepInEx 复用、所有权、文件锁回滚和不兼容环境测试全部通过，均使用 artifacts 内假游戏目录。
 - 只读输入审计保留完整差异 `artifacts/reference-changes.json`。历史基线的全树 VerifyStable 仍失败，不能称全部输入未变：源码差异 0；游戏核心 exe/Data、BepInEx core/interop/unity-libs 无差异；加载器自身已有 5 个文件的 10 条差异，当前安装版本仍为本轮修改前观察到的 2.6.4，另有玩家主题、其他插件等差异。本轮未向实际游戏或源工程写入文件，未重录基线或回滚玩家文件。范围说明在 `artifacts/reference-scoped-2.6.5.json`。
 - 最终安装器：`MalodyVThemeLoader-Setup-2.6.5.exe`，314,197,961 bytes，SHA-256 `73ec13f38336be48f4a05848cec22b7c9131a1b38fec7e747f36c4e91a007b4c`。
+
+## 2.6.6 制谱器后台扫描性能修复
+
+验证日期：2026-10-24。本轮只读检查实际游戏日志与主题配置，未启动或修改实际游戏。
+
+- 现场安装版本为 2.6.4，在线调试未启用；当前 murasame 主题只保存了一条 SceneResult 节点底图。旧 NodeDecorationService 仍每 0.5 秒重建所有已加载场景的完整节点元数据；此外图片、字体和 Live2D 使用全局对象查询再按场景过滤。日志中 EditModeKeyV2 的重复主题扫描包含 12,059 个 Image、12,051 个 TMP 和 867 个旧 Text；SceneEditor 本身只有 164 个 Image、31 个 TMP 和 32 个旧 Text。这是本插件可以确认并消除的额外工作，不据此判断其他插件的性能。
+- 节点装饰预编译完整地址，只索引目标场景中路径所需的同级集合，目标场景缺席时读取 0 个 Transform。每轮重新验证同名数量和顺序，动态场景载入后仍能找到目标，歧义地址停用旧装饰。通用组件与 Live2D 查询先过滤已加载场景再枚举，运行时跳过 EditMode* 音符池；SceneEditor / SceneEditorSkin 继续支持。旧主题规则仍通过原格式校验，不因范围收窄导致整份主题拒载。
+- 全解决方案 Release 构建通过，0 警告、0 错误。实际游戏 interop 的 316 个游戏/Unity 引用、9 个 Cubism 签名、3 个看板入口、3 个结算显示入口、3 个 UI 音频入口及音效音量适配校验通过，保留 1 个有保护的本地回退。
+- `test-inspector-runtime.ps1 -Standalone` 通过 5,000 项断言，保留底图、视频、选中粗框、单份标签和穿透搜索回归。新增场景含 12,000 个音符 Image、12,000 个文本和 12,000 个无关制谱 UI 分支节点；音符池不进入组件查询或调试树。结算场景未加载时，真实 NodeDecorationService 的目标查询读取 0 个同级节点；直接定位制谱按钮每轮读取 4 个，同场景全树对照产生 12,004 个节点。该次 100 轮精确查找总计 5.0495ms，全树单轮 266.6315ms；两者有意执行不同工作量，这些隔离时序不是实际游戏 FPS。结果为 `artifacts/inspector-overlay-player-test/editor-performance.json`。
+- `test-inspector-il2cpp.ps1 -SkipPlayerBuild` 通过：真实 IL2CPP 场景内组件查询、600 次拾取、100 次底图重载及双端 GC。播放器使用 Unity 2022.3.62f3 和固定 BepInEx 785，不等于实际游戏 f2 / Metadata V29 及其他插件的组合验证。`test-update-service.ps1` 的 49 项更新/心跳断言通过。
+- 输入审计保留历史基线：源工程变化记录为 0；游戏核心 exe/Data、BepInEx core/interop/unity-libs 变化记录为 0；加载器历史差异仍为 10 条，当前安装插件仍为 2.6.4。完整 VerifyStable 因历史加载器、玩家主题及其他插件变化失败，未重录基线、扩大排除或回滚玩家文件；不声称整个活动游戏目录未变。范围说明为 `artifacts/reference-scoped-2.6.6.json`。
+- `verify-plugin.ps1` 确认插件引用固定 IL2CPP/BepInEx 接口、无 UnityEditor 引用；`verify-payload.py` 校验全部离线运行库、主题清单与路径，Default 的 1,626 个资源与源工程一致，目录包含 1,428 张图片。
+- 最终安装器：`MalodyVThemeLoader-Setup-2.6.6.exe`，314,197,961 bytes，SHA-256 `8365ef822290cb836f4087e55b22eba96ea127cd4ae2a0871352a2dba0997f30`。
+- 最终 EXE 的 dry-run、内嵌离线安装、安装后验证、修复、卸载及未拥有 winhttp.dll 拒绝覆盖通过；外部 BepInEx 复用、所有权保留、文件锁回滚、禁用 Doorstop / Mono 入口 / 缺失核心库拒绝修改通过。对应 `test-installer.ps1` 与 `test-runtime-reuse.ps1`，全部仅操作 artifacts 内的假游戏目录。

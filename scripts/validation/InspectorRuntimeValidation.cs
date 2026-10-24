@@ -86,6 +86,16 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         Destroy(wide.gameObject); yield return null;
         var nodes = SceneNodeLocator.Collect(store, out var truncated);
         var ai = nodes.Single(n => n.Transform == a.transform); var bi = nodes.Single(n => n.Transform == b.transform); var ci = nodes.Single(n => n.Transform == container);
+        var scopedTargets = new SceneNodeTargets(new[] {
+            new ThemeNodeRule { Scene = "SceneSong", Address = ai.Info.Address },
+            new ThemeNodeRule { Scene = "SceneSong", Address = bi.Info.Address },
+            new ThemeNodeRule { Scene = "SceneSong", Address = ci.Info.Address }
+        });
+        var locatedTargets = scopedTargets.Resolve();
+        Require(locatedTargets.Count == 3 && locatedTargets.Any(n => n.Transform == a.transform) && locatedTargets.Any(n => n.Transform == b.transform), "Direct path lookup confused same-name siblings.");
+        var extraDuplicate = Rect("重复节点", canvas.transform, Vector2.one, Vector2.zero);
+        Require(scopedTargets.Resolve().Count == 1, "Changed duplicate counts did not fail closed in direct path lookup.");
+        DestroyImmediate(extraDuplicate.gameObject);
         Require(!truncated && ai.Info.Address != bi.Info.Address && ai.Info.Address == SceneNodeLocator.AddressOf(a.transform), "Duplicate addresses are unstable.");
         Require(ai.Info.LogicalId == "Textures/icon.png" && bi.Info.LogicalId == ai.Info.LogicalId, "Original asset mapping failed.");
         store.ResourceRules.Images.Add(new ThemeImageRule { LogicalId = "Textures/icon.png", Scene = "SceneSong", Hierarchy = ai.Info.Hierarchy, Component = "Image", NodeAddress = ai.Info.Address, File = "background.png" });
@@ -283,6 +293,75 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         Destroy(otherRoot.gameObject); SceneManager.UnloadSceneAsync(other);
         store.Dispose(); camera.targetTexture = null; target.Release(); Destroy(target); Destroy(inspector.gameObject); yield return null;
         Require(caption.font != null, "Disposing the inspector destroyed the game's borrowed font.");
+        VerifyEditorPerformance(theme);
+    }
+    private void VerifyEditorPerformance(LoadedTheme theme)
+    {
+        var previous = SceneManager.GetActiveScene();
+        var editor = SceneManager.CreateScene("SceneEditor"); SceneManager.SetActiveScene(editor);
+        var editorCanvas = new GameObject("EditorCanvas").AddComponent<Canvas>();
+        var toolbar = Rect("Toolbar", editorCanvas.transform, new Vector2(400, 60), Vector2.zero);
+        var button = Rect("Button 中文/#", toolbar, new Vector2(60, 40), Vector2.zero); button.gameObject.AddComponent<Image>();
+        var pool = new GameObject("UnrelatedPool").transform; pool.SetParent(editorCanvas.transform, false);
+        for (var i = 0; i < 12000; i++) new GameObject("Pooled" + i).transform.SetParent(pool, false);
+        var notes = SceneManager.CreateScene("EditModeKeyV2"); SceneManager.SetActiveScene(notes);
+        var notesCanvas = new GameObject("NotesCanvas").AddComponent<Canvas>(); notesCanvas.gameObject.SetActive(false);
+        for (var i = 0; i < 12000; i++)
+        {
+            var note = Rect("Note" + i, notesCanvas.transform, Vector2.one, Vector2.zero); note.gameObject.AddComponent<Image>();
+            Rect("Label", note, Vector2.one, Vector2.zero).gameObject.AddComponent<Text>();
+        }
+        Require(!SceneComponentQuery.IsAllowedScene("EditModeKeyV2") && SceneComponentQuery.IsAllowedScene("SceneEditor") && SceneComponentQuery.IsAllowedScene("SceneEditorSkin"), "Editor note exclusion also disabled authoring UI.");
+        var savedEditorRules = new ThemeResources();
+        savedEditorRules.Nodes.Add(new ThemeNodeRule { Scene = "EditModeKeyV2", Address = "NotesCanvas#0:1/Note0#0:1", ImageFile = "background.png" });
+        savedEditorRules.Validate();
+        var ignoredNoteTargets = new SceneNodeTargets(savedEditorRules.Nodes);
+        Require(ignoredNoteTargets.Resolve().Count == 0 && ignoredNoteTargets.LastSiblingReads == 0, "Saved note rules caused traversal or invalidated the theme.");
+        Require(!SceneComponentQuery.Find<Image>("EditModeKeyV2").Any(), "Component query entered the editor note scene.");
+        Require(SceneNodeLocator.Collect(null, out _, currentSceneOnly: true).Count == 0, "Inspector collection entered the active editor note scene.");
+        Require(SceneComponentQuery.Find<Image>("SceneEditor").Count() == 1, "Scene-scoped UI query crossed into editor note objects.");
+        Require(SceneComponentQuery.Find<Text>().All(text => text.gameObject.scene.handle != notes.handle), "Live discovery visited the editor note pool.");
+
+        var absentRules = new ThemeResources(); absentRules.Nodes.Add(new ThemeNodeRule { Scene = "SceneResult", Address = "ResultCanvas#0:1/Target#0:1", ImageFile = "background.png" });
+        var absent = new SceneNodeTargets(absentRules.Nodes);
+        Require(absent.Resolve().Count == 0 && absent.LastSiblingReads == 0, "A missing result scene still traversed editor transforms.");
+        using (var idleDecorations = new NodeDecorationService(Plugin.Log, theme, absentRules))
+        {
+            idleDecorations.Tick();
+            var actualQuery = (SceneNodeTargets)typeof(NodeDecorationService).GetField("targetsQuery", Flags).GetValue(idleDecorations);
+            Require(actualQuery.LastSiblingReads == 0, "Decoration service scanned the editor for a result-only rule.");
+        }
+        SceneManager.SetActiveScene(editor);
+        var address = SceneNodeLocator.AddressOf(button);
+        var direct = new SceneNodeTargets(new[] { new ThemeNodeRule { Scene = "SceneEditor", Address = address } });
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        for (var i = 0; i < 100; i++) Require(direct.Resolve().Single().Transform == button, "Exact editor target resolution changed under a large unrelated pool.");
+        watch.Stop(); var directMilliseconds = watch.Elapsed.TotalMilliseconds; var directReads = direct.LastSiblingReads;
+        Require(directReads < 12, "Target lookup descended into the 12,000-object unrelated branch: " + directReads);
+        watch.Restart(); var fullTree = SceneNodeLocator.Collect(null, out _, currentSceneOnly: true); watch.Stop();
+        Require(fullTree.Count >= 12004, "Performance fixture did not create its large editor hierarchy.");
+        var fullMilliseconds = watch.Elapsed.TotalMilliseconds;
+        var resultScene = SceneManager.CreateScene("SceneResult"); SceneManager.SetActiveScene(resultScene);
+        var resultCanvas = new GameObject("ResultCanvas").AddComponent<Canvas>();
+        var resultTarget = Rect("Target", resultCanvas.transform, new Vector2(90, 60), Vector2.zero);
+        Require(absent.Resolve().Single().Transform == resultTarget && absent.LastSiblingReads == 2, "Previously absent result target did not resolve after scene load.");
+        using (var ready = new NodeDecorationService(Plugin.Log, theme, absentRules))
+        {
+            ready.Tick(); Require(resultTarget.childCount == 1, "Direct target resolution stopped applying node backgrounds.");
+            var duplicate = Rect("Target", resultCanvas.transform, Vector2.one, Vector2.zero);
+            typeof(NodeDecorationService).GetField("nextScan", Flags).SetValue(ready, 0f); ready.Tick();
+            Require(absent.Resolve().Count == 0 && !resultTarget.GetChild(0).gameObject.activeSelf, "Ambiguous target retained its decoration.");
+            DestroyImmediate(duplicate.gameObject);
+        }
+        File.WriteAllText(Path.Combine(output, "editor-performance.json"), JsonSerializer.Serialize(new {
+            noteImages = 12000, noteTexts = 12000, unrelatedEditorTransforms = 12000,
+            missingSceneSiblingReads = 0, directTargetSiblingReads = directReads,
+            directTarget100PassesMilliseconds = directMilliseconds, fullHierarchyNodes = fullTree.Count,
+            fullHierarchyOnePassMilliseconds = fullMilliseconds,
+            scope = "isolated Unity player; operation counts verify bounded queries; timings are not real-game FPS"
+        }, JsonDefaults.Options));
+        SceneManager.SetActiveScene(previous);
+        SceneManager.UnloadSceneAsync(editor); SceneManager.UnloadSceneAsync(notes); SceneManager.UnloadSceneAsync(resultScene);
     }
     private static void Save(RenderTexture target, string name)
     {

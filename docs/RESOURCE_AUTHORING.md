@@ -42,6 +42,22 @@
 
 border 使用 Unity 顺序：x 左、y 下、z 右、w 上。空 scene 表示全局，空 hierarchy 表示该场景内全部使用位置；component 可为空、Image、RawImage、SpriteRenderer。重复或无效规则被拒绝；等优先级的含糊匹配不任意选取。图片始终按 catalog logical ID 识别，同名且同尺寸无法唯一确认时保留原资源。
 
+## 原始纯色遮罩与节点底图
+
+2.6.8 将以下五个节点的原始 Image Alpha 设为 0，保留节点、子内容、裁剪和点击行为：
+
+| 场景 | 节点层级 | 还原原效果的 PNG 颜色 / Alpha |
+| --- | --- | --- |
+| SceneSong | CanvasForegroundDPI/LeftPanel/EntranceIcon/mask/tip | 黑色 / 128÷255 |
+| SceneResult | Canvas/bgmask | #01060C / 0.2 |
+| SceneResult | Canvas/bottom | #01060C / 128÷255 |
+| SceneResult | Canvas/bottom_mp | #01060C / 128÷255 |
+| SceneResult | Canvas/bottom_watch | #01060C / 128÷255 |
+
+在游戏进入对应场景后，打开编辑器的在线调试，从层级树选择节点；透明区域可通过“穿透搜索”寻找。在右侧“节点底图”导入带透明度的 PNG，保存后按当前实时设置应用。底图使用独立 Image，保留 PNG 自带的透明度；九宫格、填充和尺寸设置沿用现有编辑功能。入口 tip 的底图会随其父节点平移。
+
+这些节点的原始 Graphic 持续保持透明，直接替换它的 Sprite 不会恢复可见度，应使用“节点底图”。移除自定义底图后，该区域继续透明。Default 文件仍为原始源资源，加载器的这五处显示调整同样适用。真实的 `Canvas/Image` / `shop_bg1.png` 图片叠层及其他位置复用的 `g-white.png` 不在清除范围。
+
 ## 验证范围
 
 同一张原图可以同时拥有多条场景替换。在右侧点击“新增场景替换”，选择“应用范围”，导入新图后保存；已有场景不会被移走。在“已保存的替换”中切回大厅、选曲或具体控件，可以继续编辑各自的文件和九宫格。“恢复此范围”只删除当前选中的规则。“所有场景”作为基础图片，各场景规则优先于它。

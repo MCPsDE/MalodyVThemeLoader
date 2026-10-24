@@ -6,7 +6,7 @@ $build=Join-Path $project 'validation-build'
 $plugins=Join-Path $project 'Assets\Plugins'
 New-Item -ItemType Directory -Path $build,$plugins,(Join-Path $project 'Assets\Editor'),(Join-Path $project 'Packages'),(Join-Path $project 'ProjectSettings') -Force|Out-Null
 $managed=Join-Path (Split-Path $UnityExe) 'Data\Managed\UnityEngine'
-$sources=@('ThemeAssetStore','ThemeResourceImages','SceneNodeLocator','SceneNodeTargets','SceneComponentQuery','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ControlModeController','InspectorInputFence')
+$sources=@('ThemeAssetStore','ThemeResourceImages','SceneNodeLocator','SceneNodeTargets','SceneComponentQuery','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ControlModeController','InspectorInputFence','BuiltInOverlayVisibility')
 foreach($name in $sources){
     $source=[IO.File]::ReadAllText((Join-Path $repo "src\MalodyVThemeLoader.Plugin\$name.cs"))
     $source=$source.Replace('using Il2CppInterop.Runtime.InteropTypes.Arrays;','').Replace('using BepInEx.Unity.IL2CPP.Utils.Collections;','').Replace('.WrapToIl2Cpp()','')
@@ -24,6 +24,7 @@ foreach($name in @('ThemeResources','SceneInspector')){
     $source=[IO.File]::ReadAllText((Join-Path $repo "src\MalodyVThemeLoader.Shared\$name.cs")).Replace('File.Move(temporary, target, true);','File.Copy(temporary, target, true); File.Delete(temporary);')
     [IO.File]::WriteAllText((Join-Path $build ($name+'.cs')),$source)
 }
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'validation\OverlayVisibilityValidation.cs') -Destination (Join-Path $build 'OverlayVisibilityValidation.cs') -Force
 $references=@(Get-ChildItem -LiteralPath $managed -Filter '*.dll'|ForEach-Object{'<Reference Include="'+$_.BaseName+'"><HintPath>'+ $_.FullName+'</HintPath><Private>false</Private></Reference>'})
 $ui='E:\UnityProjects\Emiria\Library\ScriptAssemblies\UnityEngine.UI.dll'
 $references+='<Reference Include="UnityEngine.UI"><HintPath>'+$ui+'</HintPath><Private>false</Private></Reference>'

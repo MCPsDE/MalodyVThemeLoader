@@ -54,6 +54,7 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
     private IEnumerator Run()
     {
         var scene = SceneManager.CreateScene("SceneSong"); SceneManager.SetActiveScene(scene);
+        checks += OverlayVisibilityValidation.Run(output, true);
         var canvas = new GameObject("Canvas").AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         var container = Rect("空白容器", canvas.transform, new Vector2(320, 240), Vector2.zero);
         var caption = Rect("标题", container, new Vector2(220, 32), new Vector2(0, 75)).gameObject.AddComponent<Text>(); caption.font = Font.CreateDynamicFontFromOSFont("Arial", 20); caption.text = "Foreground"; caption.color = Color.white; caption.raycastTarget = false;

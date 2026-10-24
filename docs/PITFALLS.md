@@ -1,5 +1,7 @@
 # 开发踩坑记录（持续维护）
 
+- 移除原始色块只改目标 Image.color.a，不能把 CanvasGroup.alpha 设为 0、禁用整个 GameObject 或删除裁剪组件，否则用户添加的底图、文字、点击或裁剪会一起失效。2.6.8 仅匹配入口 tip 与结算 bgmask/三个底栏的五条完整场景层级，并逐级检查同名唯一性；其他 Image、真实背景纹理、调试装饰保持各自行为。验证透明节点仍能穿透拾取、添加半透明 PNG，并比较原色块与 PNG 重建后的渲染像素。
+
 - 半透明 UI 不一定有专用遮罩图片。入口 `mask/tip` 用通用纯白 `g-white.png` 配 Image 黑色、alpha≈0.502；结算 `Canvas/bgmask` 与底栏也靠 Image 着色，而 `Canvas/Image` 另外叠加真实 `shop_bg1.png`（alpha≈0.447）。只换 Sprite 不会清除 Image.color，移动 RectTransform 也不会改变它。调查时分别核对纹理、组件颜色和独立叠层；不可全局清除同名 mask 或替换复用的 g-white 来处理局部效果。
 
 - IL2CPP 的 `Transform.Find` / `parent` 可返回 CLR 基础 Transform 包装器，即便底层确实是 RectTransform，C# `as` / `is` 也会失败。2.6.6 的入口提示平移因此完全没有绑定，旧 Mono 隔离测试无法发现；改用 `GetComponent<RectTransform>()`，并在原生 IL2CPP 播放器中回放原动画、逐帧检查固定宽度和位移。场景 Start 后绑定使用实例所属 scene，避免 additive 场景下误用 active scene。

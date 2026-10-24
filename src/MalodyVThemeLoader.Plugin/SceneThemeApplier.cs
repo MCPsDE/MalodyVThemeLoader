@@ -56,6 +56,7 @@ internal sealed class SceneThemeApplier
             }
 
             imageCount++;
+            if (BuiltInOverlayVisibility.Hide(image)) changed++;
             var videoState = videos.ApplyImage(image, true);
             if (videoState == ThemeVideoApplyState.Changed)
             {
@@ -216,6 +217,7 @@ internal sealed class SceneThemeApplier
             return false;
         }
 
+        var changed = BuiltInOverlayVisibility.Hide(image);
         var videoState = videos.ApplyImage(image, logChange);
         if (videoState == ThemeVideoApplyState.Changed)
         {
@@ -224,10 +226,9 @@ internal sealed class SceneThemeApplier
 
         if (videoState == ThemeVideoApplyState.Active)
         {
-            return false;
+            return changed;
         }
 
-        var changed = false;
         if (ApplyImageSprite(
                 image,
                 image.sprite,

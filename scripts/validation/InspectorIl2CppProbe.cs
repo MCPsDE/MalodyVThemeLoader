@@ -54,6 +54,7 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
     private LoadedTheme theme = null!;
     private RectTransform target = null!;
     private int tick;
+    private int overlayChecks;
     public InspectorLifetimeDriver(IntPtr pointer) : base(pointer) { }
 
     private void Start()
@@ -61,6 +62,7 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
         try
         {
             SceneManager.SetActiveScene(SceneManager.CreateScene("SceneSong"));
+            overlayChecks = OverlayVisibilityValidation.Run(Paths.GameRootPath, false);
             var canvas = new GameObject("Canvas"); canvas.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             target = new GameObject("Target").AddComponent<RectTransform>(); target.SetParent(canvas.transform, false); target.sizeDelta = new Vector2(241, 179);
             var caption = new GameObject("Caption").AddComponent<Text>(); caption.transform.SetParent(canvas.transform, false);
@@ -122,7 +124,7 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
     { control.PointerSearch = tick % 200 >= 100; control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(Path.Combine(Paths.GameRootPath, "ThemeLoader"), InspectorFiles.ControlName, control); }
     [HideFromIl2Cpp] private void Finish(bool passed, string error)
     {
-        File.WriteAllText(result, JsonSerializer.Serialize(new { passed, picks = tick, reloads = tick / 6, error,
+        File.WriteAllText(result, JsonSerializer.Serialize(new { passed, picks = tick, reloads = tick / 6, overlayChecks, error,
             scope = "isolated Unity 2022.3.62f3 IL2CPP + pinned BepInEx 785; production sources; not the real game or other plugins" }, JsonDefaults.Options));
         enabled = false; Application.Quit(passed ? 0 : 1);
     }

@@ -22,6 +22,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
     private float nextSettingsPoll;
     private string reloadReason = "";
     private string watcherReloadReason = "";
+    private OpeningPresentation? opening;
 
     public ThemeRescanScheduler(IntPtr pointer) : base(pointer)
     {
@@ -42,6 +43,11 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         UnityEngine.Object.DontDestroyOnLoad(gameObject);
         gameObject.hideFlags = HideFlags.HideAndDontSave;
         runtime.Log.LogInfo("Delayed theme scan scheduler installed.");
+        if (runtime.Assets.ResourceRules.Opening is { } presentation)
+        {
+            try { opening = new OpeningPresentation(runtime.Log, runtime.Theme.ImageDirectory, presentation); }
+            catch (Exception e) { runtime.Log.LogWarning("Theme opening unavailable; keeping original presentation: " + e.Message); }
+        }
     }
 
     public void Schedule(string sceneName)
@@ -63,6 +69,8 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
 
     private void Update()
     {
+        opening?.Tick();
+        if (opening?.Finished == true) opening = null;
         if (runtime == null)
         {
             PollRealtimeSettings();
@@ -110,6 +118,7 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
     {
         if (runtime == null) return;
         EntranceIconSlideController.Tick();
+        runtime.Texts.Tick();
         // CubismModel.Update reads its previous native parameter buffer. Write
         // animation values afterwards, before its PreLateUpdate model tick.
         try { runtime.Live2d.Tick(); }
@@ -323,7 +332,9 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
         try
         {
             previous?.Videos.StopAll();
+            opening?.Dispose(); opening = null;
             previous?.Decorations.Dispose();
+            previous?.Texts.Dispose();
             previous?.Live2d.Dispose();
             previous?.Audio.Dispose();
             ThemeReplacementRegistry.RestoreAll(currentLog);
@@ -358,7 +369,9 @@ internal sealed class ThemeRescanScheduler : MonoBehaviour
 
     private void OnDestroy()
     {
+        opening?.Dispose(); opening = null;
         runtime?.Decorations.Dispose();
+        runtime?.Texts.Dispose();
         runtime?.Audio.Dispose();
         watcher?.Dispose();
         watcher = null;

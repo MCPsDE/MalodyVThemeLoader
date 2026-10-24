@@ -15,6 +15,7 @@ $projectXml=@'
     <Compile Include="Resources.cs"/><Compile Include="Inspector.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/ThemeManifest.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/PathRules.cs"/>
+    <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/TextAppearance.cs"/>
     <Compile Include="__REPO__/src/MalodyVThemeLoader.Shared/JsonDefaults.cs"/>
     <PackageReference Include="System.Text.Json" Version="6.0.10"/>
     <Reference Include="UnityEngine.CoreModule"><HintPath>__UNITY__/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>

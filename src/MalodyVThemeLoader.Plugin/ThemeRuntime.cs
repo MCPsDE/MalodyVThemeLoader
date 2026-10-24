@@ -20,6 +20,7 @@ internal sealed class ThemeRuntime
     public SceneThemeApplier Applier { get; }
     public Live2dReplacementService Live2d { get; }
     public ThemeAudioService Audio { get; }
+    public TextAppearanceService Texts { get; }
     public ThemeRescanScheduler? Scheduler { get; set; }
 
     private ThemeRuntime(
@@ -38,6 +39,7 @@ internal sealed class ThemeRuntime
         Applier = new SceneThemeApplier(log, Assets, Fonts, Videos);
         Live2d = new Live2dReplacementService(log, theme);
         Audio = new ThemeAudioService(log, theme, Assets.ResourceRules);
+        Texts = new TextAppearanceService(log, Assets.ResourceRules);
     }
 
     public static ThemeRuntime Create(ManualLogSource log)

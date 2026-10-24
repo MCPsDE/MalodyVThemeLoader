@@ -21,7 +21,7 @@ internal sealed partial class ThemeResourceEditor
         {
             if (!dirty && !ScopePending && !IsBusy)
             {
-                try { workspace.Reload(); if (image != null || audio != null) LoadSelection(); inspectorPane?.SetWorkspace(workspace, theme); }
+                try { workspace.Reload(); if (image != null || audio != null) LoadSelection(); inspectorPane?.SetWorkspace(workspace, theme); openingPane?.SetWorkspace(workspace, theme); }
                 catch (Exception e) { Notify("无法刷新资源：" + e.Message); }
             }
             return true;
@@ -41,7 +41,7 @@ internal sealed partial class ThemeResourceEditor
             Notify("选择资源；保存后会自动启用实时加载并应用此主题。");
         }
         catch (Exception e) { Notify("无法打开资源：" + e.Message); tree.Nodes.Clear(); preview.SetImage(null); }
-        finally { selecting = false; UpdateEnabled(); inspectorPane?.SetWorkspace(workspace, theme); }
+        finally { selecting = false; UpdateEnabled(); inspectorPane?.SetWorkspace(workspace, theme); openingPane?.SetWorkspace(workspace, theme); }
         return true;
     }
 
@@ -289,6 +289,7 @@ internal sealed partial class ThemeResourceEditor
 
     public async Task SaveAsync()
     {
+        if (openingPane?.Visible == true) { await openingPane.SaveAsync(); return; }
         if (inspectorPane?.Visible == true) { await inspectorPane.SaveAsync(); return; }
         if (IsBusy || !dirty || workspace == null || theme == null) return;
         if (ScopePending) { Notify("请先读取控件范围，再保存资源。 "); return; }

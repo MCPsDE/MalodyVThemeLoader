@@ -170,6 +170,7 @@ internal sealed partial class ThemeResourceEditor : UserControl
 
     public bool ConfirmLeave()
     {
+        if (openingPane != null && !openingPane.ConfirmLeave()) return false;
         if (inspectorPane != null && !inspectorPane.ConfirmLeave()) return false;
         if (IsBusy) return false;
         if (!dirty) return true;

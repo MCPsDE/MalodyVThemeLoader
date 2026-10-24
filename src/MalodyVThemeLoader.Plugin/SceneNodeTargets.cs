@@ -9,7 +9,7 @@ namespace MalodyVThemeLoader.Plugin;
 internal sealed class SceneNodeTargets
 {
     private sealed record Segment(string Name, int Index, int Count);
-    private sealed record TargetPath(string Address, Segment[] Segments);
+    private sealed record TargetPath(string Address, Segment[] Segments, int RepeatDepth = -1);
     private readonly Dictionary<string, List<TargetPath>> paths = new(StringComparer.Ordinal);
     internal int LastSiblingReads { get; private set; }
 
@@ -28,6 +28,23 @@ internal sealed class SceneNodeTargets
         }
     }
 
+    internal SceneNodeTargets(IEnumerable<ThemeTextRule> rules) : this(rules.Select(r => new ThemeNodeRule { Scene = r.Scene, Address = r.Address }))
+    {
+        // A template expands only the one ancestor the author explicitly selected.
+        foreach (var group in rules.GroupBy(r => r.Scene))
+        {
+            if (!paths.TryGetValue(group.Key, out var items)) continue;
+            var expanded = new List<TargetPath>();
+            foreach (var rule in group)
+            {
+                var path = items.FirstOrDefault(p => p.Address == rule.Address);
+                if (path != null && !expanded.Any(p => p.Address == rule.Address && p.RepeatDepth == rule.RepeatDepth))
+                    expanded.Add(path with { RepeatDepth = rule.RepeatDepth });
+            }
+            paths[group.Key] = expanded;
+        }
+    }
+
     internal List<SceneNode> Resolve()
     {
         LastSiblingReads = 0;
@@ -40,6 +57,40 @@ internal sealed class SceneNodeTargets
             var childIndexes = new Dictionary<int, Dictionary<string, List<Transform>>>();
             foreach (var path in requested)
             {
+                if (path.RepeatDepth >= 0)
+                {
+                    Expand(rootIndex, 0, "");
+                    continue;
+                    void Expand(Dictionary<string, List<Transform>> siblings, int depth, string parentAddress)
+                    {
+                        if (result.Count >= 2048 || LastSiblingReads > 32768) return;
+                        var segment = path.Segments[depth];
+                        if (!siblings.TryGetValue(segment.Name, out var candidates)
+                            || depth != path.RepeatDepth && candidates.Count != segment.Count) return;
+                        for (var occurrence = 0; occurrence < candidates.Count; occurrence++)
+                        {
+                            if (depth != path.RepeatDepth && occurrence != segment.Index) continue;
+                            var target = candidates[occurrence];
+                            var address = parentAddress + (parentAddress.Length == 0 ? "" : "/") + SceneNodeAddress.Segment(segment.Name, occurrence, candidates.Count);
+                            if (depth + 1 == path.Segments.Length)
+                            {
+                                result.Add(new SceneNode(target, new InspectorNode { Id = target.GetInstanceID(), Scene = scene.name, Address = address }));
+                                if (result.Count >= 2048) return;
+                            }
+                            else
+                            {
+                                var id = target.GetInstanceID();
+                                if (!childIndexes.TryGetValue(id, out var childrenIndex))
+                                {
+                                    var children = new List<Transform>();
+                                    for (var child = 0; child < target.childCount && child < 32768; child++) children.Add(target.GetChild(child));
+                                    childIndexes[id] = childrenIndex = Index(children);
+                                }
+                                Expand(childrenIndex, depth + 1, address);
+                            }
+                        }
+                    }
+                }
                 Transform? target = null;
                 var siblings = rootIndex;
                 for (var depth = 0; depth < path.Segments.Length; depth++)

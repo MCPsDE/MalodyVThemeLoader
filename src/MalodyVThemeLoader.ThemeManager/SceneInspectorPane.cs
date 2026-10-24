@@ -19,7 +19,7 @@ internal sealed class SceneInspectorPane : UserControl
     private readonly CheckBox pointerSearch = Check("穿透搜索");
     private readonly Label pointerStatus = AppVisuals.TextBlock("将鼠标移入游戏，查看经过的节点。", 9F);
     private readonly Label connection = AppVisuals.TextBlock("开启连接后，在游戏中按鼠标中键选取。", 9F);
-    private readonly TextBox search = new() { PlaceholderText = "搜索节点名称或路径", Dock = DockStyle.Top };
+    private readonly TextBox search = new() { PlaceholderText = "搜索节点、路径或显示文字", Dock = DockStyle.Top };
     private readonly TreeView tree = new ResourceTreeView { Dock = DockStyle.Fill, HideSelection = false, BorderStyle = BorderStyle.None, ShowNodeToolTips = true, FullRowSelect = true };
     private readonly Label title = AppVisuals.TextBlock("选择一个游戏节点", 12F, true);
     private readonly Label location = AppVisuals.TextBlock("在左侧展开层级，或在游戏中按中键。", 9F);
@@ -41,6 +41,12 @@ internal sealed class SceneInspectorPane : UserControl
     private readonly CheckBox slice = Check("九宫格切片");
     private readonly NumberField[] border = Enumerable.Range(0, 4).Select(_ => Number(0, 16384, 0)).ToArray();
     private readonly ToolTip tips = new();
+    private readonly TextAppearancePane textPane;
+    private readonly TableLayoutPanel mediaFields = AppVisuals.Stack();
+    private readonly Button textMode = AppVisuals.CreateButton("文字配色");
+    private readonly Button mediaMode = AppVisuals.CreateButton("底图与视频");
+    private ButtonRow nodeModes = null!;
+    private bool textEditing;
     private ThemeResourceWorkspace? workspace;
     private ThemeItem? theme;
     private InspectorSnapshot? snapshot;
@@ -60,6 +66,9 @@ internal sealed class SceneInspectorPane : UserControl
     public SceneInspectorPane(string gameRoot, ThemeLibrary library, Action<string> report)
     {
         loaderRoot = Path.Combine(gameRoot, "ThemeLoader"); this.library = library; this.report = report;
+        textPane = new TextAppearancePane(library, report) { Visible = false };
+        textPane.Applied += () => Applied?.Invoke();
+        textPane.StateChanged += () => { UpdateEnabled(); if (textEditing) state.Text = textPane.Status; };
         heartbeat = new InspectorHeartbeat(loaderRoot);
         Font = AppVisuals.UiFont(); BackColor = AppVisuals.Canvas; ForeColor = AppVisuals.Ink;
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = Padding.Empty };
@@ -84,16 +93,20 @@ internal sealed class SceneInspectorPane : UserControl
         title.AutoSize = false; title.AutoEllipsis = true; title.Height = 28; title.Dock = DockStyle.Top;
         location.AutoSize = false; location.AutoEllipsis = true; location.Height = 48; location.Dock = DockStyle.Top;
         AppVisuals.AddRow(fields, title); AppVisuals.AddRow(fields, location); AppVisuals.AddRow(fields, locate);
-        Section(fields, "节点底图");
-        AppVisuals.AddRow(fields, new ButtonRow(addImage, removeImage)); DataLabel(fields, imageName);
-        AppVisuals.AddRow(fields, preview);
-        Section(fields, "视频叠加"); AppVisuals.AddRow(fields, new ButtonRow(addVideo, removeVideo)); DataLabel(fields, videoName);
-        Field(fields, "视频不透明度 · %", opacity);
-        fit.Items.AddRange(new object[] { "拉伸填满", "完整显示", "裁切填满" }); fit.SelectedIndex = 0; Field(fields, "图片与视频填充", fit);
-        var sizes = new FieldGrid(); var w = AppVisuals.Stack(); var h = AppVisuals.Stack(); Field(w, "宽度 · 0 为自动", width); Field(h, "高度 · 0 为自动", height); sizes.AddField(w); sizes.AddField(h); AppVisuals.AddRow(fields, sizes);
-        AppVisuals.AddRow(fields, slice); var borders = new FieldGrid();
+        nodeModes = new ButtonRow(textMode, mediaMode) { Visible = false }; AppVisuals.AddRow(fields, nodeModes);
+        AppVisuals.AddRow(fields, textPane); AppVisuals.AddRow(fields, mediaFields);
+        Section(mediaFields, "节点底图");
+        AppVisuals.AddRow(mediaFields, new ButtonRow(addImage, removeImage)); DataLabel(mediaFields, imageName);
+        AppVisuals.AddRow(mediaFields, preview);
+        Section(mediaFields, "视频叠加"); AppVisuals.AddRow(mediaFields, new ButtonRow(addVideo, removeVideo)); DataLabel(mediaFields, videoName);
+        Field(mediaFields, "视频不透明度 · %", opacity);
+        fit.Items.AddRange(new object[] { "拉伸填满", "完整显示", "裁切填满" }); fit.SelectedIndex = 0; Field(mediaFields, "图片与视频填充", fit);
+        var sizes = new FieldGrid(); var w = AppVisuals.Stack(); var h = AppVisuals.Stack(); Field(w, "宽度 · 0 为自动", width); Field(h, "高度 · 0 为自动", height); sizes.AddField(w); sizes.AddField(h); AppVisuals.AddRow(mediaFields, sizes);
+        AppVisuals.AddRow(mediaFields, slice); var borders = new FieldGrid();
         for (var i = 0; i < 4; i++) { var column = AppVisuals.Stack(); Field(column, new[] { "左 · px", "下 · px", "右 · px", "上 · px" }[i], border[i]); borders.AddField(column); }
-        AppVisuals.AddRow(fields, borders); scroll.Controls.Add(fields);
+        AppVisuals.AddRow(mediaFields, borders); scroll.Controls.Add(fields);
+        textMode.Click += (_, _) => { textEditing = true; UpdateEnabled(); state.Text = textPane.Status; };
+        mediaMode.Click += (_, _) => { textEditing = false; UpdateEnabled(); state.Text = "可添加底图与视频，保存后实时应用。"; };
         editor.Controls.Add(scroll, 0, 0); editor.Controls.Add(new ButtonRow(save, restore) { Margin = new Padding(0, 10, 0, 0) }, 0, 1);
         state.AutoSize = false; state.Dock = DockStyle.Fill; state.Margin = new Padding(0, 8, 0, 0); editor.Controls.Add(state, 0, 2);
         body.Controls.Add(browser, 0, 0); body.Controls.Add(editor, 1, 0); shell.Controls.Add(body, 0, 2); Controls.Add(shell);
@@ -141,10 +154,10 @@ internal sealed class SceneInspectorPane : UserControl
         control.Dock = DockStyle.Top; control.AccessibleName = label; AppVisuals.AddRow(stack, control);
     }
     private static void DataLabel(TableLayoutPanel fields, Label label) { label.AutoSize = false; label.AutoEllipsis = true; label.Dock = DockStyle.Top; label.Height = 30; AppVisuals.AddRow(fields, label); }
-    public bool ConfirmLeave() => !IsBusy && (!dirty || MessageBox.Show(FindForm(), "节点修改尚未保存，是否放弃？", "在线调试", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes);
+    public bool ConfirmLeave() => !IsBusy && textPane.ConfirmLeave() && (!dirty || MessageBox.Show(FindForm(), "节点修改尚未保存，是否放弃？", "在线调试", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes);
     public void SetWorkspace(ThemeResourceWorkspace? value, ThemeItem? item)
     {
-        if (dirty && workspace?.Root == value?.Root) return;
+        if ((dirty || textPane.Dirty) && workspace?.Root == value?.Root) return;
         workspace = value; theme = item;
         if (node != null) SelectNode(node); else UpdateEnabled();
     }
@@ -177,26 +190,28 @@ internal sealed class SceneInspectorPane : UserControl
             if (node != null) node.Id = 0; // Instance IDs belong to one game session.
         }
         snapshot = next;
-        if (node != null && !dirty && !IsBusy)
+        if (node != null && !dirty && !textPane.Dirty && !IsBusy)
         {
             var live = next.Nodes.FirstOrDefault(n => n.Id == node.Id && n.Address == node.Address && n.Scene == node.Scene)
                 ?? next.Nodes.FirstOrDefault(n => n.Address == node.Address && n.Scene == node.Scene);
             if (live == null)
             {
                 node = null; draft = new ThemeNodeRule(); pendingImage = pendingVideo = null;
+                textPane.Clear();
                 title.Text = "选择一个节点"; location.Text = ""; preview.SetImage(null);
                 state.Text = "界面已切换，请在当前界面选择节点。"; UpdateMediaLabels(); UpdateEnabled();
             }
             else { node = live; if (live.DecorationStatus.Length > 0) state.Text = live.DecorationStatus; }
         }
         connection.Text = $"已连接 · {next.ActiveScene} · {next.Nodes.Count} 个节点 · 主题 {next.Theme}" + (next.Truncated ? " · 层级过多，部分未显示" : "");
+        if (Version.TryParse(next.PluginVersion, out var pluginVersion) && pluginVersion < new Version(2, 6, 11)) connection.Text += " · 重启游戏以启用文字配色";
         RefreshTree();
         if (next.SelectionRevision == lastRevision || IsBusy) return;
         lastRevision = next.SelectionRevision;
         var picked = next.Nodes.FirstOrDefault(n => n.Id == next.SelectedId);
         if (picked == null) return;
         if (node?.Id != picked.Id && !ConfirmLeave()) { if (node != null) SendSelection(node); return; }
-        if (node?.Id != picked.Id || !dirty) SelectNode(picked);
+        if (node?.Id != picked.Id || !dirty && !textPane.Dirty) SelectNode(picked);
         if (!pointerSearch.Checked && next.SelectionOrigin == "game" && picked.LogicalId.Length > 0) ResourcePicked?.Invoke(picked);
     }
     private void RefreshTree()
@@ -204,12 +219,12 @@ internal sealed class SceneInspectorPane : UserControl
         UpdatePointerStatus();
         if (pointerSearch.Checked) { RefreshPointerTree(); return; }
         if (snapshot == null) return;
-        var signature = string.Join("|", snapshot.Nodes.Select(n => n.Id + ":" + n.ParentId + ":" + n.Name + ":" + n.Active)) + search.Text + inactive.Checked;
+        var signature = string.Join("|", snapshot.Nodes.Select(n => n.Id + ":" + n.ParentId + ":" + n.Name + ":" + n.TextPreview + ":" + n.Active)) + search.Text + inactive.Checked;
         if (signature == treeSignature) return; treeSignature = signature;
         var expanded = new HashSet<string>();
         void Remember(TreeNodeCollection items) { foreach (TreeNode item in items) { if (item.IsExpanded) expanded.Add(item.Name); Remember(item.Nodes); } }
         Remember(tree.Nodes); var all = snapshot.Nodes.ToDictionary(n => n.Id); var visible = new HashSet<int>(); var query = search.Text.Trim();
-        foreach (var item in snapshot.Nodes.Where(n => (inactive.Checked || n.Active) && (n.Name + n.Hierarchy).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
+        foreach (var item in snapshot.Nodes.Where(n => (inactive.Checked || n.Active) && (n.Name + n.Hierarchy + n.TextPreview).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
         {
             var current = item; var seen = new HashSet<int>();
             while (seen.Add(current.Id)) { visible.Add(current.Id); if (!all.TryGetValue(current.ParentId, out var parent)) break; current = parent; }
@@ -222,7 +237,7 @@ internal sealed class SceneInspectorPane : UserControl
             {
                 if (!scenes.TryGetValue(item.Scene, out var scene)) { scene = tree.Nodes.Add(item.Scene, item.Scene); scenes[item.Scene] = scene; scene.Expand(); }
                 var parent = built.TryGetValue(item.ParentId, out var p) ? p : scene;
-                var leaf = parent.Nodes.Add(item.Scene + "|" + item.Address, item.Name + (item.Active ? "" : " · 隐藏")); leaf.Tag = item; leaf.ToolTipText = item.Hierarchy + Environment.NewLine + item.Component;
+                var leaf = parent.Nodes.Add(item.Scene + "|" + item.Address, item.Name + (item.TextPreview.Length > 0 ? " · " + item.TextPreview : "") + (item.Active ? "" : " · 隐藏")); leaf.Tag = item; leaf.ToolTipText = item.Hierarchy + Environment.NewLine + item.Component + Environment.NewLine + item.TextPreview;
                 if (!item.Active) leaf.ForeColor = AppVisuals.MutedInk;
                 built[item.Id] = leaf; if (expanded.Contains(leaf.Name) || query.Length > 0) leaf.Expand();
                 if (node?.Id == item.Id) tree.SelectedNode = leaf;
@@ -255,7 +270,7 @@ internal sealed class SceneInspectorPane : UserControl
             foreach (var id in candidates.Distinct())
             {
                 if (!all.TryGetValue(id, out var item) || !item.Active
-                    || !(item.Name + " " + item.Hierarchy).Contains(query, StringComparison.CurrentCultureIgnoreCase)) continue;
+                    || !(item.Name + " " + item.Hierarchy + " " + item.TextPreview).Contains(query, StringComparison.CurrentCultureIgnoreCase)) continue;
                 var leaf = tree.Nodes.Add(item.Scene + "|" + item.Address, item.Name + " · " + item.Component);
                 leaf.Tag = item;
                 leaf.ToolTipText = item.Scene + "/" + item.Hierarchy + Environment.NewLine + item.Component + Environment.NewLine + item.Address;
@@ -270,6 +285,8 @@ internal sealed class SceneInspectorPane : UserControl
         try
         {
             node = selected; pendingImage = pendingVideo = null; dirty = false;
+            textEditing = selected.Texts.Count > 0;
+            textPane.SelectNode(workspace, theme, selected);
             var rule = workspace?.NodeRule(selected.Scene, selected.Address);
             draft = rule == null ? new ThemeNodeRule { Scene = selected.Scene, Address = selected.Address, Hierarchy = selected.Hierarchy }
                 : JsonSerializer.Deserialize<ThemeNodeRule>(JsonSerializer.Serialize(rule, JsonDefaults.Options), JsonDefaults.Options)!;
@@ -283,6 +300,7 @@ internal sealed class SceneInspectorPane : UserControl
             state.Text = !selected.CanDecorate ? "此节点没有 UI 区域，可在层级中检查。" : selected.DecorationStatus.Length > 0 ? selected.DecorationStatus
                 : selected.Width <= 0 || selected.Height <= 0 ? "节点尺寸为 0，请设置宽高。" : "可添加底图与视频，保存后实时应用。";
             UpdateMediaLabels(); UpdateEnabled();
+            if (textEditing) state.Text = textPane.Status;
             void Find(TreeNodeCollection items) { foreach (TreeNode item in items) { if (item.Tag is InspectorNode info && info.Id == selected.Id) { tree.SelectedNode = item; item.EnsureVisible(); return; } Find(item.Nodes); } }
             Find(tree.Nodes);
         }
@@ -304,6 +322,12 @@ internal sealed class SceneInspectorPane : UserControl
     }
     private void UpdateEnabled()
     {
+        var hasText = node?.Texts.Count > 0;
+        textEditing &= hasText;
+        if (nodeModes != null) nodeModes.Visible = hasText;
+        textPane.Visible = textEditing; mediaFields.Visible = !textEditing;
+        textMode.BackColor = textEditing ? AppVisuals.AccentSoft : AppVisuals.Surface; textMode.ForeColor = textEditing ? AppVisuals.Accent : AppVisuals.Ink;
+        mediaMode.BackColor = textEditing ? AppVisuals.Surface : AppVisuals.AccentSoft; mediaMode.ForeColor = textEditing ? AppVisuals.Ink : AppVisuals.Accent;
         var edit = workspace != null && node?.CanDecorate == true && !IsBusy;
         locate.Enabled = workspace != null && node?.LogicalId.Length > 0 && !IsBusy;
         locate.Visible = node?.LogicalId.Length > 0;
@@ -311,6 +335,8 @@ internal sealed class SceneInspectorPane : UserControl
         removeImage.Enabled = edit && (pendingImage != null || draft.ImageFile.Length > 0); removeVideo.Enabled = edit && (pendingVideo != null || draft.VideoFile.Length > 0);
         slice.Enabled = removeImage.Enabled; foreach (var number in border) number.Enabled = edit && slice.Checked;
         save.Enabled = edit && dirty; restore.Enabled = edit && workspace!.NodeRule(node!.Scene, node.Address) != null;
+        save.Text = textEditing ? "保存文字配色" : "保存并实时应用"; restore.Text = textEditing ? "恢复原色" : "恢复此节点";
+        if (textEditing) { save.Enabled = workspace != null && !IsBusy && textPane.Dirty; restore.Enabled = !IsBusy && textPane.CanRestore; }
     }
     private async Task PickImage()
     {
@@ -341,7 +367,8 @@ internal sealed class SceneInspectorPane : UserControl
     }
     public async Task SaveAsync()
     {
-        if (workspace == null || theme == null || node == null || IsBusy || !dirty) return;
+        if (workspace == null || theme == null || node == null || IsBusy) return;
+        if (!textPane.Save() || !dirty) return;
         IsBusy = true; UpdateEnabled();
         try
         {
@@ -358,6 +385,7 @@ internal sealed class SceneInspectorPane : UserControl
     }
     private void Restore()
     {
+        if (textEditing) { textPane.Restore(); return; }
         if (workspace == null || node == null || theme == null || !ConfirmLeave()) return;
         try { workspace.RemoveNode(node.Scene, node.Address); library.SetRealtimeMode(true); library.Activate(theme); SelectNode(node); state.Text = "已移除此节点的底图和视频"; Applied?.Invoke(); }
         catch (Exception e) { state.Text = "恢复失败：" + e.Message; }

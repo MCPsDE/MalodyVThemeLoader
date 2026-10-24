@@ -17,6 +17,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private long request;
     private long revision;
     private int selected;
+    private int describedTextNode;
     private string selectionOrigin = "";
     private float nextPoll;
     private float nextSnapshot;
@@ -119,6 +120,12 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private void Publish(bool truncated)
     {
         if (Time.realtimeSinceStartup < nextPublishRetry) return;
+        // Only the selected label needs content, gradients and material metadata.
+        // Do not serialize/read every list label's material on each snapshot.
+        nodes.FirstOrDefault(n => n.Info.Id == describedTextNode)?.Info.Texts.Clear();
+        var textTarget = nodes.FirstOrDefault(n => n.Info.Id == selected);
+        if (textTarget != null) textTarget.Info.Texts = TextAppearanceService.Describe(textTarget.Transform);
+        describedTextNode = selected;
         try { InspectorFiles.Write(loaderRoot, InspectorFiles.SnapshotName, new InspectorSnapshot
         {
             Runtime = runtimeId, Client = control.Client, UpdatedUtc = DateTime.UtcNow, PluginVersion = MyPluginInfo.PLUGIN_VERSION,
@@ -171,7 +178,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
         return c != null ? c.sortingOrder : int.MinValue;
     }
     private static int GraphicDepth(Transform t) { var g = t.GetComponent<Graphic>(); return g != null ? g.depth : -1; }
-    private static bool TryMouse(out Vector2 point)
+    internal static bool TryMouse(out Vector2 point)
     {
         point = Vector2.zero; var window = GetForegroundWindow();
         if (window == IntPtr.Zero || !GetCursorPos(out var native) || !ScreenToClient(window, ref native) || !GetClientRect(window, out var client)

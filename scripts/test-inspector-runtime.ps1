@@ -28,7 +28,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'validation\OverlayVisibilityVal
 $references=@(Get-ChildItem -LiteralPath $managed -Filter '*.dll'|ForEach-Object{'<Reference Include="'+$_.BaseName+'"><HintPath>'+ $_.FullName+'</HintPath><Private>false</Private></Reference>'})
 $ui='E:\UnityProjects\Emiria\Library\ScriptAssemblies\UnityEngine.UI.dll'
 $references+='<Reference Include="UnityEngine.UI"><HintPath>'+$ui+'</HintPath><Private>false</Private></Reference>'
-$includes=@('AssetCatalog','ThemeManifest','PathRules','JsonDefaults','WebmVideo','ThemeLoaderSettings')|ForEach-Object{'<Compile Include="'+(Join-Path $repo "src\MalodyVThemeLoader.Shared\$_.cs")+'"/>'}
+$includes=@('AssetCatalog','ThemeManifest','PathRules','JsonDefaults','WebmVideo','ThemeLoaderSettings','TextAppearance')|ForEach-Object{'<Compile Include="'+(Join-Path $repo "src\MalodyVThemeLoader.Shared\$_.cs")+'"/>'}
 $xml='<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><AssemblyName>ThemeLoaderInspectorValidation</AssemblyName><LangVersion>latest</LangVersion><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies></PropertyGroup><ItemGroup>'+($references -join '')+($includes -join '')+'<Compile Include="'+(Join-Path $PSScriptRoot 'validation\InspectorRuntimeValidation.cs')+'"/><PackageReference Include="System.Text.Json" Version="6.0.10"/></ItemGroup></Project>'
 [IO.File]::WriteAllText((Join-Path $build 'validation.csproj'),$xml)
 $stubs=@'
@@ -38,6 +38,7 @@ namespace System.Runtime.CompilerServices { public sealed class IsExternalInit {
 namespace BepInEx { public static class Paths { public static string GameRootPath => System.Environment.GetEnvironmentVariable("MALODY_INSPECTOR_FIXTURE"); } }
 namespace BepInEx.Logging { public sealed class ManualLogSource { public void LogInfo(object v) => UnityEngine.Debug.Log(v); public void LogWarning(object v) => UnityEngine.Debug.LogWarning(v); public void LogDebug(object v) => UnityEngine.Debug.Log(v); } }
 namespace MalodyVThemeLoader.Plugin {
+ internal static class TextAppearanceService { internal static (string Component, string Content) Summary(UnityEngine.Transform target) => ("", ""); internal static System.Collections.Generic.List<MalodyVThemeLoader.Shared.InspectorText> Describe(UnityEngine.Transform target) => new(); }
  internal static class Plugin { public static readonly BepInEx.Logging.ManualLogSource Log = new(); }
  internal static class MyPluginInfo { public const string PLUGIN_VERSION = "__PLUGIN_VERSION__"; }
  internal sealed record LoadedTheme(string ThemeDirectory, MalodyVThemeLoader.Shared.ThemeManifest Manifest) {

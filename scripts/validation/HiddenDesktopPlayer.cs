@@ -28,6 +28,10 @@ public static class HiddenDesktopPlayer
     [DllImport("kernel32.dll")] private static extern bool TerminateProcess(IntPtr handle, uint code);
     public static int Run(string executable, string log)
     {
+        return RunCommand(executable, "-screen-width 640 -screen-height 480 -logFile \"" + log + "\"", System.IO.Path.GetDirectoryName(executable), 120);
+    }
+    public static int RunCommand(string executable, string arguments, string directory, int timeoutSeconds)
+    {
         var name = "ThemeLoaderValidation_" + Guid.NewGuid().ToString("N");
         var desktop = CreateDesktopW(name, IntPtr.Zero, IntPtr.Zero, 0, 0x10000000, IntPtr.Zero);
         if (desktop == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -35,11 +39,11 @@ public static class HiddenDesktopPlayer
         try
         {
             var startup = new StartupInfo { cb = Marshal.SizeOf(typeof(StartupInfo)), desktop = "winsta0\\" + name, flags = 1, show = 4 };
-            var command = new StringBuilder("\"" + executable + "\" -screen-width 640 -screen-height 480 -logFile \"" + log + "\"");
-            if (!CreateProcessW(executable, command, IntPtr.Zero, IntPtr.Zero, false, 0x400, IntPtr.Zero, System.IO.Path.GetDirectoryName(executable), ref startup, out process)) throw new Win32Exception(Marshal.GetLastWin32Error());
+            var command = new StringBuilder("\"" + executable + "\" " + arguments);
+            if (!CreateProcessW(executable, command, IntPtr.Zero, IntPtr.Zero, false, 0x400, IntPtr.Zero, directory, ref startup, out process)) throw new Win32Exception(Marshal.GetLastWin32Error());
             var timer = Stopwatch.StartNew();
             while (WaitForSingleObject(process.process, 1000) == 258)
-                if (timer.Elapsed.TotalSeconds > 120) { TerminateProcess(process.process, 1); throw new TimeoutException("Isolated overlay player timed out."); }
+                if (timer.Elapsed.TotalSeconds > timeoutSeconds) { TerminateProcess(process.process, 1); throw new TimeoutException("Isolated validation process timed out."); }
             if (!GetExitCodeProcess(process.process, out var code)) throw new Win32Exception(Marshal.GetLastWin32Error());
             return (int)code;
         }

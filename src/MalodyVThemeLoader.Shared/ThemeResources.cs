@@ -13,6 +13,8 @@ public sealed class ThemeResources
     public List<ThemeImageRule> Images { get; set; } = new();
     public List<ThemeAudioRule> Audio { get; set; } = new();
     public List<ThemeNodeRule> Nodes { get; set; } = new();
+    public List<ThemeTextRule> Texts { get; set; } = new();
+    public ThemeOpening? Opening { get; set; }
 
     public static ThemeResources Read(string themeRoot)
     {
@@ -40,8 +42,16 @@ public sealed class ThemeResources
 
     public void Validate()
     {
-        if (FormatVersion != 1 || Images == null || Audio == null || Nodes == null || Images.Count + Audio.Count + Nodes.Count > 10000)
+        if (FormatVersion != 1 || Images == null || Audio == null || Nodes == null || Texts == null || Images.Count + Audio.Count + Nodes.Count + Texts.Count > 10000)
             throw new InvalidDataException("资源配置版本或内容无效。");
+        Opening?.Validate();
+        var textKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var text in Texts)
+        {
+            if (text == null) throw new InvalidDataException("文字规则无效。");
+            text.Validate();
+            if (!textKeys.Add(text.Identity)) throw new InvalidDataException("存在重复的文字范围。");
+        }
         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var nodeKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var rule in Nodes)
@@ -114,13 +124,13 @@ public sealed class ThemeResources
         && !new[] { "ScenePlay", "SceneReplay", "SceneRoomWatch", "SceneWatchSub" }.Contains(scene, StringComparer.OrdinalIgnoreCase)
         && !scene.StartsWith("PlayMode", StringComparison.OrdinalIgnoreCase);
 
-    private static void CheckScene(string scene)
+    internal static void CheckScene(string scene)
     {
         if (scene == null || scene.Length > 100 || scene.Contains('/') || scene.Contains('\\') || scene.Any(char.IsControl)
             || scene.Length > 0 && !IsAllowedScene(scene)) throw new InvalidDataException("请选择非游玩场景。");
     }
 
-    private static void CheckPath(string value, bool optional = false)
+    internal static void CheckPath(string value, bool optional = false)
     {
         if (optional && value == "") return;
         if (string.IsNullOrWhiteSpace(value) || value.Contains('\\') || Path.IsPathRooted(value)

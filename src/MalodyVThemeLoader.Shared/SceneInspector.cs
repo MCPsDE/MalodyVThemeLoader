@@ -93,6 +93,8 @@ public sealed class InspectorNode
     public float Width { get; set; }
     public float Height { get; set; }
     public string DecorationStatus { get; set; } = "";
+    public List<InspectorText> Texts { get; set; } = new();
+    public string TextPreview { get; set; } = "";
 }
 
 public static class InspectorFiles

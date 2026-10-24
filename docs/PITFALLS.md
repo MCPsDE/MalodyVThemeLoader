@@ -1,5 +1,14 @@
 # 开发踩坑记录（持续维护）
 
+- 开屏不是 SceneLogo.Start 的同义词。源工程实际开屏包含 PlayerSettings 的原生 Unity Splash；SceneLogo 同时负责初始化，不能为了换动画阻断它。插件仅能接管自身启动后的呈现，不承诺抹除更早的原生帧。媒体先校验、准备首帧，再显示独立覆盖；失败不挡初始化，实时重载不重播。
+- TMP 的 IL2CPP 互操作结构不保证保留托管四参数 VertexGradient 构造函数。用字段初始化四角，实际原生测试验证顺序；实例面色／描边克隆材质，保留原 Alpha，并在重载或场景退出归还、释放。不要调用会无意改共享字体材质的快捷 setter。
+- TMP_ColorGradient preset 会优先于组件四角渐变；自定义四角时需暂时清除目标 preset，恢复时归还最近的原 preset。只设置 colorGradient 而不检查 preset，组件属性看似正确，实际渲染仍可能保留旧渐变。颜色与四角调色板在绑定时预编译，逐帧不要反复解析 HEX、LINQ 分配颜色数组或复制绑定字典。
+- 调试快照只为选中节点读取渐变／材质；其余文字只传有限摘要用于搜索。文本规则按路径做有界发现，重复范围只放开作者明确选择的一段。不要把重复行规则退化成按 Text 名或显示内容全局匹配。
+- PowerShell 中直接反射异步 WinForms 控件并循环 DoEvents，不能等同产品的 Application.Run 消息循环。曾在导入后恢复开屏时卡在 ToolTip.SetToolTipInternal/SendMessage，销毁窗口也卡在 ToolTip.DestroyRegion；用 dotnet-stack 确认后，新功能改由同版本 .NET 8 C# 宿主在独立桌面、真实消息循环内执行与 await，测试脚本只负责启动、超时和结果读取。不能用这种宿主异常判断产品原生 UI 正常或异常，空白 WM_PRINT 图也不是有效截图。
+- Unity LegacyRuntime 内置字体不保证 Include Font Data，TMP_FontAsset.CreateFontAsset 可能返回 null。隔离测试工程可从只读源工程复制 TMP Essentials 作为 fixture；AssetDatabase.ImportPackage 在 batch 调用后不保证立即可用，不要紧接着读尚未导入的字体。测试资源不得回写源工程或混进 Default。
+
+- 文字配色不能当成字体或图片替换：GLOBAL / REALTIME / LOCAL 是 PanelChart 中的 UGUI Text，WidgetRankToggle.SetCurrent 在 Awake/切分类时按选中态重新赋完整颜色，AniAlpha 另外以 0.15 秒动画修改透明度。只改初值或每次锁死 RGBA 都不正确；主题需按真实节点与状态设置 RGB，默认保留 Alpha 动画。其他文字可能含富文本颜色、TMP 渐变或共享材质，不能修改共享字体材质来给单个标签改色。当前 2.6.10 尚无文字颜色规则；完整调查在 docs/TEXT_COLOR_INVESTIGATION.md。
+
 - 用户持续报告动画绑定语音时的 ObjectCollectedException，而保留的游戏日志没有对应现场栈。不能重复运行旧的播放/句柄故障注入测试便再次宣布根因已复现。2.6.10 的动画语音完全移出 Unity AudioClip / AudioSource 路径，采用独立 Windows 输出；用管理器真实导入方法处理样本 WAV/OGG，保存并重新读取 binding 后，验证实际设备消耗 PCM、连续切换、自然结束、停止与主题重载。旧 Unity 音频工厂继续用于界面音效，不能把两条路径混称为已全部替换。
 - 音频设备初始化不能放在模型创建事务中：设备断开或打开失败会连带拒绝整个模型。动画语音构造只保存数据，模型提交后按需打开输出；失败必须记录动作完整路径与异常并允许下一次触发重试。后台音频事件只记日志，不访问 Unity、不改新一轮播放状态；切动作/退出场景/恢复主题先释放旧输出，再释放其读取流。
 - NAudio.WinMM 与 NAudio.Core 固定为 2.2.1，插件离线载荷必须同时复制两份 DLL 与上游 MIT 许可；仅添加 NuGet 引用不等于安装器会分发依赖。设备验证在 PCM 提供器中归零，不调系统/游戏音量，避免影响用户正在运行的游戏。

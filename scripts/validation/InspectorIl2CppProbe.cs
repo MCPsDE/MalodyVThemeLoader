@@ -17,6 +17,8 @@ namespace MalodyVThemeLoader.Plugin;
 internal static class ControlModeController
 { public static bool TryMapInspectorPoint(Vector2 point, out Vector2 mapped) { mapped = point; return true; } }
 internal static class MyPluginInfo { public const string PLUGIN_VERSION = "probe"; }
+// This existing probe covers inspector/decoration lifetimes; text rendering has its own native probe.
+internal static class TextAppearanceService { internal static (string Component, string Content) Summary(Transform target) => ("", ""); internal static List<InspectorText> Describe(Transform target) => new(); }
 internal sealed record LoadedTheme(string ImageDirectory, ThemeManifest Manifest)
 { public string ThemeDirectory => ImageDirectory; public string Live2dDirectory => ImageDirectory; public string ActiveKey => "Probe"; }
 internal sealed class ThemeRuntime

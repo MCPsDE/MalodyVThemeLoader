@@ -238,3 +238,14 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - 保留历史输入基线，未重录或扩大排除。源工程及实际游戏核心 exe/Data、BepInEx core/interop/unity-libs 的差异记录均为 0。历史整树差异仍含用户主题、旧插件及运行数据，VerifyStable 未整体通过；完整与范围审计在 `artifacts/recheck-2.6.10/reference-changes.json`、`reference-scoped.json`，不据此回滚用户文件。
 - 最终 `MalodyVThemeLoader-Setup-2.6.10.exe` 为 314,312,662 bytes，SHA-256 `e6518cedf5bff44bc479e7df5aeed29b84ca43f0c63a3a14335ba4f20c5475af`；ProductVersion 为 `2.6.10+d877ee634382f63d86e7e90a022d304b5d635be7`，与发布标签源提交一致。内嵌 ZIP 与最终 payload.zip 的 SHA-256 同为 `adabed7e38da270ebcfbe071c70c6b0699f272b4b753e6a60ae156e0ba213912`。音频依赖及插件哈希记录于 `artifacts/recheck-2.6.10/final-artifacts.json`。
 - GitHub v2.6.10 已正式公开，Release ID 422636661，draft/prerelease 均为 false，`/releases/latest` 返回 v2.6.10；三个附件的上传状态、大小、SHA-256 digest 均与本地逐项一致，标签提交为 `d877ee634382f63d86e7e90a022d304b5d635be7`。证据在 `release-assets.json`、`published-release.json`、`latest-release.json`、`release-tag.json`。源码与标签已在公开远程仓库；随后仅提交发布审计文档。
+
+# 2.6.11 验证记录
+
+验证日期：2026-10-24。发布范围为文字配色完整编辑链与主题开屏。
+
+- 原生文字／开屏测试使用独立 Unity 2022.3.62f3 IL2CPP 播放器和固定 BepInEx 785。覆盖 UGUI/TMP 普通与选中状态、悬停优先级、脚本原色映射、240 次动态文字/Alpha 写入、最新原文和颜色恢复、TMP 独立材质与后续材质切换、四角渐变与 preset 的覆盖/归还、重复列表数量变化、原生标签销毁，以及图片/WebM 准备、时长、损坏回退与对象释放。实际游戏 f2 未启动或修改，未声称在实际多插件现场验证。
+- 有界发现 fixture 包含 6,000 个无关节点；4 个目标只读取 8 个同级项，精确地址在同名数量改变时拒绝匹配。颜色与渐变预编译，绑定集合逐帧不复制；Detailed TMP 材质仅在选中快照读取。
+- UI 使用真实 .NET 8 Application.Run 宿主，在不激活的独立桌面执行导入/保存/恢复和截图。暗/亮各 416 项检查包含正常、最小尺寸、合成 125/150/200% 与放大 125% CJK 字体；检测完整按钮/导航文字及共享 NumberField 的隐藏原生箭头、主题步进与尺寸。合成缩放不等同物理显示器 DPI。证据保存在 `.impeccable/review/text-opening-dark`、`text-opening-light`。
+- 旧功能回归通过：真实模型 WAV/OGG 的独立 Windows 语音输出与设备失败恢复、Live2D 工作区/绑定/导入、原生调试 600 次拾取及 100 次底图重载、36 项遮罩检查、25 档结算显示派发及完整模型点击范围；原生平移/语音检查 1,082 项，48 次语音，无音频错误。
+- 保留历史参考输入基线，不重录或扩大排除。源工程与实际游戏核心 exe/Data、BepInEx core/interop/unity-libs 的差异记录均为 0；完整历史差异包含用户主题、其他插件和运行数据，不能据此宣称整树 VerifyStable 通过。范围审计见 `artifacts/recheck-2.6.11/reference-scoped.json`，完整差异同期保留。
+- 新开屏只接管插件运行后的呈现，不修改原生启动前的引擎画面、游戏初始化或场景加载，不回写源工程和实际游戏。实时重载不重播开屏。主题 ZIP、旧格式缺省、错误文件不覆盖配置及单独恢复均有桌面工作流检查。

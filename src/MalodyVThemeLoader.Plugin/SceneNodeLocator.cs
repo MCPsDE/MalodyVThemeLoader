@@ -48,6 +48,12 @@ internal static class SceneNodeLocator
                 info.Component = "SpriteRenderer"; if (renderer.sprite != null) entry = assets?.Identify(renderer.sprite.name, renderer.sprite, null, info.Scene, hierarchy, info.Component);
             }
             else info.Component = t.GetComponent<Graphic>() != null ? "Text / Graphic" : rect != null ? "RectTransform" : "Transform";
+            if (info.Component == "Text / Graphic")
+            {
+                var summary = TextAppearanceService.Summary(t);
+                if (summary.Component.Length > 0) info.Component = summary.Component;
+                info.TextPreview = summary.Content;
+            }
             info.LogicalId = entry?.LogicalId ?? "";
             result.Add(new SceneNode(t, info));
             var children = new List<Transform>();

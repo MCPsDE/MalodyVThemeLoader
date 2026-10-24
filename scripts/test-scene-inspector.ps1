@@ -39,7 +39,8 @@ try{
     (Field $pane 'connect').Checked=$true
     $snapshot=Create 'InspectorSnapshot';$snapshot.Runtime='runtime-fixture';$snapshot.Client=(Field $pane 'control').Client;$snapshot.PluginVersion='2.6.0';$snapshot.Theme='Inspector';$snapshot.UpdatedUtc=[DateTime]::UtcNow
     $root=Create 'InspectorNode';$root.Id=1;$root.Name='Canvas';$root.Scene='SceneSong';$root.Address='Canvas#0:1';$root.Hierarchy='Canvas';$root.Active=$true;$root.CanDecorate=$true
-    $snapshot.Nodes.Add($root)
+    $snapshot.ActiveScene='SceneSong';$snapshot.Nodes.Add($root)
+    $backgroundNode=Create 'InspectorNode';$backgroundNode.Id=99;$backgroundNode.Name='后台界面';$backgroundNode.Scene='SceneStore';$backgroundNode.Address='Background#0:1';$backgroundNode.Active=$true;$snapshot.Nodes.Add($backgroundNode)
     $node=Create 'InspectorNode';$node.Id=2;$node.ParentId=1;$node.Name='空白容器 · 可添加底图';$node.Scene='SceneSong';$node.Address='Canvas#0:1/Panel#0:1';$node.Hierarchy='Canvas/Panel';$node.Component='RectTransform';$node.Active=$true;$node.CanDecorate=$true;$node.Width=320;$node.Height=200
     $snapshot.Nodes.Add($node)
     $entry=$workspace.Catalog.Images | Where-Object LogicalId -eq 'Textures/Malody/editor/btn_editsys_base.png'|Select-Object -First 1
@@ -48,6 +49,7 @@ try{
     $snapshot.SelectedId=2;$snapshot.SelectionRevision=1;$snapshot.SelectionOrigin='editor'
     Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
     Assert ((Field $pane 'node').Id -eq 2) 'Live node selection failed.'
+    Assert (@($snapshot.Nodes | Where-Object Scene -ne 'SceneSong').Count -eq 0) 'A background scene remained in the editor tree.'
     Assert ((Field $pane 'addImage').Enabled) 'Empty node cannot receive a background.'
     Await (Invoke $pane 'ImportImageAsync' @([string](Join-Path $repo 'artifacts\inspector-media\background.png')))
     Await (Invoke $pane 'ImportVideoAsync' @([string](Join-Path $repo 'artifacts\inspector-media\vp8.webm')))

@@ -22,7 +22,7 @@ internal sealed class NodeDecorationService : IDisposable
         foreach (var pair in active.ToArray())
         {
             try { pair.Value.Tick(); }
-            catch (Exception e) { pair.Value.Dispose(); active.Remove(pair.Key); states[pair.Key] = "加载失败：" + e.Message; log.LogWarning("Node decoration stopped: " + e.Message); }
+            catch (Exception e) { pair.Value.Dispose(); active.Remove(pair.Key); states[pair.Key] = "加载失败：" + e.Message; log.LogWarning("Node decoration stopped: " + e); }
         }
         if (rules.Nodes.Count == 0 || Time.realtimeSinceStartup < nextScan) return;
         nextScan = Time.realtimeSinceStartup + .5f;
@@ -40,7 +40,7 @@ internal sealed class NodeDecorationService : IDisposable
             // Failed assets retry only after a theme reload, never every frame.
             if (states.TryGetValue(key, out var failed) && failed.StartsWith("加载失败", StringComparison.Ordinal)) continue;
             try { var decoration = new Decoration(theme.ImageDirectory, candidates[0].Transform, rule); active[key] = decoration; states[key] = decoration.Status; }
-            catch (Exception e) { states[key] = "加载失败：" + e.Message; log.LogWarning($"Node decoration {rule.Scene}/{rule.Hierarchy}: {e.Message}"); }
+            catch (Exception e) { states[key] = "加载失败：" + e.Message; log.LogWarning($"Node decoration {rule.Scene}/{rule.Hierarchy}: {e}"); }
         }
     }
     public void Dispose() { foreach (var value in active.Values) value.Dispose(); active.Clear(); states.Clear(); }
@@ -61,7 +61,7 @@ internal sealed class NodeDecorationService : IDisposable
         private readonly bool sibling;
         private float prepareAt;
         private bool prepareRequested;
-        private string videoError = "";
+        private Rect spriteRect;
         private bool playing;
         private bool disposed;
         internal Decoration(string imageRoot, Transform target, ThemeNodeRule rule)
@@ -88,6 +88,7 @@ internal sealed class NodeDecorationService : IDisposable
                     var border = rule.Border == null ? Vector4.zero : new Vector4(rule.Border.X, rule.Border.Y, rule.Border.Z, rule.Border.W);
                     if (border.x + border.z > texture.width || border.y + border.w > texture.height) throw new InvalidDataException("切片边距超过底图尺寸。");
                     sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect, border);
+                    spriteRect = sprite.rect;
                     image = Child("Background").gameObject.AddComponent<Image>(); image.sprite = sprite; image.raycastTarget = false;
                     image.type = rule.Border != null ? Image.Type.Sliced : Image.Type.Simple;
                 }
@@ -100,7 +101,7 @@ internal sealed class NodeDecorationService : IDisposable
                     player = video.gameObject.AddComponent<VideoPlayer>(); player.playOnAwake = false; player.source = VideoSource.Url; player.url = new Uri(path).AbsoluteUri;
                     player.isLooping = true; player.renderMode = VideoRenderMode.RenderTexture; player.targetTexture = renderTexture; player.audioOutputMode = VideoAudioOutputMode.None;
                     player.waitForFirstFrame = true; player.skipOnDrop = true;
-                    player.errorReceived += new Action<VideoPlayer, string>((_, message) => videoError = message);
+                    // Poll preparation below; no managed delegates cross the IL2CPP lifetime boundary.
                     Status = "视频准备中";
                 }
                 Tick();
@@ -140,7 +141,7 @@ internal sealed class NodeDecorationService : IDisposable
             if (player == null) return;
             if (!visible) { if (playing) player.Pause(); playing = false; prepareRequested = false; return; }
             if (!player.isPrepared && !prepareRequested) { player.Prepare(); prepareAt = Time.realtimeSinceStartup; prepareRequested = true; }
-            if (videoError.Length > 0 || !player.isPrepared && prepareRequested && Time.realtimeSinceStartup - prepareAt > 15)
+            if (!player.isPrepared && prepareRequested && Time.realtimeSinceStartup - prepareAt > 15)
             {
                 Status = "视频加载失败，底图保留"; video!.enabled = false; player.Stop(); UnityEngine.Object.Destroy(player); player = null; return;
             }
@@ -171,19 +172,33 @@ internal sealed class NodeDecorationService : IDisposable
                 // RectMask path instead of spilling an oversized child outward.
                 var crop = aspect > targetAspect ? new Rect((texture!.width - texture.height * targetAspect) / 2, 0, texture.height * targetAspect, texture.height)
                     : new Rect(0, (texture!.height - texture.width / targetAspect) / 2, texture.width, texture.width / targetAspect);
-                if (sprite != null && sprite.rect != crop)
+                if (sprite != null && spriteRect != crop)
                 {
-                    UnityEngine.Object.Destroy(sprite); sprite = Sprite.Create(texture, crop, new Vector2(.5f, .5f), 100); image.sprite = sprite;
+                    var previous = sprite;
+                    sprite = Sprite.Create(texture, crop, new Vector2(.5f, .5f), 100); spriteRect = crop; image.sprite = sprite;
+                    UnityEngine.Object.Destroy(previous);
                 }
             }
         }
         public void Dispose()
         {
             if (disposed) return; disposed = true;
-            if (root != null) { root.SetActive(false); UnityEngine.Object.Destroy(root); }
-            if (player != null) { player.Stop(); player.targetTexture = null; UnityEngine.Object.Destroy(player); }
-            if (renderTexture != null) { renderTexture.Release(); UnityEngine.Object.Destroy(renderTexture); }
-            if (sprite != null) UnityEngine.Object.Destroy(sprite); if (texture != null) UnityEngine.Object.Destroy(texture);
+            // Disconnect consumers before retiring shared native resources. Release()
+            // frees the GPU surface immediately, while UI/video destruction is deferred.
+            Cleanup(() => { if (player != null) { player.Stop(); player.targetTexture = null; } });
+            Cleanup(() => { if (image != null) image.sprite = null; });
+            Cleanup(() => { if (video != null) video.texture = null; });
+            Cleanup(() => { if (root != null) { root.SetActive(false); UnityEngine.Object.Destroy(root); } });
+            Cleanup(() => { if (renderTexture != null) UnityEngine.Object.Destroy(renderTexture, .1f); });
+            Cleanup(() => { if (sprite != null) UnityEngine.Object.Destroy(sprite, .1f); });
+            Cleanup(() => { if (texture != null) UnityEngine.Object.Destroy(texture, .1f); });
+            root = null; rect = null; player = null; image = null; video = null;
+            renderTexture = null; sprite = null; texture = null;
+        }
+        private static void Cleanup(Action release)
+        {
+            try { release(); }
+            catch (Exception e) { Plugin.Log.LogDebug("Node decoration cleanup: " + e.Message); }
         }
     }
 }

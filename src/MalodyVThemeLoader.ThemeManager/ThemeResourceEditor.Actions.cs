@@ -35,7 +35,8 @@ internal sealed partial class ThemeResourceEditor
             if (item == null || item.IsVirtual) { tree.Nodes.Clear(); preview.SetImage(null); Notify("先选择一个目录主题，或导入 ZIP。 "); return true; }
             workspace = new ThemeResourceWorkspace(gameRoot, item);
             theme = new ThemeItem(item.Key, workspace.Root, true, ThemePackage.InspectDirectory(workspace.Root));
-            foreach (var name in workspace.Catalog.Scenes.Where(ThemeResources.IsAllowedScene)) sceneBox.Items.Add(new SceneChoice(name, SceneTitle(name)));
+            foreach (var name in workspace.Catalog.Scenes.Concat(workspace.Rules.Images.Select(r => r.Scene)).Concat(workspace.Rules.Audio.Select(r => r.Scene))
+                .Where(ThemeResources.IsAllowedScene).Distinct(StringComparer.Ordinal)) sceneBox.Items.Add(new SceneChoice(name, SceneTitle(name)));
             loadedScene = ""; BuildTree();
             Notify("选择资源；保存后会自动启用实时加载并应用此主题。");
         }
@@ -96,6 +97,42 @@ internal sealed partial class ThemeResourceEditor
         if (!ConfirmLeave()) { selecting = true; SetScene(loadedScene); selecting = false; return; }
         selecting = true; hierarchyBox.Text = ""; componentBox.SelectedIndex = 0; liveNodeAddress = ""; selecting = false;
         LoadSelection();
+    }
+
+    private void RefreshSavedScopes()
+    {
+        savedScopes.Items.Clear(); savedScopes.Items.Add("此范围尚未保存");
+        if (workspace == null) return;
+        var scopes = image != null
+            ? workspace.Rules.Images.Where(r => r.LogicalId == image.LogicalId).Select(r => new ResourceScope(r.Scene, r.Hierarchy, r.Component, r.NodeAddress))
+            : workspace.Rules.Audio.Where(r => r.Event == audio?.Event).Select(r => new ResourceScope(r.Scene, "", "", ""));
+        foreach (var scope in scopes.OrderBy(s => s.Scene, StringComparer.Ordinal).ThenBy(s => s.Hierarchy, StringComparer.Ordinal)) savedScopes.Items.Add(scope);
+        savedScopes.SelectedIndex = 0;
+        foreach (var scope in savedScopes.Items.OfType<ResourceScope>())
+            if (scope.Scene == SceneName && scope.Hierarchy == Hierarchy && scope.Component == ComponentName && scope.Address == liveNodeAddress) { savedScopes.SelectedItem = scope; break; }
+        savedScopes.Enabled = !IsBusy && (image != null || audio != null);
+        addSceneScope.Enabled = !IsBusy && (image != null || audio != null);
+        tips.SetToolTip(savedScopes, savedScopes.SelectedItem?.ToString() ?? "");
+    }
+
+    private void SelectSavedScope()
+    {
+        if (selecting || savedScopes.SelectedItem is not ResourceScope scope || IsBusy) return;
+        if (!ConfirmLeave()) { selecting = true; try { RefreshSavedScopes(); } finally { selecting = false; } return; }
+        selecting = true;
+        try { SetScene(scope.Scene); hierarchyBox.Text = scope.Hierarchy; componentBox.SelectedItem = scope.Component.Length == 0 ? componentBox.Items[0] : scope.Component; liveNodeAddress = scope.Address; }
+        finally { selecting = false; }
+        LoadSelection();
+    }
+
+    private void AddSceneScope()
+    {
+        if (IsBusy || workspace == null || image == null && audio == null || !ConfirmLeave()) return;
+        selecting = true;
+        try { hierarchyBox.Text = ""; componentBox.SelectedIndex = 0; liveNodeAddress = ""; }
+        finally { selecting = false; }
+        LoadSelection(); sceneBox.Focus(); sceneBox.DroppedDown = true;
+        Notify("选择另一个场景，导入图片或音频后保存；已有场景的替换会保留。");
     }
 
     private void SelectUsage()
@@ -179,7 +216,7 @@ internal sealed partial class ThemeResourceEditor
             }
         }
         catch (Exception e) { preview.EmptyText = "预览不可用，可导入文件替换"; preview.SetImage(null); Notify("预览失败：" + e.Message); }
-        finally { selecting = false; UpdateSlicePreview(); UpdateEnabled(); }
+        finally { RefreshSavedScopes(); selecting = false; UpdateSlicePreview(); UpdateEnabled(); }
     }
 
     private void SetBorders(Float4 value)
@@ -203,6 +240,7 @@ internal sealed partial class ThemeResourceEditor
     {
         var selected = workspace != null && (image != null || audio != null);
         body.Enabled = !IsBusy;
+        savedScopes.Enabled = addSceneScope.Enabled = selected && !IsBusy;
         sceneBox.Enabled = selected; locationFields.Visible = image != null;
         componentFields.Visible = image != null && Hierarchy.Length > 0;
         scopeActions.Visible = image != null && (Hierarchy.Length > 0 || ScopePending);
@@ -322,8 +360,13 @@ internal sealed partial class ThemeResourceEditor
     private void StopAudio() { player?.Stop(); player?.Dispose(); player = null; soundStream?.Dispose(); soundStream = null; }
     private void Notify(string text) { state.Text = text; report(text); }
     private static string SceneTitle(string name) => name switch {
-        "SceneSong" => "大厅 / 选曲", "SceneResult" => "游玩结算", "SceneLogo" => "启动界面", "SceneChart" => "谱面详情", "SceneStore" => "商店",
+        "SceneSong" => "选曲", "SceneLobby" => "大厅", "SceneResult" => "游玩结算", "SceneLogo" => "启动界面", "SceneChart" => "谱面详情", "SceneStore" => "商店",
         "SceneInventory" => "物品栏", "SceneSkin" => "皮肤", "SceneEditor" => "谱面编辑器", "SceneEditorSkin" => "皮肤编辑器", "SceneRoom" => "房间界面", _ => name };
     private sealed record SceneChoice(string Name, string Title) { public override string ToString() => Title + (Name.Length == 0 ? "" : " · " + Name); }
+    private sealed record ResourceScope(string Scene, string Hierarchy, string Component, string Address)
+    {
+        public override string ToString() => (Scene.Length == 0 ? "所有场景" : SceneTitle(Scene)) + (Hierarchy.Length == 0 ? " · 整个场景" : " · " + Hierarchy)
+            + (Component.Length == 0 ? "" : " · " + Component) + (Address.Length == 0 ? "" : " · 精确节点");
+    }
     private sealed record UsageChoice(ImageUsage Usage) { public override string ToString() => SceneTitle(Usage.Scene) + " · " + Usage.Hierarchy; }
 }

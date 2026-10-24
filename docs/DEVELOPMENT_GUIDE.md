@@ -1,5 +1,7 @@
 # Malody V ThemeLoader Development Guide
 
+2.6.4 narrows the live inspector to the current scene and selected node, adds readable label plates and saved resource-scope navigation, and revises decoration and raycast-filter lifetimes. See `SCENE_INSPECTOR.md` for the native IL2CPP stress test and its game-version limits, and `PITFALLS.md` for the captured GC finalizer failures and temporary IPC-lock handling. The original multi-plugin crash was not reproduced in the isolated player; do not describe its stack as proof of a specific plugin's fault.
+
 ## 1. Scope
 
 Malody V ThemeLoader is an install-once visual mod for the Windows x64 IL2CPP

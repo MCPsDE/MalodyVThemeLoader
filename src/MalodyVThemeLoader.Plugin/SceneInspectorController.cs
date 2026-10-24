@@ -4,6 +4,7 @@ using MalodyVThemeLoader.Shared;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 namespace MalodyVThemeLoader.Plugin;
 
@@ -37,6 +38,9 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private float retryAt;
     private float nextFailureLog;
     private bool snapshotTruncated;
+    private int sceneHandle = int.MinValue;
+    private float nextPublishRetry;
+    private float nextPublishLog;
     internal static bool IsInspecting { get; private set; }
     public SceneInspectorController(IntPtr pointer) : base(pointer) { }
     public void Initialize()
@@ -49,6 +53,12 @@ internal sealed class SceneInspectorController : MonoBehaviour
         try
         {
             var now = Time.realtimeSinceStartup;
+            var scene = SceneManager.GetActiveScene();
+            if (scene.handle != sceneHandle)
+            {
+                sceneHandle = scene.handle; nodes.Clear(); selected = 0; cycle = 0;
+                selectionOrigin = "scene"; revision++; nextSnapshot = 0;
+            }
             if (now >= nextPoll)
             {
                 nextPoll = now + .25f;
@@ -66,7 +76,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
             if (now >= nextSnapshot)
             {
                 nextSnapshot = now + .5f;
-                nodes = SceneNodeLocator.Collect(ThemeRuntime.Current?.Assets, out snapshotTruncated);
+                nodes = SceneNodeLocator.Collect(ThemeRuntime.Current?.Assets, out snapshotTruncated, currentSceneOnly: true);
                 if (control.Runtime == runtimeId && control.SelectRequest != request)
                 {
                     request = control.SelectRequest;
@@ -91,12 +101,21 @@ internal sealed class SceneInspectorController : MonoBehaviour
     }
     private void Publish(bool truncated)
     {
-        InspectorFiles.Write(loaderRoot, InspectorFiles.SnapshotName, new InspectorSnapshot
+        if (Time.realtimeSinceStartup < nextPublishRetry) return;
+        try { InspectorFiles.Write(loaderRoot, InspectorFiles.SnapshotName, new InspectorSnapshot
         {
             Runtime = runtimeId, Client = control.Client, UpdatedUtc = DateTime.UtcNow, PluginVersion = MyPluginInfo.PLUGIN_VERSION,
             Theme = ThemeRuntime.Current?.Theme.ActiveKey ?? "", SelectedId = selected, SelectionRevision = revision, SelectionOrigin = selectionOrigin,
-            Nodes = nodes.Select(n => n.Info).ToList(), Truncated = truncated
-        });
+            ActiveScene = SceneManager.GetActiveScene().name, Nodes = nodes.Select(n => n.Info).ToList(), Truncated = truncated
+        }); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // A temporary reader/virus-scanner lock must not destroy and
+            // recreate injected UI objects, nor lose the current selection.
+            nextPublishRetry = Time.realtimeSinceStartup + .25f;
+            if (Time.realtimeSinceStartup >= nextPublishLog)
+            { nextPublishLog = Time.realtimeSinceStartup + 10; Plugin.Log.LogDebug("Inspector snapshot will retry: " + e.Message); }
+        }
     }
     private void Pick(Vector2 position)
     {
@@ -149,7 +168,8 @@ internal sealed class SceneInspectorController : MonoBehaviour
         overlay.AddComponent<GraphicRaycaster>();
         var fenceObject = new GameObject(SceneNodeLocator.OwnPrefix + "MiddleClickFence"); var fenceRect = fenceObject.AddComponent<RectTransform>(); fenceRect.SetParent(overlay.transform, false);
         fenceRect.anchorMin = Vector2.zero; fenceRect.anchorMax = Vector2.one; fenceRect.offsetMin = fenceRect.offsetMax = Vector2.zero;
-        var fence = fenceObject.AddComponent<InspectorInputFence>(); fence.color = Color.clear; fence.raycastTarget = true; fence.canvasRenderer.cullTransparentMesh = false;
+        var fence = fenceObject.AddComponent<Image>(); fence.color = Color.clear; fence.raycastTarget = true; fence.canvasRenderer.cullTransparentMesh = false;
+        fenceObject.AddComponent<InspectorInputFence>();
         var drawing = new GameObject(SceneNodeLocator.OwnPrefix + "Bounds"); var rect = drawing.AddComponent<RectTransform>(); rect.SetParent(overlay.transform, false);
         rect.anchorMin = rect.anchorMax = Vector2.zero; rect.pivot = Vector2.zero; rect.anchoredPosition = Vector2.zero;
         canvasRenderer = drawing.AddComponent<CanvasRenderer>();
@@ -189,29 +209,36 @@ internal sealed class SceneInspectorController : MonoBehaviour
         var vertices = new List<Vector3>(); var colors = new List<Color32>(); var indices = new List<int>(); var used = 0;
         foreach (var node in nodes)
         {
-            if (node.Transform == null) continue;
+            if (node.Info.Id != selected || node.Transform == null || node.Transform.gameObject.scene.handle != sceneHandle) continue;
             var points = SceneNodeLocator.Corners(node); if (points == null) continue;
             var clip = ClipFor(node); if (clip.width <= 0 || clip.height <= 0) continue;
             var left = points.Min(p => p.x); var right = points.Max(p => p.x); var bottom = points.Min(p => p.y); var top = points.Max(p => p.y);
             if (right < clip.xMin || left > clip.xMax || top < clip.yMin || bottom > clip.yMax) continue;
-            var isSelected = node.Info.Id == selected;
-            Color32 color = isSelected ? new Color32(255, 204, 64, 255) : node.Info.Component == "Image" ? new Color32(95, 170, 255, 200)
-                : node.Info.Component == "RawImage" ? new Color32(200, 150, 255, 200) : new Color32(200, 200, 200, 150);
-            if (control.ShowFrames || isSelected)
-                for (var i = 0; i < 4; i++) Segment(points[i], points[(i + 1) % 4], clip, color, isSelected ? 2 : 1, vertices, colors, indices);
-            if ((!control.ShowNames && !isSelected) || font == null) continue;
+            Color32 color = new Color32(255, 204, 64, 255);
+            if (control.ShowFrames)
+                for (var i = 0; i < 4; i++) Segment(points[i], points[(i + 1) % 4], clip, color, 4, vertices, colors, indices);
+            if (!control.ShowNames || font == null) continue;
             if (used == labels.Count)
             {
-                var item = new GameObject(SceneNodeLocator.OwnPrefix + "Name"); item.transform.SetParent(overlay!.transform, false);
-                var text = item.AddComponent<Text>(); text.font = font; text.fontSize = 13; text.raycastTarget = false; text.horizontalOverflow = HorizontalWrapMode.Overflow;
-                text.verticalOverflow = VerticalWrapMode.Overflow; text.rectTransform.anchorMin = text.rectTransform.anchorMax = Vector2.zero;
-                text.rectTransform.pivot = new Vector2(0, 1); labels.Add(text);
+                var plate = new GameObject(SceneNodeLocator.OwnPrefix + "NamePlate"); plate.transform.SetParent(overlay!.transform, false);
+                var background = plate.AddComponent<Image>(); background.color = new Color(.035f, .04f, .055f, .94f); background.raycastTarget = false;
+                background.rectTransform.anchorMin = background.rectTransform.anchorMax = Vector2.zero; background.rectTransform.pivot = new Vector2(0, 1);
+                var item = new GameObject(SceneNodeLocator.OwnPrefix + "Name"); item.transform.SetParent(plate.transform, false);
+                var text = item.AddComponent<Text>(); text.font = font; text.fontSize = 16; text.raycastTarget = false; text.horizontalOverflow = HorizontalWrapMode.Wrap;
+                text.verticalOverflow = VerticalWrapMode.Overflow; text.alignment = TextAnchor.MiddleLeft;
+                text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one;
+                text.rectTransform.offsetMin = new Vector2(8, 4); text.rectTransform.offsetMax = new Vector2(-8, -4); labels.Add(text);
             }
-            var label = labels[used++]; label.gameObject.SetActive(true); label.text = node.Info.Name; label.color = color;
-            label.rectTransform.anchoredPosition = new Vector2(Math.Clamp(left, clip.xMin, Math.Max(clip.xMin, clip.xMax - 80)), Math.Clamp(top, clip.yMin + 16, clip.yMax));
-            label.rectTransform.sizeDelta = new Vector2(500, 20);
+            var label = labels[used++]; label.transform.parent.gameObject.SetActive(true); label.text = node.Info.Name; label.color = Color.white;
+            var plateRect = label.transform.parent.GetComponent<RectTransform>();
+            var labelWidth = Math.Min(Math.Max(32, label.preferredWidth + 16), Math.Max(32, Screen.width - 16));
+            plateRect.sizeDelta = new Vector2(labelWidth, 32);
+            var labelHeight = Math.Min(Math.Max(32, label.preferredHeight + 8), Math.Max(32, Screen.height - 16));
+            plateRect.sizeDelta = new Vector2(labelWidth, labelHeight);
+            var labelTop = top + labelHeight + 5 <= Screen.height - 8 ? top + labelHeight + 5 : top - 6;
+            plateRect.anchoredPosition = new Vector2(Math.Clamp(left, 8, Math.Max(8, Screen.width - labelWidth - 8)), Math.Clamp(labelTop, labelHeight + 8, Math.Max(labelHeight + 8, Screen.height - 8)));
         }
-        for (var i = used; i < labels.Count; i++) labels[i].gameObject.SetActive(false);
+        for (var i = used; i < labels.Count; i++) labels[i].transform.parent.gameObject.SetActive(false);
         const int batchSize = 60000;
         var required = Math.Max(1, (vertices.Count + batchSize - 1) / batchSize);
         while (meshBatches.Count < required)
@@ -239,9 +266,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
         foreach (var mask in node.Transform.GetComponentsInParent<RectMask2D>())
         {
             if (!mask.isActiveAndEnabled) continue;
-            var corners = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<Vector3>(4);
-            mask.rectTransform.GetWorldCorners(corners); var camera = SceneNodeLocator.CameraFor(mask.rectTransform);
-            var points = Enumerable.Range(0, 4).Select(i => RectTransformUtility.WorldToScreenPoint(camera, corners[i])).ToArray();
+            var points = SceneNodeLocator.ScreenCorners(mask.rectTransform);
             clip = Rect.MinMaxRect(Math.Max(clip.xMin, points.Min(p => p.x)), Math.Max(clip.yMin, points.Min(p => p.y)),
                 Math.Min(clip.xMax, points.Max(p => p.x)), Math.Min(clip.yMax, points.Max(p => p.y)));
         }

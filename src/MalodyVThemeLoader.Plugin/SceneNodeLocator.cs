@@ -1,6 +1,7 @@
 using MalodyVThemeLoader.Shared;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 namespace MalodyVThemeLoader.Plugin;
@@ -11,11 +12,18 @@ internal static class SceneNodeLocator
 {
     private static readonly Il2CppStructArray<Vector3> cornerBuffer = new(4);
     internal const string OwnPrefix = "ThemeLoader.";
-    internal static List<SceneNode> Collect(ThemeAssetStore? assets, out bool truncated)
+    internal static List<SceneNode> Collect(ThemeAssetStore? assets, out bool truncated, bool currentSceneOnly = false)
     {
         var result = new List<SceneNode>(); var limit = false;
-        var roots = Resources.FindObjectsOfTypeAll<Transform>().Where(t => t != null && t.parent == null && t.gameObject.scene.IsValid()
-            && SceneThemeApplier.IsAllowedScene(t.gameObject.scene.name) && !IsOwn(t)).ToArray();
+        // Enumerate live scene roots, never prefab assets or persistent plugin objects.
+        var roots = new List<Transform>();
+        var current = SceneManager.GetActiveScene();
+        for (var index = 0; index < SceneManager.sceneCount; index++)
+        {
+            var scene = SceneManager.GetSceneAt(index);
+            if (!scene.isLoaded || !SceneThemeApplier.IsAllowedScene(scene.name) || currentSceneOnly && scene.handle != current.handle) continue;
+            foreach (var root in scene.GetRootGameObjects()) if (root != null && !IsOwn(root.transform)) roots.Add(root.transform);
+        }
         void Visit(Transform t, int parent, string address, string hierarchy, int depth)
         {
             if (depth > 96 || result.Count >= 20000) { limit = true; return; }
@@ -76,13 +84,18 @@ internal static class SceneNodeLocator
         if (rect == null) return null;
         var canvas = rect.GetComponentInParent<Canvas>();
         if (canvas == null || !canvas.isActiveAndEnabled || rect.rect.width <= 0 || rect.rect.height <= 0) return null;
+        var points = ScreenCorners(rect);
+        if (points.Any(p => !float.IsFinite(p.x) || !float.IsFinite(p.y))) return null;
+        // Debug bounds describe active layout even without a visible image.
+        // Picking applies the additional visibility filters below.
+        return points;
+    }
+    internal static Vector2[] ScreenCorners(RectTransform rect)
+    {
         var camera = CameraFor(rect);
         var world = cornerBuffer; rect.GetWorldCorners(world);
         var points = new Vector2[4];
         for (var i = 0; i < 4; i++) points[i] = RectTransformUtility.WorldToScreenPoint(camera, world[i]);
-        if (points.Any(p => !float.IsFinite(p.x) || !float.IsFinite(p.y))) return null;
-        // Debug bounds describe active layout even without a visible image.
-        // Picking applies the additional visibility filters below.
         return points;
     }
     internal static bool Hit(SceneNode node, Vector2 position)

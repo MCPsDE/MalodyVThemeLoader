@@ -84,6 +84,17 @@ try {
     $global=$rules.ResolveImage($entry.LogicalId,'SceneStore','','')
     $scoped=$rules.ResolveImage($entry.LogicalId,'SceneSong','','')
     Assert ($global.File -ne $scoped.File -and $scoped.Border.X -eq 12 -and $scoped.Mode -eq 'sliced') 'Reused image did not keep distinct global/scene files and slice borders.'
+    Invoke $editor 'SetScene' @('SceneLobby') | Out-Null
+    Await (Invoke $editor 'ImportFileAsync' @([string]$source)); $numbers['左'].Value=6; Await (Invoke $editor 'SaveAsync')
+    $savedScopes=Field $editor 'savedScopes'
+    Assert ($savedScopes.Items.Count -eq 4) 'The resource did not list global and both saved scene replacements.'
+    $savedScopes.SelectedItem=@($savedScopes.Items | Where-Object { $_.Scene -eq 'SceneSong' })[0]
+    Assert ((Field $editor 'loadedScene') -eq 'SceneSong' -and $numbers['左'].Value -eq 12) 'Switching a saved scene lost its image/slices.'
+    Assert ($workspace.Rules.ResolveImage($entry.LogicalId,'SceneLobby','','').Border.X -eq 6) 'Adding another scene overwrote the first replacement.'
+    $savedScopes.SelectedItem=@($savedScopes.Items | Where-Object { $_.Scene -eq 'SceneLobby' })[0]
+    Invoke $editor 'RestoreScope' | Out-Null
+    Assert ($workspace.Rules.ResolveImage($entry.LogicalId,'SceneSong','','').Border.X -eq 12) 'Restoring one scene removed a different scene replacement.'
+    Invoke $editor 'SetScene' @('SceneSong') | Out-Null
     $hierarchy=Field $editor 'hierarchyBox'; $hierarchy.Text='Canvas/Panel/Target'; (Field $editor 'componentBox').SelectedItem='Image'
     Assert (!(Field $editor 'save').Enabled -and !(Field $editor 'import').Enabled) 'An uncommitted manual scope allowed edits.'
     Invoke $editor 'CommitScope' | Out-Null

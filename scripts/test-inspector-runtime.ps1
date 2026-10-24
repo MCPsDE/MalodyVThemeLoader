@@ -17,6 +17,7 @@ foreach($name in $sources){
     $source=$source.Replace('new Action<VideoPlayer, string>','new VideoPlayer.ErrorEventHandler')
     $source=$source.Replace('public SceneInspectorController(IntPtr pointer) : base(pointer)','public SceneInspectorController()').Replace('public ControlModeController(IntPtr pointer) : base(pointer)','public ControlModeController()')
     $source=$source.Replace('public InspectorInputFence(IntPtr pointer) : base(pointer)','public InspectorInputFence()')
+    $source=$source.Replace('internal sealed class InspectorInputFence : MonoBehaviour','internal sealed class InspectorInputFence : MonoBehaviour, ICanvasRaycastFilter')
     [IO.File]::WriteAllText((Join-Path $build ($name+'.cs')),$source)
 }
 foreach($name in @('ThemeResources','SceneInspector')){

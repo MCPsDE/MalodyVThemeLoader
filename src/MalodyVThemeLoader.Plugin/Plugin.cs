@@ -45,7 +45,8 @@ public sealed class Plugin : BasePlugin
             try
             {
                 if (!Il2CppInterop.Runtime.Injection.ClassInjector.IsTypeRegisteredInIl2Cpp<InspectorInputFence>())
-                    Il2CppInterop.Runtime.Injection.ClassInjector.RegisterTypeInIl2Cpp<InspectorInputFence>();
+                    Il2CppInterop.Runtime.Injection.ClassInjector.RegisterTypeInIl2Cpp<InspectorInputFence>(new()
+                    { Interfaces = new[] { typeof(UnityEngine.ICanvasRaycastFilter) } });
                 var inspector = AddComponent<SceneInspectorController>(); inspector.Initialize();
             }
             catch (Exception e) { Log.LogWarning("Scene inspector unavailable: " + e.Message); }

@@ -59,6 +59,7 @@ public sealed class InspectorControl
 
 public sealed class InspectorSnapshot
 {
+    public string ActiveScene { get; set; } = "";
     public string Runtime { get; set; } = "";
     public string Client { get; set; } = "";
     public string PluginVersion { get; set; } = "";

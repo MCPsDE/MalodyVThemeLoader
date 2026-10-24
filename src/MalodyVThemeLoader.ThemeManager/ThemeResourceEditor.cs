@@ -16,6 +16,8 @@ internal sealed partial class ThemeResourceEditor : UserControl
     private readonly Label fileState = AppVisuals.TextBlock("导入图片或音频后保存，即可实时应用。", 9F);
     private readonly Label state = AppVisuals.TextBlock("选择图片或界面音频开始编辑。", 9F);
     private readonly ChoiceBox sceneBox = new() { Dock = DockStyle.Top, IntegralHeight = false, DropDownHeight = 260 };
+    private readonly ChoiceBox savedScopes = new() { Dock = DockStyle.Top, IntegralHeight = false, DropDownHeight = 260 };
+    private readonly Button addSceneScope = AppVisuals.CreateButton("新增场景替换");
     private readonly TextBox hierarchyBox = new() { Dock = DockStyle.Top, MaxLength = 1024 };
     private readonly ChoiceBox componentBox = new() { Dock = DockStyle.Top };
     private readonly CheckBox sliceToggle = new() { Text = "九宫格切片", AutoSize = true, Margin = new Padding(0, 14, 0, 8) };
@@ -84,6 +86,9 @@ internal sealed partial class ThemeResourceEditor : UserControl
         var fields = AppVisuals.Stack(); fields.Margin = Padding.Empty;
         resourceName.AutoSize = false; resourceName.Height = 28; resourceName.Dock = DockStyle.Top; resourceName.AutoEllipsis = true;
         AppVisuals.AddRow(fields, resourceName);
+        Field(fields, "已保存的替换", savedScopes);
+        savedScopes.AccessibleName = "此资源已保存的独立替换范围";
+        AppVisuals.AddRow(fields, new ButtonRow(addSceneScope) { Margin = new Padding(0, 8, 0, 10) });
         Field(fields, "应用范围", sceneBox);
         locationFields = AppVisuals.Stack(); locationFields.Margin = Padding.Empty;
         hierarchyBox.PlaceholderText = "双击使用位置，或输入路径";
@@ -129,6 +134,8 @@ internal sealed partial class ThemeResourceEditor : UserControl
         search.TextChanged += (_, _) => { searchTimer.Stop(); searchTimer.Start(); };
         searchTimer.Tick += (_, _) => { searchTimer.Stop(); BuildTree(); };
         sceneBox.SelectedIndexChanged += (_, _) => ScopeChanged();
+        savedScopes.SelectedIndexChanged += (_, _) => SelectSavedScope();
+        addSceneScope.Click += (_, _) => AddSceneScope();
         hierarchyBox.TextChanged += (_, _) => ScopeInputChanged();
         componentBox.SelectedIndexChanged += (_, _) => ScopeInputChanged();
         readScope.Click += (_, _) => CommitScope(); cancelScope.Click += (_, _) => CancelScope();

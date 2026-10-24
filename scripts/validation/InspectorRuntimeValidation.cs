@@ -125,6 +125,8 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         var inspector = new GameObject("ThemeLoader.TestInspector").AddComponent<SceneInspectorController>(); inspector.Initialize(); Force(inspector); yield return null;
         var snapshot = InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName);
         Require(snapshot != null && snapshot.Nodes.Any(n => n.Id == ai.Info.Id) && snapshot.Nodes.All(n => !n.Name.StartsWith("ThemeLoader.")), "Inspector snapshot includes its own layers or omits source objects.");
+        Call(inspector, "LateUpdate");
+        Require((inspector.GetType().GetField("mesh", Flags).GetValue(inspector) as Mesh).vertexCount == 0, "Unselected nodes were outlined.");
         var point = RectTransformUtility.WorldToScreenPoint(camera, a.transform.position); Call(inspector, "Pick", point);
         snapshot = InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName);
         Require(snapshot.SelectedId == ai.Info.Id && snapshot.SelectionOrigin == "game", "Middle-click picker selected the wrong visible node.");
@@ -144,13 +146,23 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         pointer.button = PointerEventData.InputButton.Left; raycasts.Clear(); events.RaycastAll(pointer, raycasts);
         Require(raycasts.Count > 0 && raycasts[0].gameObject == a.gameObject, "Inspection layer swallowed ordinary game UI clicks.");
         var mesh = inspector.GetType().GetField("mesh", Flags).GetValue(inspector) as Mesh;
-        Require(mesh.vertexCount > 16 && overlay.GetComponentsInChildren<Text>().Length > 2, "Inspector did not draw bounds and names.");
+        Require(mesh.vertexCount == 16 && overlay.GetComponentsInChildren<Text>().Length == 1, "Inspector must draw only the selected bounds and label.");
+        using (var lockedSnapshot = new FileStream(Path.Combine(loader, InspectorFiles.SnapshotName), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Call(inspector, "Pick", point); Call(inspector, "LateUpdate");
+            Require(SceneInspectorController.IsInspecting && overlay == inspector.GetType().GetField("overlay", Flags).GetValue(inspector) as GameObject,
+                "A locked snapshot destroyed the overlay.");
+        }
+        inspector.GetType().GetField("nextPublishRetry", Flags).SetValue(inspector, 0f);
+        control.SelectedId = bi.Info.Id; control.SelectRequest++; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
+        Require(Math.Abs((mesh.vertices[0] - mesh.vertices[1]).magnitude - 4) < .01f, "Selected bounds are not four pixels thick.");
+        Require(overlay.GetComponentsInChildren<Text>()[0].transform.parent.GetComponent<Image>().color.a > .9f, "Selected label has no readable background.");
         Require(overlay.GetComponentsInChildren<Text>().All(label => label.font == caption.font), "Inspector did not reuse the game's existing UI font.");
         var emptyPixel = Pixel(target, .1f, .1f); Require(emptyPixel.r < .05f && emptyPixel.g < .05f && emptyPixel.b < .05f, "Debug outlines filled unrelated screen areas.");
         inspector.GetType().GetField("font", Flags).SetValue(inspector, null); inspector.GetType().GetField("nextFontRetry", Flags).SetValue(inspector, float.PositiveInfinity); Call(inspector, "LateUpdate");
-        Require(SceneInspectorController.IsInspecting && mesh.vertexCount > 16 && overlay.GetComponentsInChildren<Text>().Length == 0, "Missing fonts disabled bounds or left stale labels.");
+        Require(SceneInspectorController.IsInspecting && mesh.vertexCount == 16 && overlay.GetComponentsInChildren<Text>().Length == 0, "Missing fonts disabled bounds or left stale labels.");
         inspector.GetType().GetField("nextFontRetry", Flags).SetValue(inspector, 0f); Call(inspector, "LateUpdate");
-        Require(overlay.GetComponentsInChildren<Text>().Length > 2, "Labels did not recover after font retry.");
+        Require(overlay.GetComponentsInChildren<Text>().Length == 1, "Selected label did not recover after font retry.");
         if (!Application.isEditor)
         {
             camera.targetTexture = null; overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay; Canvas.ForceUpdateCanvases();
@@ -158,12 +170,12 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
             yield return null; yield return null;
             yield return new WaitForEndOfFrame();
             var presented = ScreenCapture.CaptureScreenshotAsTexture(); File.WriteAllBytes(Path.Combine(output, "overlay-presented.png"), presented.EncodeToPNG());
-            var corners = SceneNodeLocator.Corners(ai); var minX = (int)corners.Min(p => p.x); var maxY = (int)corners.Max(p => p.y);
+            var corners = SceneNodeLocator.Corners(bi); var minX = (int)corners.Min(p => p.x); var maxY = (int)corners.Max(p => p.y);
             var edgePixels = 0; var glyphPixels = 0;
-            for (var y = maxY - 22; y <= maxY + 2; y++) for (var x = minX - 2; x <= minX + 90; x++)
+            for (var y = maxY - 2; y <= Math.Min(presented.height - 1, maxY + 40); y++) for (var x = minX - 2; x <= minX + 90; x++)
             {
                 if (x < 0 || y < 0 || x >= presented.width || y >= presented.height) continue;
-                var pixel = presented.GetPixel(x, y); if (pixel.b < .35f || pixel.r > .85f) continue;
+                var pixel = presented.GetPixel(x, y); if (pixel.r < .7f || pixel.g < .5f) continue;
                 if (Math.Abs(y - maxY) <= 2 || Math.Abs(x - minX) <= 2) edgePixels++; else glyphPixels++;
             }
             Require(edgePixels > 10 && glyphPixels > 10, $"Bounds/names were not visible on the automatically presented game frame: edges={edgePixels}, glyphs={glyphPixels}, camera={camera.enabled}/{camera.gameObject.activeInHierarchy}, cameras={Camera.allCamerasCount}, display={Display.main.active}, inspecting={SceneInspectorController.IsInspecting}.");
@@ -173,7 +185,7 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         for (var i = 0; i < 4000; i++) Rect("N" + i, stress, Vector2.one, Vector2.zero);
         control.ShowNames = false; control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Canvas.ForceUpdateCanvases(); Force(inspector); Call(inspector, "LateUpdate");
         var batches = inspector.GetType().GetField("meshBatches", Flags).GetValue(inspector) as System.Collections.Generic.List<Mesh>;
-        Require(batches.Count > 1 && batches.All(m => m.vertexCount <= 60000 && m.indexFormat == UnityEngine.Rendering.IndexFormat.UInt16), "Large hierarchy did not split UI index batches.");
+        Require(batches.Count == 1 && batches[0].vertexCount == 16 && batches[0].indexFormat == UnityEngine.Rendering.IndexFormat.UInt16, "Large hierarchy drew unselected bounds.");
         Destroy(stress.gameObject); yield return null;
         var projection = new GameObject("ThemeLoader.ProjectionTest").AddComponent<ControlModeController>();
         var quad = GameObject.CreatePrimitive(PrimitiveType.Quad); quad.name = "ThemeLoader.ProjectionQuad"; quad.transform.localRotation = Quaternion.Euler(180, 0, 0); quad.transform.localScale = new Vector3(8, 6, 1);
@@ -199,15 +211,15 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
         overlay = inspector.GetType().GetField("overlay", Flags).GetValue(inspector) as GameObject;
         mesh = inspector.GetType().GetField("mesh", Flags).GetValue(inspector) as Mesh;
-        Require(SceneInspectorController.IsInspecting && overlay.activeSelf && mesh.vertexCount > 16, "Transient failure permanently disabled drawing.");
+        Require(SceneInspectorController.IsInspecting && overlay.activeSelf && mesh.vertexCount == 16, "Transient failure permanently disabled drawing.");
         if (!Application.isEditor)
         {
             camera.targetTexture = null; yield return null; yield return new WaitForEndOfFrame();
             var recovered = ScreenCapture.CaptureScreenshotAsTexture(); File.WriteAllBytes(Path.Combine(output, "overlay-recovered.png"), recovered.EncodeToPNG());
-            var corners = SceneNodeLocator.Corners(ai); var edgeCount = 0;
+            var corners = SceneNodeLocator.Corners(bi); var edgeCount = 0;
             for (var x = (int)corners.Min(p => p.x); x < (int)corners.Max(p => p.x); x++)
                 for (var y = (int)corners.Max(p => p.y) - 1; y <= (int)corners.Max(p => p.y) + 1; y++)
-                { var pixel = recovered.GetPixel(x, y); if (pixel.b > .35f && pixel.r < .85f) edgeCount++; }
+                { var pixel = recovered.GetPixel(x, y); if (pixel.r > .7f && pixel.g > .5f) edgeCount++; }
             Require(edgeCount > 10, "Recovered overlay has no visible bounds pixels."); Destroy(recovered); camera.targetTexture = target;
         }
         service.Dispose(); yield return null;
@@ -216,6 +228,24 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         var bad = new NodeDecorationService(Plugin.Log, theme, invalid); bad.Tick(); yield return null;
         Require(container.Find("ThemeLoader.Decoration") == null && bad.Status("SceneSong", ci.Info.Address).StartsWith("加载失败"), "Invalid decoration left an orphan or claimed success."); bad.Dispose();
         Require(a.sprite == b.sprite, "Unrelated source images were changed.");
+        for (var cycle = 0; cycle < 24; cycle++)
+        {
+            var hot = new NodeDecorationService(Plugin.Log, theme, rules); hot.Tick();
+            Call(inspector, "Pick", point); Call(inspector, "LateUpdate");
+            hot.Dispose(); hot.Dispose(); yield return null;
+            GC.Collect();
+            Require(container.Find("ThemeLoader.Decoration") == null, "Reload left a stale background layer.");
+        }
+        var other = SceneManager.CreateScene("SceneStore");
+        SceneManager.SetActiveScene(other);
+        var otherRoot = Rect("OtherCanvas", null, new Vector2(100, 100), Vector2.zero); otherRoot.gameObject.AddComponent<Canvas>();
+        Force(inspector); Call(inspector, "LateUpdate");
+        var currentSnapshot = InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName);
+        Require(currentSnapshot.ActiveScene == "SceneStore" && currentSnapshot.Nodes.All(n => n.Scene == "SceneStore") && currentSnapshot.SelectedId == 0, "Inspector retained the previous scene or selection.");
+        Require(mesh.vertexCount == 0 && overlay.GetComponentsInChildren<Text>().Length == 0, "Previous scene bounds or labels remained visible.");
+        SceneManager.SetActiveScene(scene); Force(inspector);
+        Require(SceneNodeLocator.Collect(store, out _, currentSceneOnly: true).All(n => n.Info.Scene == "SceneSong"), "Current-scene collection included additive background scenes.");
+        Destroy(otherRoot.gameObject); SceneManager.UnloadSceneAsync(other);
         store.Dispose(); camera.targetTexture = null; target.Release(); Destroy(target); Destroy(inspector.gameObject); yield return null;
         Require(caption.font != null, "Disposing the inspector destroyed the game's borrowed font.");
     }

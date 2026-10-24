@@ -44,6 +44,8 @@ border 使用 Unity 顺序：x 左、y 下、z 右、w 上。空 scene 表示全
 
 ## 验证范围
 
+同一张原图可以同时拥有多条场景替换。在右侧点击“新增场景替换”，选择“应用范围”，导入新图后保存；已有场景不会被移走。在“已保存的替换”中切回大厅、选曲或具体控件，可以继续编辑各自的文件和九宫格。“恢复此范围”只删除当前选中的规则。“所有场景”作为基础图片，各场景规则优先于它。
+
 `test-resource-editor.ps1` 使用独立假游戏目录，覆盖目录树、场景和控件优先级、切片拖动、非法配置不覆盖、三种音频解码、静音试听启停、保存和恢复继承、实时模式及活动主题。明暗和合成 150% 结果保存在 `.impeccable/review/resources-dark`、`resources-light`。
 
 `test-resource-render.ps1` 在仓库内的独立 Unity 2022.3 项目中编译发行图片解析代码，使用同一资源配置验证不同场景纹理、来源追踪、Unity Sprite.border、pivot/PPU、控件范围、缺失/非法回退及实际九宫格渲染。只替换 IL2CPP byte-array 包装、日志和 Mono 不支持的未调用写入重载；不修改源工程或安装游戏。它不等于实际 IL2CPP 游戏端到端测试。`test-interop-compatibility.ps1` 另行校验实际 interop 的 UI 音频方法、九个枚举值与音量适配器。

@@ -5,9 +5,9 @@ using UnityEngine.UI;
 
 namespace MalodyVThemeLoader.Plugin;
 
-// A loader-owned transparent graphic receives only inspection clicks. Native
-// UI dispatch stays intact; game panels never receive this middle-button click.
-internal sealed class InspectorInputFence : Image
+// Keep the graphic native. Inject only the small MonoBehaviour filter, rather
+// than a managed subclass of Unity's serialized UI Image hierarchy.
+internal sealed class InspectorInputFence : MonoBehaviour
 {
     private int releaseFrame = int.MinValue;
     public InspectorInputFence(IntPtr pointer) : base(pointer) { }
@@ -16,7 +16,7 @@ internal sealed class InspectorInputFence : Image
         if (down) releaseFrame = frame + 2;
         return down || frame <= releaseFrame;
     }
-    public override bool Raycast(Vector2 screenPoint, Camera eventCamera)
+    public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
     {
         if (!SceneInspectorController.IsInspecting || !SceneThemeApplier.IsAllowedScene(SceneManager.GetActiveScene().name)) return false;
         return CaptureForFrame((GetAsyncKeyState(4) & 0x8000) != 0, Time.frameCount);

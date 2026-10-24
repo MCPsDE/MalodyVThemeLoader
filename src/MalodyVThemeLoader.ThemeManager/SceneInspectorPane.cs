@@ -13,7 +13,7 @@ internal sealed class SceneInspectorPane : UserControl
     private readonly InspectorHeartbeat heartbeat;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 500 };
     private readonly CheckBox connect = Check("连接游戏");
-    private readonly CheckBox frames = Check("层级边框", true);
+    private readonly CheckBox frames = Check("选中边框", true);
     private readonly CheckBox names = Check("节点名称", true);
     private readonly CheckBox inactive = Check("隐藏节点");
     private readonly Label connection = AppVisuals.TextBlock("开启连接后，在游戏中按鼠标中键选取。", 9F);
@@ -159,6 +159,7 @@ internal sealed class SceneInspectorPane : UserControl
     }
     internal void AcceptSnapshot(InspectorSnapshot next)
     {
+        if (next.ActiveScene.Length > 0) next.Nodes.RemoveAll(n => n.Scene != next.ActiveScene);
         if (next.Runtime != lastRuntime)
         {
             lastRuntime = next.Runtime; lastRevision = -1; treeSignature = "";
@@ -169,10 +170,15 @@ internal sealed class SceneInspectorPane : UserControl
         {
             var live = next.Nodes.FirstOrDefault(n => n.Id == node.Id && n.Address == node.Address && n.Scene == node.Scene)
                 ?? next.Nodes.FirstOrDefault(n => n.Address == node.Address && n.Scene == node.Scene);
-            if (live == null) state.Text = "节点暂未出现 · 保存的规则会在它出现时应用";
+            if (live == null)
+            {
+                node = null; draft = new ThemeNodeRule(); pendingImage = pendingVideo = null;
+                title.Text = "选择一个节点"; location.Text = ""; preview.SetImage(null);
+                state.Text = "界面已切换，请在当前界面选择节点。"; UpdateMediaLabels(); UpdateEnabled();
+            }
             else { node = live; if (live.DecorationStatus.Length > 0) state.Text = live.DecorationStatus; }
         }
-        connection.Text = $"已连接 · {next.Nodes.Count} 个节点 · 主题 {next.Theme}" + (next.Truncated ? " · 层级过多，部分未显示" : "");
+        connection.Text = $"已连接 · {next.ActiveScene} · {next.Nodes.Count} 个节点 · 主题 {next.Theme}" + (next.Truncated ? " · 层级过多，部分未显示" : "");
         RefreshTree();
         if (next.SelectionRevision == lastRevision || IsBusy) return;
         lastRevision = next.SelectionRevision;

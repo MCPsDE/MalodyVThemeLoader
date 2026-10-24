@@ -37,6 +37,8 @@ public sealed class PresentationDriver : MonoBehaviour
     private int checks;
     private int audioPlays;
     private int intermediateFrames;
+    private int siblingFrames;
+    private readonly List<(Animator Animator, RectTransform Mask)> siblings = new();
     private int recoveredHandles;
     private bool finished;
     private static readonly BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -53,11 +55,20 @@ public sealed class PresentationDriver : MonoBehaviour
             var entrance = SceneManager.GetActiveScene().GetRootGameObjects().Single(root => root.name == "CanvasForegroundDPI").transform.Find("LeftPanel/EntranceIcon");
             var found = entrance.Find("mask"); managedCastWorks = found is RectTransform;
             mask = found.GetComponent<RectTransform>(); animator = entrance.GetComponent<Animator>();
+            if (!baseline)
+                for (var index = 1; index < 6; index++)
+                {
+                    var sibling = entrance.parent.Find($"EntranceIcon ({index})");
+                    Require(sibling != null, "A repeated entrance fixture is missing.");
+                    siblings.Add((sibling.GetComponent<Animator>(), sibling.Find("mask").GetComponent<RectTransform>()));
+                }
             EntranceIconSlideController.Bind(SceneManager.GetActiveScene());
             initialSlideWorks = Mathf.Abs(mask.anchorMax.x - 1) < .001f && mask.anchoredPosition.x < -270;
             if (!baseline)
             {
                 Require(initialSlideWorks, "Native RectTransform binding did not put the full-width tip outside the left edge.");
+                foreach (var sibling in siblings)
+                    Require(sibling.Mask.anchorMax.x == 1 && sibling.Mask.anchoredPosition.x < -270, "A later entrance was not bound to translation.");
                 AudioListener.volume = 0; Time.captureFramerate = 60;
                 PrepareAudio();
             }
@@ -102,6 +113,8 @@ public sealed class PresentationDriver : MonoBehaviour
             {
                 var progress = Mathf.Clamp01(mask.anchorMax.x);
                 var state = animator.GetCurrentAnimatorStateInfo(0);
+                var siblingProgress = siblings.Where(item => item.Mask != null).Select(item =>
+                    (item.Mask, State: item.Animator.GetCurrentAnimatorStateInfo(0), Progress: Mathf.Clamp01(item.Mask.anchorMax.x))).ToArray();
                 EntranceIconSlideController.Tick();
                 if (!baseline)
                 {
@@ -112,12 +125,23 @@ public sealed class PresentationDriver : MonoBehaviour
                         if (progress > .01f && progress < .99f) intermediateFrames++;
                     }
                     if (tick < 100) motionFrames.Add(new { tick, progress, x = mask.anchoredPosition.x, time = state.normalizedTime, hover = state.IsName("hover"), leave = state.IsName("leave") });
+                    foreach (var sibling in siblingProgress)
+                    {
+                        Require(Mathf.Abs(sibling.Mask.rect.width - 274) < 1, "A later entrance tip still stretches.");
+                        if ((sibling.State.IsName("hover") || sibling.State.IsName("leave")) && sibling.State.normalizedTime < 1)
+                        {
+                            Require(Mathf.Abs(sibling.Mask.anchoredPosition.x + 274 * (1 - sibling.Progress)) < 1,
+                                "A later entrance's own animation curve was not mapped to translation.");
+                            if (sibling.Progress > .01f && sibling.Progress < .99f) siblingFrames++;
+                        }
+                    }
                 }
             }
             tick++;
             if (tick == (baseline ? 120 : 240))
             {
                 if (!baseline) Require(intermediateFrames > 4 && recoveredHandles == 2 && audioPlays > 20, "Required animation/audio recovery coverage was not executed.");
+                if (!baseline) Require(siblingFrames > 20, "Repeated entrances were not exercised through animation.");
                 Finish(true, "");
             }
         }
@@ -145,6 +169,13 @@ public sealed class PresentationDriver : MonoBehaviour
     {
         if (tick == 1 || tick == 70) animator.Play("hover", 0, 0);
         if (tick == 35) animator.Play("leave", 0, 0);
+        for (var index = 0; index < siblings.Count; index++)
+        {
+            var sibling = siblings[index].Animator;
+            if (sibling == null) continue;
+            if (tick == 2 + index * 3 || tick == 70 + index * 2) sibling.Play("hover", 0, 0);
+            if (tick == 35 + index * 2) sibling.Play("leave", 0, 0);
+        }
         if (tick == 20 || tick == 90 || tick == 160) Resources.UnloadUnusedAssets();
         if (tick % 10 == 0) { GC.Collect(); IL2CPP.il2cpp_gc_collect(0); GC.WaitForPendingFinalizers(); }
         if (tick == 40) UnityEngine.Object.Destroy(CachedClips()["result"]);
@@ -197,7 +228,7 @@ public sealed class PresentationDriver : MonoBehaviour
         if (finished) return; finished = true;
         voices?.Dispose(); foreach (var keeper in keepers) if (!keeper.WasCollected && keeper != null) UnityEngine.Object.Destroy(keeper);
         File.WriteAllText(Environment.GetEnvironmentVariable("MALODY_PRESENTATION_RESULT")!, JsonSerializer.Serialize(new {
-            passed, error, baseline, managedCastWorks, initialSlideWorks, audioErrors, checks, audioPlays, intermediateFrames, recoveredHandles,
+            passed, error, baseline, managedCastWorks, initialSlideWorks, audioErrors, checks, audioPlays, intermediateFrames, siblingFrames, recoveredHandles,
             scope = "isolated Unity f3 IL2CPP; WAV/OGG; GC, unused-asset unload, scene changes and explicit collected-handle fault injection; not actual f2 game"
         }, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.Combine(Paths.GameRootPath, "motion-frames.json"), JsonSerializer.Serialize(motionFrames));

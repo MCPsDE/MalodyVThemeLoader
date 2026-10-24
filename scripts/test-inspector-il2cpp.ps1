@@ -21,13 +21,14 @@ Copy-Item -Path (Join-Path $repo 'vendor\bepinex\*') -Destination $playerRoot -R
 $references=Get-ChildItem (Join-Path $repo 'generated\game-libs') -Filter '*.dll' | Where-Object Name -Match '^(UnityEngine|Il2Cpp)' | ForEach-Object {
     '<Reference Include="'+$_.BaseName+'"><HintPath>'+[Security.SecurityElement]::Escape($_.FullName)+'</HintPath><Private>false</Private></Reference>'
 }
-$sources=@('InspectorInputFence','SceneNodeLocator','SceneNodeTargets','SceneComponentQuery','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ThemeAssetStore','ThemeResourceImages','BuiltInOverlayVisibility') | ForEach-Object {
+$sources=@('InspectorInputFence','SceneNodeLocator','SceneNodeTargets','SceneComponentQuery','SceneAddressIndex','NodeDecorationService','SceneInspectorController','ThemeAssetStore','ThemeResourceImages','BuiltInOverlayVisibility','Live2dClickSurface','Live2dResultAnimation') | ForEach-Object {
     '<Compile Include="'+[Security.SecurityElement]::Escape((Join-Path $repo "src\MalodyVThemeLoader.Plugin\$_.cs"))+'"/>'
 }
 $xml='<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net6.0</TargetFramework><LangVersion>latest</LangVersion><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.785"/>'+($references -join '')+($sources -join '')+'<ProjectReference Include="'+[Security.SecurityElement]::Escape((Join-Path $repo 'src\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj'))+'"/></ItemGroup></Project>'
 [IO.File]::WriteAllText((Join-Path $build 'Probe.csproj'),$xml)
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'validation\InspectorIl2CppProbe.cs') -Destination (Join-Path $build 'Probe.cs') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'validation\OverlayVisibilityValidation.cs') -Destination (Join-Path $build 'OverlayVisibilityValidation.cs') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'validation\Live2dInteractionValidation.cs') -Destination (Join-Path $build 'Live2dInteractionValidation.cs') -Force
 dotnet build (Join-Path $build 'Probe.csproj') -c Release -o (Join-Path $build 'output') -p:UseSharedCompilation=false -v quiet
 if($LASTEXITCODE -ne 0){throw 'IL2CPP runtime probe compile failed.'}
 $plugin=Join-Path $playerRoot 'BepInEx\plugins\Probe'; New-Item -ItemType Directory -Force -Path $plugin | Out-Null

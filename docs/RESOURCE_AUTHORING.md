@@ -58,6 +58,12 @@ border 使用 Unity 顺序：x 左、y 下、z 右、w 上。空 scene 表示全
 
 这些节点的原始 Graphic 持续保持透明，直接替换它的 Sprite 不会恢复可见度，应使用“节点底图”。移除自定义底图后，该区域继续透明。Default 文件仍为原始源资源，加载器的这五处显示调整同样适用。真实的 `Canvas/Image` / `shop_bg1.png` 图片叠层及其他位置复用的 `g-white.png` 不在清除范围。
 
+2.6.9 补齐大厅其余五个入口：`CanvasForegroundDPI/LeftPanel/EntranceIcon (1)/mask/tip` 至 `EntranceIcon (5)/mask/tip` 同样清除原始半透明底色，六个入口的提示区域统一使用平移显示，支持添加独立节点底图。
+
+结算的 `SceneResult/Canvas/Image` 使用真正的图片 `Textures/Malody/shop_bg1.png`，主题位置为 `themes/<主题>/images/Textures/Malody/shop_bg1.png`，源文件位于 `E:\UnityProjects\Emiria\Assets\Malody\Textures\Malody\shop_bg1.png`。2.6.9 保留该文件，将 Image 组件预设的 44.7% 不透明度恢复为 100%，并清除结算主相机的预设蓝色清屏底色；替换 PNG 的颜色和文件自身 alpha 均保留。可在资源编辑器搜索 `shop_bg1` 并选择 SceneResult 范围替换，或在在线调试选择 `Canvas/Image` 添加节点底图；需整个结算画面作背景时选择该节点，分数面板根只覆盖面板本身。
+
+Live2D 的点击接收范围随实际替换模型的大小、偏移和投影扩大，原有按钮和前景界面仍按游戏的 UI 顺序处理。区域动画仍使用编辑器预览中的整个模型坐标，无需重新画区域；未绑定位置继续使用默认点击动画。M1–M5 从结算页实际显示的评级图识别，兼容 Unity 图集的 `(Clone)` 名称；绑定保存在 `live2d/replacement.json`。模型延迟创建时保留待播放结果，播放结束后回到待机，重复扫描不重播。成功时游戏日志增加 `Live2D result animation: M… -> …`，方便确认当前绑定。
+
 ## 验证范围
 
 同一张原图可以同时拥有多条场景替换。在右侧点击“新增场景替换”，选择“应用范围”，导入新图后保存；已有场景不会被移走。在“已保存的替换”中切回大厅、选曲或具体控件，可以继续编辑各自的文件和九宫格。“恢复此范围”只删除当前选中的规则。“所有场景”作为基础图片，各场景规则优先于它。

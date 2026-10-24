@@ -28,8 +28,16 @@ internal static class OverlayVisibilityValidation
         }
         var previous = SceneManager.GetActiveScene();
         var entrance = Rect("CanvasForegroundDPI", null);
-        var tip = Background("tip", Rect("mask", Rect("EntranceIcon", Rect("LeftPanel", entrance))));
-        Require(BuiltInOverlayVisibility.Hide(tip) && tip.color.a == 0, "Entrance tip overlay was not cleared in its exact hierarchy.");
+        var left = Rect("LeftPanel", entrance);
+        foreach (var name in BuiltInOverlayVisibility.EntranceNames)
+        {
+            var icon = Rect(name, left);
+            var tip = Background("tip", Rect("mask", icon));
+            Require(BuiltInOverlayVisibility.Hide(tip) && tip.color.a == 0, "Entrance overlay was not cleared: " + name);
+            Require(tip.enabled && tip.transform.parent.gameObject.activeSelf, "Removing a sibling entrance overlay hid its content.");
+        }
+        var outside = Background("tip", Rect("mask", Rect("EntranceIcon (6)", left)));
+        Require(!BuiltInOverlayVisibility.Hide(outside) && outside.color.a == .2f, "An unknown entrance was changed.");
         Object.DestroyImmediate(entrance.gameObject);
 
         var result = SceneManager.CreateScene("SceneResult"); SceneManager.SetActiveScene(result);
@@ -47,6 +55,22 @@ internal static class OverlayVisibilityValidation
         }
         var artwork = Background("Image", canvas.transform); artwork.color = new Color(1, 1, 1, .447f); artwork.gameObject.SetActive(false);
         Require(!BuiltInOverlayVisibility.Hide(artwork) && artwork.color.a == .447f, "Actual background artwork was cleared.");
+        Require(BuiltInOverlayVisibility.NormalizeResultBackground(artwork) && artwork.color == Color.white,
+            "Result artwork still blends the blue clear color through its component tint.");
+        Require(!BuiltInOverlayVisibility.NormalizeResultBackground(artwork), "Result background normalization is not idempotent.");
+        var backgroundCamera = new GameObject("Main Camera").AddComponent<Camera>();
+        backgroundCamera.clearFlags = CameraClearFlags.SolidColor; backgroundCamera.backgroundColor = new Color(49 / 255f, 77 / 255f, 121 / 255f, 0);
+        Require(BuiltInOverlayVisibility.ClearResultCamera(backgroundCamera) && backgroundCamera.backgroundColor == Color.clear,
+            "Result camera still supplies a blue background color.");
+        Require(!BuiltInOverlayVisibility.ClearResultCamera(backgroundCamera), "Result camera clearing is not idempotent.");
+        backgroundCamera.backgroundColor = Color.blue;
+        var duplicateCamera = new GameObject("Main Camera").AddComponent<Camera>();
+        Require(!BuiltInOverlayVisibility.ClearResultCamera(backgroundCamera), "Ambiguous camera roots were modified.");
+        Object.DestroyImmediate(duplicateCamera.gameObject); Object.DestroyImmediate(backgroundCamera.gameObject);
+        var otherArtwork = Background("Image", Rect("OtherArtwork", canvas.transform));
+        Require(!BuiltInOverlayVisibility.NormalizeResultBackground(otherArtwork) && otherArtwork.color.a == .2f,
+            "Unrelated image tint was changed.");
+        otherArtwork.gameObject.SetActive(false);
         var unrelated = Background("bgmask", Rect("OtherPanel", canvas.transform));
         Require(!BuiltInOverlayVisibility.Hide(unrelated) && unrelated.color.a == .2f, "A same-name node in another hierarchy was cleared.");
         var duplicate = Rect("bgmask", canvas.transform);
@@ -99,6 +123,26 @@ internal static class OverlayVisibilityValidation
             Require(SceneNodeLocator.Hit(node, point), "Decorated transparent overlay cannot be picked normally.");
             Require(!BuiltInOverlayVisibility.Hide(custom) && custom.color.a == 1, "Custom backgrounds were also suppressed.");
             if (render) Require(Math.Abs(Pixel().r - originalPixel.r) < .025f, "A semi-transparent PNG did not reproduce the original overlay pixels.");
+        }
+        if (render)
+        {
+            backdrop.gameObject.SetActive(false); artwork.gameObject.SetActive(true);
+            var artTexture = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            for (var y = 0; y < 4; y++) for (var x = 0; x < 4; x++) artTexture.SetPixel(x, y, new Color(.9f, .2f, .4f, 1));
+            artTexture.Apply(); artwork.sprite = Sprite.Create(artTexture, new Rect(0, 0, 4, 4), new Vector2(.5f, .5f));
+            camera.name = "Main Camera"; camera.backgroundColor = new Color(49 / 255f, 77 / 255f, 121 / 255f, 0);
+            artwork.color = Color.white; var expectedArtwork = Pixel();
+            artwork.color = new Color(1, 1, 1, .44705883f); var blueMix = Pixel();
+            Require(Math.Abs(blueMix.r - expectedArtwork.r) > .1f, "The blue-clear/transparent-artwork composite was not reproduced.");
+            Require(BuiltInOverlayVisibility.NormalizeResultBackground(artwork) && BuiltInOverlayVisibility.ClearResultCamera(camera),
+                "Result background presentation was not normalized.");
+            var restoredArtwork = Pixel();
+            Require(Math.Abs(restoredArtwork.r - expectedArtwork.r) < .025f && Math.Abs(restoredArtwork.g - expectedArtwork.g) < .025f
+                && Math.Abs(restoredArtwork.b - expectedArtwork.b) < .025f, "Removing the blue backdrop changed opaque replacement PNG colors.");
+            for (var y = 0; y < 4; y++) for (var x = 0; x < 4; x++) artTexture.SetPixel(x, y, new Color(.9f, .2f, .4f, .25f));
+            artTexture.Apply();
+            Require(Pixel().r < restoredArtwork.r - .1f, "Artwork's own alpha was lost when removing the component tint.");
+            Object.DestroyImmediate(artwork.sprite); Object.DestroyImmediate(artTexture);
         }
         if (camera != null) { camera.targetTexture = null; Object.DestroyImmediate(camera.gameObject); target.Release(); Object.DestroyImmediate(target); }
         Object.DestroyImmediate(canvas.gameObject);

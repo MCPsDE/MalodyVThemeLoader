@@ -90,10 +90,13 @@ try {
     $binding.ClickRegions.Add($overlap)
     Assert ($events.GetMethod('ClickMotion').Invoke($null,@($binding,[single]0.5,[single]0.15)) -eq $binding.IdleMotion) 'Last-drawn region priority failed.'
     $binding.ClickRegions.RemoveAt(1)
-    for($rank=1; $rank -le 5; $rank++) {
-        Assert ($events.GetMethod('ResultFromSprite').Invoke($null,@('rank_score_2'+$rank)) -eq ('M'+(6-$rank))) 'Displayed result rank mapping is wrong.'
+    for($level=0; $level -le 4; $level++) { for($rank=1; $rank -le 5; $rank++) {
+        foreach($suffix in @('', '(Clone)')) {
+            Assert ($events.GetMethod('ResultFromSprite').Invoke($null,@("rank_score_$level$rank$suffix")) -eq ('M'+(6-$rank))) 'Displayed result rank mapping is wrong.'
+        }
     }
-    foreach($invalid in @('rank_score_bg_2','rank_score_20','rank_score_211','rank_score_91','not-a-result')) {
+    }
+    foreach($invalid in @('rank_score_bg_2','rank_score_20','rank_score_211','rank_score_91','not-a-result','rank_score_bg_2(Clone)','rank_score_20(Clone)','rank_score_211(Clone)','rank_score_91(Clone)','rank_score_21(Clone)(Clone)')) {
         Assert ($events.GetMethod('ResultFromSprite').Invoke($null,@($invalid)) -eq '') 'Non-result artwork triggered a result event.'
     }
     $options = $shared.GetType('MalodyVThemeLoader.Shared.JsonDefaults').GetField('Options').GetValue($null)

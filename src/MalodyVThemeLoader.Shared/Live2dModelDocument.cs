@@ -65,6 +65,11 @@ public static class Live2dEvents
     public static readonly string[] ResultKeys = { "M1", "M2", "M3", "M4", "M5" };
     public static string ResultFromSprite(string sprite)
     {
+        if (string.IsNullOrEmpty(sprite)) return "";
+        // SpriteAtlas.GetSprite returns a clone. The asset resolver already
+        // accepts this suffix; result animation dispatch must accept it too.
+        const string clone = "(Clone)";
+        if (sprite.EndsWith(clone, StringComparison.Ordinal)) sprite = sprite[..^clone.Length];
         const string prefix = "rank_score_";
         if (!sprite.StartsWith(prefix, StringComparison.Ordinal) || sprite.Length != prefix.Length + 2
             || sprite[prefix.Length] < '0' || sprite[prefix.Length] > '4') return "";

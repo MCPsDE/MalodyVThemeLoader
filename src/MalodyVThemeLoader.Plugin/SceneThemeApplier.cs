@@ -47,6 +47,10 @@ internal sealed class SceneThemeApplier
         var legacyTextCount = 0;
         var cubismRendererCount = 0;
 
+        if (sceneName == "SceneResult")
+            foreach (var camera in SceneComponentQuery.Find<Camera>(sceneName))
+                if (BuiltInOverlayVisibility.ClearResultCamera(camera)) changed++;
+
         foreach (var image in SceneComponentQuery.Find<Image>(sceneName))
         {
             if (!IsSceneComponent(image, sceneName)
@@ -57,6 +61,7 @@ internal sealed class SceneThemeApplier
 
             imageCount++;
             if (BuiltInOverlayVisibility.Hide(image)) changed++;
+            if (BuiltInOverlayVisibility.NormalizeResultBackground(image)) changed++;
             var videoState = videos.ApplyImage(image, true);
             if (videoState == ThemeVideoApplyState.Changed)
             {
@@ -218,6 +223,7 @@ internal sealed class SceneThemeApplier
         }
 
         var changed = BuiltInOverlayVisibility.Hide(image);
+        changed |= BuiltInOverlayVisibility.NormalizeResultBackground(image);
         var videoState = videos.ApplyImage(image, logChange);
         if (videoState == ThemeVideoApplyState.Changed)
         {

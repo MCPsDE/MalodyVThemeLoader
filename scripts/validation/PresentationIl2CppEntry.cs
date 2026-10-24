@@ -17,14 +17,18 @@ public static class PresentationBuild
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var canvas = Rect("CanvasForegroundDPI", null); canvas.gameObject.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         var panel = Rect("LeftPanel", canvas);
-        var entrance = Rect("EntranceIcon", panel); entrance.sizeDelta = new Vector2(274, 81);
-        var animator = entrance.gameObject.AddComponent<Animator>();
-        animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/entranceIcon.controller");
-        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-        var mask = Rect("mask", entrance); mask.anchorMin = Vector2.zero; mask.anchorMax = new Vector2(0, 1); mask.sizeDelta = Vector2.zero;
-        mask.gameObject.AddComponent<RectMask2D>();
-        var tip = Rect("tip", mask); tip.anchorMin = Vector2.zero; tip.anchorMax = Vector2.one; tip.sizeDelta = Vector2.zero;
-        tip.gameObject.AddComponent<Image>();
+        for (var index = 0; index < 6; index++)
+        {
+            var entrance = Rect(index == 0 ? "EntranceIcon" : $"EntranceIcon ({index})", panel); entrance.sizeDelta = new Vector2(274, 81);
+            entrance.anchoredPosition = new Vector2(0, -85 * index);
+            var animator = entrance.gameObject.AddComponent<Animator>();
+            animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/entranceIcon.controller");
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            var mask = Rect("mask", entrance); mask.anchorMin = Vector2.zero; mask.anchorMax = new Vector2(0, 1); mask.sizeDelta = Vector2.zero;
+            mask.gameObject.AddComponent<RectMask2D>();
+            var tip = Rect("tip", mask); tip.anchorMin = Vector2.zero; tip.anchorMax = Vector2.one; tip.sizeDelta = Vector2.zero;
+            tip.gameObject.AddComponent<Image>();
+        }
         EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), "Assets/SceneSong.unity");
         var directory = Path.Combine(Directory.GetCurrentDirectory(), "player"); Directory.CreateDirectory(directory);
         var build = BuildPipeline.BuildPlayer(new[] { "Assets/SceneSong.unity" }, Path.Combine(directory, "PresentationProbe.exe"), BuildTarget.StandaloneWindows64, BuildOptions.None);

@@ -206,3 +206,16 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - 保留历史输入基线；源工程与游戏核心 exe/Data、BepInEx core/interop/unity-libs 变化记录均为 0。完整 VerifyStable 仍因历史加载器、玩家内容和其他插件变化失败，没有重录基线、扩大排除或回滚玩家文件。范围统计和全差异位于 `artifacts/recheck-2.6.8/reference-scoped.json`、`reference-changes.json`。
 - 最终安装器 `MalodyVThemeLoader-Setup-2.6.8.exe`，314,202,057 bytes，SHA-256 `fd74c4e0341e3fbe38180d6e9981eea160f2ade9622e3dc64a3086f7f4a9469c`，ProductVersion 为 `2.6.8+1dcf7b3b4083511737aa0ab20b828f60d238f937`。源代码在构建前提交，该源提交同时用于 v2.6.8 标签。
 - GitHub v2.6.8 已于 2026-10-24 正式发布，Release ID 为 422577521，draft/prerelease 均为 false；`/releases/latest` 已返回 v2.6.8，供管理器自动更新。三个附件逐一核对大小及 SHA-256 digest，与本地一致；记录在 `artifacts/recheck-2.6.8/release-assets.json`、`published-release.json`、`latest-release.json`。
+
+## 2.6.9 结算背景、完整模型点击、评级动作与六个入口
+
+验证日期：2026-10-24。四项修复合并为同一补丁版本。
+
+- SceneResult 的真实图片是 `Canvas/Image` 的 `Textures/Malody/shop_bg1.png`。当前 Murasame 文件已换成粉色角色图；源场景仍以 Image Alpha≈0.447 混合主相机 #314D79 的清屏 RGB，形成蓝色偏色。仅修改该唯一场景路径的组件不透明度与唯一主相机的固色清屏；背景文件本身、PNG 自身 Alpha、自定义节点底图、其他相机和其他 Image 保留。原来的结算 bgmask/底栏清透明继续有效。
+- 六个入口 `EntranceIcon` 至 `EntranceIcon (5)` 的 `mask/tip` 全部清除原始半透明背景，并各自绑定 Animator 曲线进行满宽平移。完整路径逐级检查歧义；未知后缀不修改。未全局替换通用白图，没有删节点、文字、点击或 RectMask2D。
+- Live2dClickSurface 将模型局部边界经主相机投影到原生 UI Graphic，扩大其 raycastPadding；不改角色适配用的 RectTransform，不增加全屏输入钩子或高层拦截面。不同缩放/偏移、镜像、旋转、透视/正交和 UI overlay 模式下均验证命中位置与编辑器归一化坐标一致；前景 Button 优先，屏幕空白不误命中，投影失效和主题释放会恢复旧 padding。
+- 原生 SpriteAtlas.GetSprite 实际返回 `rank_score_45(Clone)`，旧 ResultFromSprite 的精确长度匹配会丢弃有效评级。解析剥离一次已知后缀，仍从显示层读取结果，不读写成绩、判定或提交逻辑。每个替换模型独立记住已播放结果，动作确实成功提交后才标记；模型未准备好可重试，轮询不重播。成功日志记录评级与动作文件。
+- `test-inspector-il2cpp.ps1`：原生隔离播放器通过 595 项新增交互/评级断言、36 项遮罩/背景断言、600 次拾取与 100 次节点重载。真实打包的 25 个评级 Sprite 均映射至 M1–M5 并各提交一次动作，重复轮询不重复提交；点击使用替代模型几何而非实际 Cubism 模型。证据：`artifacts/recheck-2.6.9/native-inspector.json`。
+- `test-presentation-il2cpp.ps1`：1,225 项断言，原入口 44 个中间帧、其余入口共 220 个独立中间帧；旧语音生命周期回归继续通过，48 次播放及 2 次主动失效句柄恢复。证据：`artifacts/recheck-2.6.9/native-presentation.json`。
+- `test-inspector-runtime.ps1 -Standalone`：5,042 项断言，包含实际像素检查：复现蓝色清屏与 .447 图片合成，修复后不透明替换 PNG 的 RGB 与参考渲染误差小于 .025，PNG 自身透明度仍有效。原有半透明底图重建、视频、节点粗框、穿透搜索和性能回归通过。证据：`artifacts/recheck-2.6.9/inspector-runtime.json`。
+- Live2D 编辑器/工作台测试通过，覆盖五档绑定保存、50 组普通/Clone 名称解析、所有 12 个样本动作、导入覆盖、音频、预览和恢复；全解决方案 Release 构建零警告零错误。隔离原生播放器为 Unity 2022.3.62f3，实际游戏为 f2；没有启动或写入真实游戏，没有把这些结果声称为用户现场的多插件端到端验证。

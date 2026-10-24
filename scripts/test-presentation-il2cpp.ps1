@@ -33,7 +33,7 @@ if($Baseline){
     [IO.File]::WriteAllText($controllerSource,($oldSource -join "`n"))
 }
 $sources='<Compile Include="'+[Security.SecurityElement]::Escape($controllerSource)+'"/>'
-foreach($name in @('UnityAudioClipFactory','AnimationAudioPlayer')) {
+foreach($name in @('UnityAudioClipFactory','AnimationAudioPlayer','BuiltInOverlayVisibility')) {
     $sources+='<Compile Include="'+[Security.SecurityElement]::Escape((Join-Path $repo "src\MalodyVThemeLoader.Plugin\$name.cs"))+'"/>'
 }
 $xml='<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net6.0</TargetFramework><LangVersion>latest</LangVersion><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies></PropertyGroup><ItemGroup><PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.785"/>'+($references -join '')+$sources+'<ProjectReference Include="'+[Security.SecurityElement]::Escape((Join-Path $repo 'src\MalodyVThemeLoader.Shared\MalodyVThemeLoader.Shared.csproj'))+'"/></ItemGroup></Project>'

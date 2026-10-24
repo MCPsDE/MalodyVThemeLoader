@@ -1,5 +1,10 @@
 # 开发踩坑记录（持续维护）
 
+- 结算动画不能拿 Unity 图集返回的 Sprite.name 直接做无后缀的精确匹配。真实 SpriteAtlas.GetSprite 返回 `rank_score_21(Clone)`，旧解析器把五档评级全部丢弃；不要从成绩计算或提交逻辑补读数据。解析已显示的 rank 图，只剥离一次明确的 `(Clone)`，用实际打包图集验证五种判定级别 × 五档评级、无效名称拒绝、模型未准备好的重试及轮询不重播。优先读当前可见 Sprite，不无条件依赖可能已卸载的原始纹理包装器。
+- 角色区域坐标正确不代表能收到点击：原生 UGUI 会先用旧角色的 RectTransform 拒绝超出矩形的指针。用新模型边界经实际模型相机投影到原 Graphic 的坐标，设置负 raycastPadding 扩大接收范围；不要改 RectTransform 尺寸（它可能还用于模型适配）、添加顶层拦截层或轮询全局鼠标。保留原射线排序、按钮和裁剪；恢复主题时还原 padding。原生测试须先经过实际渲染帧，Graphic.depth 在刚创建后为 -1，ForceUpdateCanvases 本身不保证已经可被 GraphicRaycaster 命中。
+- 同源入口有六个场景实例，名称为 `EntranceIcon`、`EntranceIcon (1)` 至 `(5)`。只硬编码第一条完整路径会漏掉其余阴影和动画；根据源场景列出完整已确认名称，并逐级拒绝同名歧义，不用任意前缀匹配扩散到其他节点。平移绑定为每个入口保留独立 Animator 进度，并回归所有实例。
+- 蓝色遮罩也可能是背景合成而非独立图片。SceneResult 主相机清屏 RGB 为 #314D79，即便清屏 alpha=0，普通桌面后缓冲仍会显示它的 RGB；Canvas/Image 的 Image.color.a≈0.447 又让替换的完整 PNG 与此蓝底混合。2.6.9 仅将该场景唯一 Main Camera 的固色清屏改为透明黑、唯一 Canvas/Image 的组件 alpha 改为 1，保留图片自身 RGB/alpha 和文件；真实 shop_bg1 图片与纯色 bgmask 必须分别解释。用实际像素比较确认用户 PNG 不再偏蓝，透明 PNG 仍可透出下层。
+
 - 移除原始色块只改目标 Image.color.a，不能把 CanvasGroup.alpha 设为 0、禁用整个 GameObject 或删除裁剪组件，否则用户添加的底图、文字、点击或裁剪会一起失效。2.6.8 仅匹配入口 tip 与结算 bgmask/三个底栏的五条完整场景层级，并逐级检查同名唯一性；其他 Image、真实背景纹理、调试装饰保持各自行为。验证透明节点仍能穿透拾取、添加半透明 PNG，并比较原色块与 PNG 重建后的渲染像素。
 
 - 半透明 UI 不一定有专用遮罩图片。入口 `mask/tip` 用通用纯白 `g-white.png` 配 Image 黑色、alpha≈0.502；结算 `Canvas/bgmask` 与底栏也靠 Image 着色，而 `Canvas/Image` 另外叠加真实 `shop_bg1.png`（alpha≈0.447）。只换 Sprite 不会清除 Image.color，移动 RectTransform 也不会改变它。调查时分别核对纹理、组件颜色和独立叠层；不可全局清除同名 mask 或替换复用的 g-white 来处理局部效果。

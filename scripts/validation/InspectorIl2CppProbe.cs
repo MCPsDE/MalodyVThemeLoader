@@ -55,6 +55,8 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
     private RectTransform target = null!;
     private int tick;
     private int overlayChecks;
+    private object? live2dInteraction;
+    private System.Collections.IEnumerator? interactionRun;
     public InspectorLifetimeDriver(IntPtr pointer) : base(pointer) { }
 
     private void Start()
@@ -63,27 +65,36 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
         {
             SceneManager.SetActiveScene(SceneManager.CreateScene("SceneSong"));
             overlayChecks = OverlayVisibilityValidation.Run(Paths.GameRootPath, false);
-            var canvas = new GameObject("Canvas"); canvas.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            target = new GameObject("Target").AddComponent<RectTransform>(); target.SetParent(canvas.transform, false); target.sizeDelta = new Vector2(241, 179);
-            var caption = new GameObject("Caption").AddComponent<Text>(); caption.transform.SetParent(canvas.transform, false);
-            caption.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); caption.text = "Runtime";
-            var directory = Path.Combine(Paths.GameRootPath, "fixture"); Directory.CreateDirectory(directory);
-            var texture = new Texture2D(16, 16, TextureFormat.RGBA32, false);
-            File.WriteAllBytes(Path.Combine(directory, "bg.png"), ImageConversion.EncodeToPNG(texture)); UnityEngine.Object.Destroy(texture);
-            theme = new LoadedTheme(directory, new ThemeManifest());
-            rules.Nodes.Add(new ThemeNodeRule { Scene = "SceneSong", Address = SceneNodeLocator.AddressOf(target), ImageFile = "bg.png", Fit = "cover" });
-            decorations = new NodeDecorationService(Plugin.Log, theme, rules); decorations.Tick();
-            var store = new ThemeAssetStore(Plugin.Log, theme, new AssetCatalog());
-            ThemeRuntime.Current = new ThemeRuntime { Theme = theme, Assets = store, Decorations = decorations };
-            ClassInjector.RegisterTypeInIl2Cpp<SceneInspectorController>();
-            inspector = gameObject.AddComponent<SceneInspectorController>(); inspector.Initialize(); Renew();
+            interactionRun = Live2dInteractionValidation.Run(value => live2dInteraction = value);
         }
         catch (Exception e) { Finish(false, e.ToString()); }
+    }
+    [HideFromIl2Cpp] private void PrepareInspector()
+    {
+        var canvas = new GameObject("Canvas"); canvas.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+        target = new GameObject("Target").AddComponent<RectTransform>(); target.SetParent(canvas.transform, false); target.sizeDelta = new Vector2(241, 179);
+        var caption = new GameObject("Caption").AddComponent<Text>(); caption.transform.SetParent(canvas.transform, false);
+        caption.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); caption.text = "Runtime";
+        var directory = Path.Combine(Paths.GameRootPath, "fixture"); Directory.CreateDirectory(directory);
+        var texture = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+        File.WriteAllBytes(Path.Combine(directory, "bg.png"), ImageConversion.EncodeToPNG(texture)); UnityEngine.Object.Destroy(texture);
+        theme = new LoadedTheme(directory, new ThemeManifest());
+        rules.Nodes.Add(new ThemeNodeRule { Scene = "SceneSong", Address = SceneNodeLocator.AddressOf(target), ImageFile = "bg.png", Fit = "cover" });
+        decorations = new NodeDecorationService(Plugin.Log, theme, rules); decorations.Tick();
+        var store = new ThemeAssetStore(Plugin.Log, theme, new AssetCatalog());
+        ThemeRuntime.Current = new ThemeRuntime { Theme = theme, Assets = store, Decorations = decorations };
+        ClassInjector.RegisterTypeInIl2Cpp<SceneInspectorController>();
+        inspector = gameObject.AddComponent<SceneInspectorController>(); inspector.Initialize(); Renew();
     }
     private void Update()
     {
         try
         {
+            if (interactionRun != null)
+            {
+                if (interactionRun.MoveNext()) return;
+                interactionRun = null; PrepareInspector(); return;
+            }
             if (inspector == null) return;
             if (tick % 10 == 0) Renew();
             if (tick % 10 == 0 && !SceneComponentQuery.Find<Text>("SceneSong").Any(text => text.name == "Caption"))
@@ -124,7 +135,7 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
     { control.PointerSearch = tick % 200 >= 100; control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(Path.Combine(Paths.GameRootPath, "ThemeLoader"), InspectorFiles.ControlName, control); }
     [HideFromIl2Cpp] private void Finish(bool passed, string error)
     {
-        File.WriteAllText(result, JsonSerializer.Serialize(new { passed, picks = tick, reloads = tick / 6, overlayChecks, error,
+        File.WriteAllText(result, JsonSerializer.Serialize(new { passed, picks = tick, reloads = tick / 6, overlayChecks, live2dInteraction, error,
             scope = "isolated Unity 2022.3.62f3 IL2CPP + pinned BepInEx 785; production sources; not the real game or other plugins" }, JsonDefaults.Options));
         enabled = false; Application.Quit(passed ? 0 : 1);
     }

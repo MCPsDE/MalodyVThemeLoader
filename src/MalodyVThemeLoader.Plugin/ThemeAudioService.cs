@@ -93,8 +93,7 @@ internal sealed class ThemeAudioService : IDisposable
         {
             var decoded = Live2dAudio.Decode(path);
             if (samplesLoaded + decoded.Samples.Length > 32 * 1024 * 1024) throw new InvalidDataException("Theme UI audio exceeds the decoded cache limit.");
-            clip = AudioClip.Create("ThemeLoader UI " + eventName, decoded.Samples.Length / decoded.Channels, decoded.Channels, decoded.SampleRate, false);
-            if (clip == null || !clip.SetData(decoded.Samples, 0)) throw new InvalidDataException("Unity could not prepare UI audio.");
+            clip = UnityAudioClipFactory.Create("ThemeLoader UI " + eventName, decoded);
             samplesLoaded += decoded.Samples.Length;
             clips[path] = clip;
             return clip;

@@ -85,9 +85,9 @@ internal static class EditResourceGetSpritePatch
 [HarmonyPatch(typeof(SceneSong), "Start")]
 internal static class SceneSongStartThemePatch
 {
-    private static void Postfix()
+    private static void Postfix(SceneSong __instance)
     {
-        EntranceIconSlideController.Bind(SceneManager.GetActiveScene());
+        EntranceIconSlideController.Bind(__instance.gameObject.scene);
         SceneStartThemePatch.Apply("SceneSong");
     }
 }

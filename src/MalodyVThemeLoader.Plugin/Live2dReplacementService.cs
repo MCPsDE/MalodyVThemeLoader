@@ -325,13 +325,8 @@ internal sealed class Live2dReplacementService : IDisposable
         private readonly List<Texture2D> textures;
         private readonly CubismMotion? idle;
         private readonly Dictionary<string, CubismMotion> actions;
-        private readonly Dictionary<string, AudioClip> clips = new(StringComparer.OrdinalIgnoreCase);
+        private readonly AnimationAudioPlayer audio;
         private readonly string idleFile;
-        private readonly ManualLogSource log;
-        private GameObject? audioOwner;
-        private AudioSource? audioSource;
-        private bool audioDisabled;
-        private bool audioFailureLogged;
         private CubismMotion? action;
         public string PlayedResult { get; set; } = "";
         private readonly Dictionary<string, CubismParameter> parameters;
@@ -347,10 +342,9 @@ internal sealed class Live2dReplacementService : IDisposable
 
         public Replacement(WidgetLive2dControl widget, GameObject original, CubismVisual visual,
             List<Texture2D> textures, CubismMotion? idle, Dictionary<string, CubismMotion> actions, string idleFile,
-            Dictionary<string, Live2dAudio> audio, ManualLogSource log)
+            Dictionary<string, Live2dAudio> audioData, ManualLogSource log)
         {
             Widget = widget; Original = original; Visual = visual; this.textures = textures; this.idle = idle; this.actions = actions;
-            this.log = log;
             parameters = visual.Model.GetComponentsInChildren<CubismParameter>(true).ToDictionary(p => p.name, StringComparer.Ordinal);
             defaults = parameters.ToDictionary(p => p.Key, p => p.Value.Value, StringComparer.Ordinal);
             parts = visual.Model.GetComponentsInChildren<CubismPart>(true).ToDictionary(p => p.name, StringComparer.Ordinal);
@@ -359,26 +353,7 @@ internal sealed class Live2dReplacementService : IDisposable
             legacy = original.GetComponent<LAppModelProxy>();
             legacyVisible = legacy != null && legacy.GetVisible();
             this.idleFile = idleFile;
-            try
-            {
-                foreach (var pair in audio)
-                {
-                    var data = pair.Value;
-                    var clip = AudioClip.Create("ThemeLoader." + pair.Key, data.Samples.Length / data.Channels, data.Channels, data.SampleRate, false);
-                    clips.Add(pair.Key, clip);
-                    if (!clip.SetData(data.Samples, 0)) throw new InvalidDataException("动画音频创建失败。");
-                }
-                if (clips.Count > 0)
-                {
-                    // The game recreates and destroys its Live2D widget as scenes
-                    // change. Keep the audio component on our own persistent host.
-                    audioOwner = new GameObject("ThemeLoader Live2D Audio") { hideFlags = HideFlags.HideAndDontSave };
-                    UnityEngine.Object.DontDestroyOnLoad(audioOwner);
-                    audioSource = audioOwner.AddComponent<AudioSource>();
-                    audioSource.playOnAwake = false; audioSource.loop = false; audioSource.spatialBlend = 0;
-                }
-            }
-            catch { DisposeAudio(); throw; }
+            audio = new AnimationAudioPlayer(log, audioData);
         }
 
         public void HideOriginal()
@@ -399,67 +374,11 @@ internal sealed class Live2dReplacementService : IDisposable
         public void Play(string file)
         {
             if (string.IsNullOrEmpty(file) || !actions.TryGetValue(file, out var motion)) return;
-            action = motion; actionAt = Time.unscaledTime; PlayAudio(file);
+            action = motion; actionAt = Time.unscaledTime; audio.Play(file);
         }
 
-        private void PlayAudio(string file)
-        {
-            StopAudio();
-            if (audioDisabled || !clips.TryGetValue(file, out var clip)) return;
-            var source = audioSource;
-            if (source is null) return;
-            try
-            {
-                source.clip = clip;
-                source.Play();
-            }
-            catch (Exception e) { DisableAudio(e); }
-        }
-
-        public void StartIdleAudio() { idleAt = Time.unscaledTime; StopAudio(); if (idle != null) PlayAudio(idleFile); }
-        public void StopAudio()
-        {
-            if (audioDisabled) return;
-            var source = audioSource;
-            if (source is null) return;
-            try { source.Stop(); }
-            catch (Exception e) { DisableAudio(e); }
-        }
-
-        private void DisableAudio(Exception exception)
-        {
-            if (!audioFailureLogged)
-            {
-                audioFailureLogged = true;
-                log.LogWarning($"Live2D animation audio stopped; model animation remains active: {exception}");
-            }
-            audioDisabled = true;
-            DisposeAudio();
-        }
-
-        private void DisposeAudio()
-        {
-            var source = audioSource;
-            audioSource = null;
-            if (source is not null)
-            {
-                try { source.Stop(); source.clip = null; }
-                catch { }
-            }
-            var owner = audioOwner;
-            audioOwner = null;
-            if (owner is not null)
-            {
-                try { UnityEngine.Object.Destroy(owner); }
-                catch { }
-            }
-            foreach (var clip in clips.Values)
-            {
-                try { UnityEngine.Object.Destroy(clip); }
-                catch { }
-            }
-            clips.Clear();
-        }
+        public void StartIdleAudio() { idleAt = Time.unscaledTime; audio.Stop(); if (idle != null) audio.Play(idleFile); }
+        public void StopAudio() => audio.Stop();
 
         public void Animate()
         {
@@ -489,7 +408,7 @@ internal sealed class Live2dReplacementService : IDisposable
 
         public void Dispose()
         {
-            DisposeAudio();
+            audio.Dispose();
             foreach (var pair in originalRenderers) if (pair.Renderer != null) pair.Renderer.forceRenderingOff = pair.ForceRenderingOff;
             if (legacy != null) legacy.SetVisible(legacyVisible);
             Visual.Dispose();

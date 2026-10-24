@@ -1,5 +1,9 @@
 # 开发踩坑记录（持续维护）
 
+- IL2CPP 的 `Transform.Find` / `parent` 可返回 CLR 基础 Transform 包装器，即便底层确实是 RectTransform，C# `as` / `is` 也会失败。2.6.6 的入口提示平移因此完全没有绑定，旧 Mono 隔离测试无法发现；改用 `GetComponent<RectTransform>()`，并在原生 IL2CPP 播放器中回放原动画、逐帧检查固定宽度和位移。场景 Start 后绑定使用实例所属 scene，避免 additive 场景下误用 active scene。
+- .NET 字典保留 AudioClip 包装器不等于 Unity 资源保活：`Resources.UnloadUnusedAssets` 会清除未绑定音源的缓存语音。自建缓存设置 `DontUnloadUnusedAsset`，显式管理销毁；逐项检查 `WasCollected` 及 Unity 对象存活，失效后重建，不能一次报错就永久关闭语音。固定 Il2CppInterop 的全局 wrapper pool 命中没有排除 WasCollected；自建 AudioClip 使用与游戏 helper 相同的 Construct_Internal / CreateUserSound 接口创建新包装器，显式保留 SetData 数组至调用结束，不修改全局池。
+- 必须区分自然复现与故障注入：本轮隔离 f3 IL2CPP 自然复现的是缓存被 UnloadUnusedAssets 清除后的 native NullReference，用户的 ObjectCollectedException 没有完整现场栈，不能说成相同根因已自然复现。测试主动使自有 clip/source 句柄失效，确认抛出该异常及后续触发恢复；隔离 Unity f3 的通过不能替代实际游戏 f2 的现场验证。
+
 - PowerShell 调用 rg 时不要把 README* 或 src/Foo*.cs 当作路径参数：通配符不一定由 shell 展开，Windows 会报文件名语法错误。传真实目录，再用 -g 'README*' / -g 'Foo*.cs' 过滤；先用 rg --files 确认文件名，避免猜测协议类的文件路径。
 - GitHub 草稿 Release 已存在且附件上传完成时，按 /releases/tags/<tag> 查询仍可能返回 404，gh create 还会打印 untagged 草稿地址。这不等于创建失败；用授权后的 releases 列表按 tag_name 定位，再按 release ID 校验附件的 state/size/digest。不要重复创建或重传；核对完成再发布，随后用 /releases/latest 确认正式标签。
 

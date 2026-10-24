@@ -22,9 +22,13 @@ internal static class EntranceIconSlideController
             if (!string.Equals(root.name, CanvasName, StringComparison.Ordinal)) continue;
 
             var entrance = root.transform.Find(PanelName + "/" + EntranceName);
-            var mask = entrance?.Find(MaskName) as RectTransform;
+            // Transform.Find returns a base CLR wrapper in IL2CPP. Managed
+            // `as` / pattern casts cannot discover its native RectTransform.
+            var mask = entrance?.Find(MaskName)?.GetComponent<RectTransform>();
             var animator = entrance?.GetComponent<Animator>();
-            if (mask == null || animator == null || mask.parent is not RectTransform parent) return;
+            if (mask == null || animator == null) return;
+            var parent = mask.parent?.GetComponent<RectTransform>();
+            if (parent == null) return;
 
             var progress = Mathf.Clamp01(mask.anchorMax.x);
             binding = new Binding(animator, mask, progress);
@@ -37,7 +41,8 @@ internal static class EntranceIconSlideController
     {
         var current = binding;
         if (current == null || current.Animator == null || current.Mask == null) return;
-        if (current.Mask.parent is not RectTransform parent) return;
+        var parent = current.Mask.parent?.GetComponent<RectTransform>();
+        if (parent == null) return;
 
         if (current.Animator.isActiveAndEnabled)
         {

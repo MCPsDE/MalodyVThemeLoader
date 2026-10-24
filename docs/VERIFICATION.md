@@ -179,3 +179,16 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - 最终安装器：`MalodyVThemeLoader-Setup-2.6.6.exe`，314,197,961 bytes，SHA-256 `8365ef822290cb836f4087e55b22eba96ea127cd4ae2a0871352a2dba0997f30`。
 - 最终 EXE 的 dry-run、内嵌离线安装、安装后验证、修复、卸载及未拥有 winhttp.dll 拒绝覆盖通过；外部 BepInEx 复用、所有权保留、文件锁回滚、禁用 Doorstop / Mono 入口 / 缺失核心库拒绝修改通过。对应 `test-installer.ps1` 与 `test-runtime-reuse.ps1`，全部仅操作 artifacts 内的假游戏目录。
 - GitHub v2.6.6 已公开发布并设为 Latest，2026-10-24 的 /releases/latest 返回该标签。三个附件均为 uploaded，逐一与本地 size / SHA-256 digest 一致；记录在 `artifacts/release-assets-2.6.6.json` 和 `artifacts/published-release-2.6.6.json`。发布标签对应 d413a78d744e50cedb181be7bb65807d24c7130a，之后只补发布审计与草稿查询踩坑文档。
+
+## 2.6.7 入口提示平移与动画语音复查
+
+验证日期：2026-10-24。实际游戏目录、Emiria 源目录仅用于读取；没有安装到实际游戏或操作其窗口。
+
+- 旧入口提示平移存在确定的 IL2CPP 绑定缺陷：`Transform.Find` 返回基础 CLR wrapper，`as RectTransform` 与 `is RectTransform` 均失败；Mono 测试无法暴露此差异。新增原生基线诊断记录 `managedCastWorks=false`、`initialSlideWorks=false`。生产代码通过 `GetComponent<RectTransform>()` 获取 mask 和父节点，SceneSong.Start 使用实例所属 scene。只处理原指定入口路径。
+- `test-presentation-il2cpp.ps1` 在独立 Unity 2022.3.62f3 / IL2CPP / 固定 BepInEx 785 播放器加载生产控制器和实际语音服务，回放原入口 Animator；修复后 `initialSlideWorks=true`，44 个中间帧保持 mask 与 tip 完整宽度，原曲线进度映射为横向位移。补充 `test-entrance-icon-motion.ps1` 检查原进入/离开曲线及 empty 状态两端位置保留，均通过。
+- 语音基线自然复现了缓存仅被 .NET 字典持有时，在 `Resources.UnloadUnusedAssets` 后失效的 native NullReference；没有自然复现用户原始 ObjectCollectedException，也没有取得其完整现场栈。新工厂复用游戏同名 Unity binding 创建新 AudioClip wrapper，显式保留采样数组与 native 缓存；播放服务检查句柄及 Unity 对象存活，必要时重建音源/音频，异常后保留下次重试能力。
+- 原生回归共 409 项断言、48 次语音触发，覆盖 WAV/OGG、PCM 原生采样回读、双端 GC、未使用资源卸载、销毁缓存 clip / 宿主、卸载原场景、重复释放/创建。对自有 clip 与 source 显式注入两次已回收句柄，分别确认 ObjectCollectedException 后恢复后续播放；这是故障注入，不能写成用户现场自然复现。结果及原生逐帧数据保存在 `artifacts/recheck-2.6.7/fixed.json` 和 `artifacts/presentation-il2cpp-test/player/motion-frames.json`。测试的 f3 / Metadata31.1 与实际游戏 f2 / Metadata29 不同，保留现场验证范围限制。
+- Murasame 数据回归通过：全部 12 个动作、语音绑定及回滚、Unicode 动作导入、重复覆盖、实时启用与恢复。全解决方案 Release 构建零警告零错误，真实游戏互操作接口检查通过。缓存语音保留期间会保存解码数据供失效重建，卸载替换时统一释放。
+- 历史输入基线未重录：源工程与游戏核心 exe/Data、BepInEx core/interop/unity-libs 变化记录均为 0；完整 VerifyStable 仍因历史加载器、玩家内容及其他插件变化失败。全差异及范围统计保存在 `artifacts/recheck-2.6.7/reference-changes.json`、`reference-scoped.json`，不声称整个活动游戏目录未变。
+- 最终载荷校验通过：1,626 份 Default 源资源保持原样、1,428 个目录图像有效；插件仅引用运行时 IL2CPP/BepInEx 程序集。最终 EXE 的假游戏 dry-run、安装、验证、修复、卸载、外部 BepInEx 复用/所有权、锁定目标后的精确回滚及不兼容环境拒绝均通过；锁定文件与禁用 Doorstop 的错误输出属于主动故障测试。
+- 最终安装器 `MalodyVThemeLoader-Setup-2.6.7.exe`，314,202,057 bytes，SHA-256 `c243da25e82c61a81b6d1d52ff161d788e8dd79586df718007bd619a1ced5d40`。安装和更新应先退出游戏，重新启动后才加载新的插件 DLL。

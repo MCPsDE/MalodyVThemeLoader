@@ -24,6 +24,9 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private Vector2 lastPick;
     private float lastPickTime;
     private int cycle;
+    private readonly List<int> pointerHits = new();
+    private bool hasPointerSample;
+    private bool pointerInGame;
     private GameObject? overlay;
     private Mesh? mesh;
     private Material? material;
@@ -56,14 +59,15 @@ internal sealed class SceneInspectorController : MonoBehaviour
             var scene = SceneManager.GetActiveScene();
             if (scene.handle != sceneHandle)
             {
-                sceneHandle = scene.handle; nodes.Clear(); selected = 0; cycle = 0;
+                sceneHandle = scene.handle; nodes.Clear(); selected = 0; cycle = 0; ClearPointerSearch();
                 selectionOrigin = "scene"; revision++; nextSnapshot = 0;
             }
             if (now >= nextPoll)
             {
                 nextPoll = now + .25f;
                 var next = InspectorFiles.Read<InspectorControl>(loaderRoot, InspectorFiles.ControlName) ?? control;
-                if (next.Client != control.Client || next.IsLive && !control.IsLive) { failed = false; request = 0; selected = 0; revision = 0; }
+                if (next.Client != control.Client || next.IsLive && !control.IsLive) { failed = false; request = 0; selected = 0; revision = 0; ClearPointerSearch(); }
+                if (next.PointerSearch != control.PointerSearch) { ClearPointerSearch(); cycle = 0; nextSnapshot = 0; }
                 control = next;
             }
             if (failed && now >= retryAt) { failed = false; nextSnapshot = 0; }
@@ -71,6 +75,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
             if (!IsInspecting)
             {
                 if (overlay != null) overlay.SetActive(false);
+                ClearPointerSearch();
                 middleWasDown = false; return;
             }
             if (now >= nextSnapshot)
@@ -87,6 +92,18 @@ internal sealed class SceneInspectorController : MonoBehaviour
                 {
                     node.Info.HasBounds = SceneNodeLocator.Corners(node) != null;
                     node.Info.DecorationStatus = ThemeRuntime.Current?.Decorations.Status(node.Info.Scene, node.Info.Address) ?? "";
+                }
+                if (control.PointerSearch)
+                {
+                    if (Application.isFocused && TryMouse(out var pointer)) SamplePointer(pointer);
+                    else
+                    {
+                        // Keep the last candidates available while the author
+                        // moves to the manager to select one of them.
+                        pointerInGame = false;
+                        var liveIds = nodes.Select(n => n.Info.Id).ToHashSet();
+                        pointerHits.RemoveAll(id => !liveIds.Contains(id));
+                    }
                 }
                 Publish(snapshotTruncated);
             }
@@ -106,7 +123,8 @@ internal sealed class SceneInspectorController : MonoBehaviour
         {
             Runtime = runtimeId, Client = control.Client, UpdatedUtc = DateTime.UtcNow, PluginVersion = MyPluginInfo.PLUGIN_VERSION,
             Theme = ThemeRuntime.Current?.Theme.ActiveKey ?? "", SelectedId = selected, SelectionRevision = revision, SelectionOrigin = selectionOrigin,
-            ActiveScene = SceneManager.GetActiveScene().name, Nodes = nodes.Select(n => n.Info).ToList(), Truncated = truncated
+            ActiveScene = SceneManager.GetActiveScene().name, Nodes = nodes.Select(n => n.Info).ToList(), Truncated = truncated,
+            PointerSearch = control.PointerSearch, HasPointerSample = hasPointerSample, PointerInGame = pointerInGame, PointerHits = pointerHits.ToList()
         }); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -120,13 +138,30 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private void Pick(Vector2 position)
     {
         if (!ControlModeController.TryMapInspectorPoint(position, out position)) return;
-        var hits = nodes.Where(n => n.Transform != null && SceneNodeLocator.Hit(n, position))
-            .OrderByDescending(n => CanvasOrder(n.Transform)).ThenByDescending(n => GraphicDepth(n.Transform))
-            .ThenByDescending(n => n.Info.Address.Count(c => c == '/')).ThenByDescending(n => n.Transform.GetSiblingIndex()).ToList();
+        var hits = FindHits(position, control.PointerSearch);
+        if (control.PointerSearch) SetPointerHits(hits);
         if (hits.Count == 0) return;
         cycle = (position - lastPick).sqrMagnitude < 64 && Time.realtimeSinceStartup - lastPickTime < 1.5f ? cycle + 1 : 0;
         lastPick = position; lastPickTime = Time.realtimeSinceStartup;
         selected = hits[cycle % hits.Count].Info.Id; selectionOrigin = "game"; revision++; Publish(snapshotTruncated);
+    }
+    private List<SceneNode> FindHits(Vector2 position, bool through) =>
+        nodes.Where(n => n.Transform != null && (through ? SceneNodeLocator.HitThrough(n, position) : SceneNodeLocator.Hit(n, position)))
+            .OrderByDescending(n => CanvasOrder(n.Transform)).ThenByDescending(n => GraphicDepth(n.Transform))
+            .ThenByDescending(n => n.Info.Address.Count(c => c == '/')).ThenByDescending(n => n.Transform.GetSiblingIndex()).ToList();
+    private void ClearPointerSearch()
+    { pointerHits.Clear(); hasPointerSample = false; pointerInGame = false; }
+    private void SamplePointer(Vector2 position)
+    {
+        if (!control.PointerSearch) return;
+        if (!ControlModeController.TryMapInspectorPoint(position, out position))
+        { ClearPointerSearch(); return; }
+        SetPointerHits(FindHits(position, true));
+    }
+    private void SetPointerHits(List<SceneNode> hits)
+    {
+        pointerHits.Clear(); pointerHits.AddRange(hits.Select(n => n.Info.Id));
+        hasPointerSample = true; pointerInGame = true;
     }
     private static int CanvasOrder(Transform t)
     {
@@ -153,7 +188,7 @@ internal sealed class SceneInspectorController : MonoBehaviour
     private void Recover(Exception exception)
     {
         failed = true; IsInspecting = false; retryAt = Time.realtimeSinceStartup + 1;
-        nodes.Clear(); ResetOverlay();
+        nodes.Clear(); ClearPointerSearch(); ResetOverlay();
         if (Time.realtimeSinceStartup >= nextFailureLog)
         { nextFailureLog = Time.realtimeSinceStartup + 10; Plugin.Log.LogWarning("Scene inspector will retry: " + exception); }
     }
@@ -211,7 +246,8 @@ internal sealed class SceneInspectorController : MonoBehaviour
         {
             if (node.Info.Id != selected || node.Transform == null || node.Transform.gameObject.scene.handle != sceneHandle) continue;
             var points = SceneNodeLocator.Corners(node); if (points == null) continue;
-            var clip = ClipFor(node); if (clip.width <= 0 || clip.height <= 0) continue;
+            var clip = control.PointerSearch ? new Rect(0, 0, Screen.width, Screen.height) : ClipFor(node);
+            if (clip.width <= 0 || clip.height <= 0) continue;
             var left = points.Min(p => p.x); var right = points.Max(p => p.x); var bottom = points.Min(p => p.y); var top = points.Max(p => p.y);
             if (right < clip.xMin || left > clip.xMax || top < clip.yMin || bottom > clip.yMax) continue;
             Color32 color = new Color32(255, 204, 64, 255);

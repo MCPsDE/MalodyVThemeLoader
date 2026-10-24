@@ -95,6 +95,21 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         var clipNode = nodes.Single(n => n.Transform == clipped);
         var outside = RectTransformUtility.WorldToScreenPoint(null, clipped.TransformPoint(new Vector3(120, 0)));
         Require(!SceneNodeLocator.Hit(clipNode, outside), "Picking ignored RectMask2D.");
+        Require(SceneNodeLocator.HitThrough(clipNode, outside), "Through search missed the masked portion of a UI node.");
+        var transparent = Rect("itemScore(Clone)", canvas.transform, new Vector2(80, 80), new Vector2(-250, 0)).gameObject.AddComponent<Image>();
+        transparent.color = Color.clear; transparent.raycastTarget = false;
+        var group = transparent.gameObject.AddComponent<CanvasGroup>(); group.alpha = 0; group.blocksRaycasts = false;
+        var zero = Rect("零宽度", canvas.transform, new Vector2(0, 80), new Vector2(-250, 0));
+        Canvas.ForceUpdateCanvases();
+        var throughNodes = SceneNodeLocator.Collect(store, out _);
+        var transparentNode = throughNodes.Single(n => n.Transform == transparent.transform);
+        var throughPoint = RectTransformUtility.WorldToScreenPoint(SceneNodeLocator.CameraFor(transparent.rectTransform), transparent.transform.position);
+        Require(!SceneNodeLocator.Hit(transparentNode, throughPoint) && SceneNodeLocator.HitThrough(transparentNode, throughPoint), "Transparent non-interactive nodes were not exclusive to through search.");
+        transparent.enabled = false;
+        Require(SceneNodeLocator.HitThrough(transparentNode, throughPoint), "Disabled image component removed its active container from through search.");
+        Require(!SceneNodeLocator.HitThrough(throughNodes.Single(n => n.Transform == hidden), throughPoint), "Inactive nodes were hit by through search.");
+        Require(!SceneNodeLocator.HitThrough(throughNodes.Single(n => n.Transform == zero), throughPoint), "Zero-width node was hit by through search.");
+        Require(!SceneNodeLocator.HitThrough(transparentNode, throughPoint + new Vector2(500, 0)), "Through search included a rectangle outside the pointer.");
         var rules = new ThemeResources(); rules.Nodes.Add(new ThemeNodeRule { Scene = "SceneSong", Address = ci.Info.Address, Hierarchy = ci.Info.Hierarchy, ImageFile = "background.png", VideoFile = "video.webm", VideoOpacity = .45f });
         rules.Nodes.Add(new ThemeNodeRule { Scene = "SceneSong", Address = nodes.Single(n => n.Transform == caption.transform).Info.Address, Hierarchy = "Canvas/空白容器/标题", ImageFile = "background.png" });
         rules.Write(themeRoot); var service = new NodeDecorationService(Plugin.Log, theme, rules);
@@ -108,8 +123,8 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
         while ((!player.isPrepared || player.frame < 0) && Time.realtimeSinceStartup < until) { service.Tick(); yield return null; }
         Require(player.isPrepared && player.frame >= 0, "VP8 alpha video did not produce a frame.");
         service.Tick(); var raw = layer.GetComponentInChildren<RawImage>(); Require(raw.enabled && Math.Abs(raw.color.a - .45f) < .001, "Video opacity was not applied.");
-        var opaque = Pixel(player.targetTexture, .25f, .5f); var transparent = Pixel(player.targetTexture, .75f, .5f);
-        Require(opaque.b > .7f && opaque.a > .8f && transparent.a < .1f, "Video lost per-pixel alpha.");
+        var opaque = Pixel(player.targetTexture, .25f, .5f); var transparentPixel = Pixel(player.targetTexture, .75f, .5f);
+        Require(opaque.b > .7f && opaque.a > .8f && transparentPixel.a < .1f, "Video lost per-pixel alpha.");
         // Render the actual UI layers to a camera target to check compositing.
         var camera = new GameObject("Validation camera").AddComponent<Camera>(); camera.orthographic = true; camera.orthographicSize = Screen.height / 2f; camera.transform.position = new Vector3(0, 0, -10); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black;
         var target = new RenderTexture(Screen.width, Screen.height, 24); target.Create(); camera.targetTexture = target;
@@ -154,6 +169,26 @@ public sealed class InspectorRuntimeValidation : MonoBehaviour
                 "A locked snapshot destroyed the overlay.");
         }
         inspector.GetType().GetField("nextPublishRetry", Flags).SetValue(inspector, 0f);
+        Call(inspector, "SamplePointer", point); Call(inspector, "Publish", false);
+        Require(!InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName).HasPointerSample, "Pointer search ran while disabled.");
+        control.PointerSearch = true; control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector);
+        Call(inspector, "SamplePointer", point); Call(inspector, "Publish", false);
+        var throughSnapshot = InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName);
+        Require(throughSnapshot.PointerSearch && throughSnapshot.HasPointerSample && throughSnapshot.PointerHits.Contains(ai.Info.Id)
+            && throughSnapshot.PointerHits.Contains(transparentNode.Info.Id), "Through search did not publish every overlapping node.");
+        Require(throughSnapshot.PointerHits.Distinct().Count() == throughSnapshot.PointerHits.Count, "Through search published duplicate candidates.");
+        var throughSelected = new System.Collections.Generic.HashSet<int>();
+        for (var i = 0; i < throughSnapshot.PointerHits.Count + 1; i++)
+        { Call(inspector, "Pick", point); throughSelected.Add(InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName).SelectedId); }
+        Require(throughSelected.Contains(transparentNode.Info.Id), "Middle click did not cycle into a transparent node in through search.");
+        Call(inspector, "SamplePointer", outside);
+        control.SelectedId = clipNode.Info.Id; control.SelectRequest++; control.LeaseUtc = DateTime.UtcNow;
+        InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
+        Require(mesh.vertexCount == 16 && overlay.GetComponentsInChildren<Text>().Length <= 1, "Selected clipped node did not show complete search bounds with at most one label.");
+        control.PointerSearch = false; control.SelectRequest++; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector);
+        var cleared = InspectorFiles.Read<InspectorSnapshot>(loader, InspectorFiles.SnapshotName);
+        Require(!cleared.PointerSearch && !cleared.HasPointerSample && cleared.PointerHits.Count == 0, "Disabling search retained candidates.");
+        Destroy(transparent.gameObject); Destroy(zero.gameObject); yield return null;
         control.SelectedId = bi.Info.Id; control.SelectRequest++; InspectorFiles.Write(loader, InspectorFiles.ControlName, control); Force(inspector); Call(inspector, "LateUpdate");
         Require(Math.Abs((mesh.vertices[0] - mesh.vertices[1]).magnitude - 4) < .01f, "Selected bounds are not four pixels thick.");
         Require(overlay.GetComponentsInChildren<Text>()[0].transform.parent.GetComponent<Image>().color.a > .9f, "Selected label has no readable background.");

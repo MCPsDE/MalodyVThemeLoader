@@ -16,6 +16,8 @@ internal sealed class SceneInspectorPane : UserControl
     private readonly CheckBox frames = Check("选中边框", true);
     private readonly CheckBox names = Check("节点名称", true);
     private readonly CheckBox inactive = Check("隐藏节点");
+    private readonly CheckBox pointerSearch = Check("穿透搜索");
+    private readonly Label pointerStatus = AppVisuals.TextBlock("将鼠标移入游戏，查看经过的节点。", 9F);
     private readonly Label connection = AppVisuals.TextBlock("开启连接后，在游戏中按鼠标中键选取。", 9F);
     private readonly TextBox search = new() { PlaceholderText = "搜索节点名称或路径", Dock = DockStyle.Top };
     private readonly TreeView tree = new ResourceTreeView { Dock = DockStyle.Fill, HideSelection = false, BorderStyle = BorderStyle.None, ShowNodeToolTips = true, FullRowSelect = true };
@@ -63,14 +65,16 @@ internal sealed class SceneInspectorPane : UserControl
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = Padding.Empty };
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); shell.RowStyles.Add(new RowStyle(SizeType.AutoSize)); shell.RowStyles.Add(new RowStyle(SizeType.AutoSize)); shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var options = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = Padding.Empty };
-        options.Controls.AddRange(new Control[] { connect, frames, names, inactive });
+        options.Controls.AddRange(new Control[] { connect, frames, names, inactive, pointerSearch });
         connection.Margin = new Padding(0, 8, 0, 14); connection.Dock = DockStyle.Top;
         shell.Controls.Add(options, 0, 0); shell.Controls.Add(connection, 0, 1);
         var body = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40)); body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60)); body.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var browser = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(10), BackColor = AppVisuals.Surface, Margin = new Padding(0, 0, 16, 0) };
-        browser.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); browser.RowStyles.Add(new RowStyle(SizeType.AutoSize)); browser.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); browser.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        browser.Controls.Add(AppVisuals.TextBlock("搜索节点名称或路径", 9F, true), 0, 0); browser.Controls.Add(new TextField(search), 0, 1); browser.Controls.Add(tree, 0, 2);
+        var browser = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(10), BackColor = AppVisuals.Surface, Margin = new Padding(0, 0, 16, 0) };
+        browser.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); browser.RowStyles.Add(new RowStyle(SizeType.AutoSize)); browser.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); browser.RowStyles.Add(new RowStyle(SizeType.AutoSize)); browser.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        pointerStatus.Dock = DockStyle.Top; pointerStatus.Margin = new Padding(0, 4, 0, 10); pointerStatus.Visible = false;
+        browser.Controls.Add(AppVisuals.TextBlock("搜索节点名称或路径", 9F, true), 0, 0); browser.Controls.Add(new TextField(search), 0, 1); browser.Controls.Add(pointerStatus, 0, 2); browser.Controls.Add(tree, 0, 3);
+        tips.SetToolTip(pointerSearch, "列出鼠标下的所有活动 UI 节点，包含透明和被遮罩的节点。移回管理器后保留列表，可直接点选。");
         tree.BackColor = search.BackColor = AppVisuals.Surface; tree.ForeColor = search.ForeColor = AppVisuals.Ink; tree.ItemHeight = 27;
         tree.AccessibleName = "实时场景层级"; search.AccessibleName = "搜索游戏节点";
         var editor = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = Padding.Empty };
@@ -98,7 +102,14 @@ internal sealed class SceneInspectorPane : UserControl
             var owner = InspectorFiles.Read<InspectorControl>(loaderRoot, InspectorFiles.ControlName);
             if (connect.Checked && owner?.IsLive == true && owner.Client != control.Client)
             { connect.Checked = false; connection.Text = "另一个管理器正在调试，请先断开其连接"; return; }
-            WriteControl(); if (!connect.Checked) connection.Text = "连接已关闭";
+            WriteControl(); if (!connect.Checked) { connection.Text = "连接已关闭"; snapshot = null; treeSignature = ""; tree.Nodes.Clear(); }
+            RefreshTree();
+        };
+        pointerSearch.CheckedChanged += (_, _) =>
+        {
+            inactive.Enabled = !pointerSearch.Checked; pointerStatus.Visible = pointerSearch.Checked;
+            tree.AccessibleName = pointerSearch.Checked ? "鼠标穿透搜索结果" : "实时场景层级";
+            treeSignature = ""; RefreshTree(); WriteControl();
         };
         frames.CheckedChanged += (_, _) => WriteControl(); names.CheckedChanged += (_, _) => WriteControl(); inactive.CheckedChanged += (_, _) => { treeSignature = ""; RefreshTree(); WriteControl(); };
         search.TextChanged += (_, _) => { treeSignature = ""; RefreshTree(); };
@@ -141,7 +152,7 @@ internal sealed class SceneInspectorPane : UserControl
     {
         try
         {
-            control.Enabled = connect.Checked; control.LeaseUtc = DateTime.UtcNow; control.ShowFrames = frames.Checked; control.ShowNames = names.Checked; control.IncludeInactive = inactive.Checked;
+            control.Enabled = connect.Checked; control.LeaseUtc = DateTime.UtcNow; control.ShowFrames = frames.Checked; control.ShowNames = names.Checked; control.IncludeInactive = inactive.Checked; control.PointerSearch = pointerSearch.Checked;
             heartbeat.Update(control);
         }
         catch (Exception e) { connection.Text = "无法连接：" + e.Message; }
@@ -154,7 +165,7 @@ internal sealed class SceneInspectorPane : UserControl
         WriteControl();
         var next = InspectorFiles.Read<InspectorSnapshot>(loaderRoot, InspectorFiles.SnapshotName);
         if (next == null || next.Client != control.Client || next.UpdatedUtc < DateTime.UtcNow.AddSeconds(-5) || next.UpdatedUtc > DateTime.UtcNow.AddSeconds(5))
-        { connection.Text = "等待游戏连接 · 请使用 2.6.1 或更高版本启动游戏"; return; }
+        { connection.Text = "等待游戏连接 · 请使用 2.6.1 或更高版本启动游戏"; snapshot = null; if (pointerSearch.Checked) RefreshTree(); return; }
         AcceptSnapshot(next);
     }
     internal void AcceptSnapshot(InspectorSnapshot next)
@@ -186,10 +197,12 @@ internal sealed class SceneInspectorPane : UserControl
         if (picked == null) return;
         if (node?.Id != picked.Id && !ConfirmLeave()) { if (node != null) SendSelection(node); return; }
         if (node?.Id != picked.Id || !dirty) SelectNode(picked);
-        if (next.SelectionOrigin == "game" && picked.LogicalId.Length > 0) ResourcePicked?.Invoke(picked);
+        if (!pointerSearch.Checked && next.SelectionOrigin == "game" && picked.LogicalId.Length > 0) ResourcePicked?.Invoke(picked);
     }
     private void RefreshTree()
     {
+        UpdatePointerStatus();
+        if (pointerSearch.Checked) { RefreshPointerTree(); return; }
         if (snapshot == null) return;
         var signature = string.Join("|", snapshot.Nodes.Select(n => n.Id + ":" + n.ParentId + ":" + n.Name + ":" + n.Active)) + search.Text + inactive.Checked;
         if (signature == treeSignature) return; treeSignature = signature;
@@ -212,6 +225,40 @@ internal sealed class SceneInspectorPane : UserControl
                 var leaf = parent.Nodes.Add(item.Scene + "|" + item.Address, item.Name + (item.Active ? "" : " · 隐藏")); leaf.Tag = item; leaf.ToolTipText = item.Hierarchy + Environment.NewLine + item.Component;
                 if (!item.Active) leaf.ForeColor = AppVisuals.MutedInk;
                 built[item.Id] = leaf; if (expanded.Contains(leaf.Name) || query.Length > 0) leaf.Expand();
+                if (node?.Id == item.Id) tree.SelectedNode = leaf;
+            }
+        }
+        finally { tree.EndUpdate(); selecting = false; }
+    }
+    private void UpdatePointerStatus()
+    {
+        if (!pointerSearch.Checked) return;
+        pointerStatus.Text = !connect.Checked ? "连接游戏后，将鼠标移入游戏。"
+            : snapshot == null ? "等待游戏连接…"
+            : !snapshot.PointerSearch ? "等待搜索模式 · 需要游戏插件 2.6.5 或更高版本"
+            : !snapshot.HasPointerSample ? "将鼠标移入游戏，查看经过的节点。"
+            : $"{snapshot.PointerHits.Count} 个节点 · " + (snapshot.PointerInGame ? "鼠标下方" : "已保留，可直接点选");
+    }
+    private void RefreshPointerTree()
+    {
+        var candidates = snapshot?.PointerSearch == true && snapshot.HasPointerSample
+            ? snapshot.PointerHits : new List<int>();
+        var query = search.Text.Trim();
+        var all = snapshot?.Nodes.ToDictionary(n => n.Id) ?? new Dictionary<int, InspectorNode>();
+        var signature = "pointer|" + lastRuntime + "|" + string.Join("|", candidates.Select(id => all.TryGetValue(id, out var item)
+            ? id + ":" + item.Scene + ":" + item.Address + ":" + item.Name + ":" + item.Component + ":" + item.Active : "")) + "|" + query;
+        if (signature == treeSignature) return;
+        treeSignature = signature;
+        selecting = true; tree.BeginUpdate(); tree.Nodes.Clear();
+        try
+        {
+            foreach (var id in candidates.Distinct())
+            {
+                if (!all.TryGetValue(id, out var item) || !item.Active
+                    || !(item.Name + " " + item.Hierarchy).Contains(query, StringComparison.CurrentCultureIgnoreCase)) continue;
+                var leaf = tree.Nodes.Add(item.Scene + "|" + item.Address, item.Name + " · " + item.Component);
+                leaf.Tag = item;
+                leaf.ToolTipText = item.Scene + "/" + item.Hierarchy + Environment.NewLine + item.Component + Environment.NewLine + item.Address;
                 if (node?.Id == item.Id) tree.SelectedNode = leaf;
             }
         }

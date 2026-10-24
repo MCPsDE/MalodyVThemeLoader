@@ -1,5 +1,12 @@
 # 开发踩坑记录（持续维护）
 
+- 对可见顶层 Form 调用 Scale(2) 时，Windows 会按当前桌面的最大跟踪尺寸限制窗口；此时子控件已放大，窗口却没放大，截图会误成“200% 布局”，树和内容区还可能被挤成一条线。大于桌面的合成检查应把已缩放的客户端控件移到指定尺寸的离屏画布，断言候选树仍有可用高度；与物理显示器 DPI 检查分别记录。
+
+- 多文件 apply-patch 不保证整批原子完成；后面的文件匹配失败时，前面的文件可能已经写入。先检查 git diff 和目标内容，再只补失败部分，避免整批重跑造成重复段落或覆盖已完成修改。
+
+- 普通拾取遵守 Graphic / CanvasGroup 透明度和 UI 遮罩，不能直接复用为“穿透搜索”。穿透模式只检测活动 Canvas 下有效 RectTransform 的几何区域，保留透明、禁用 Graphic 和被遮罩节点；关闭模式后恢复原过滤，不修改游戏对象。鼠标移回管理器时必须保留最后的候选，否则用户无法点选；切场景、断连、过期和关闭模式才清除。新增 IPC 开关要同步复制到后台 InspectorHeartbeat，避免续租一秒后把开关复原。
+- 资源目录中的 prefab 名不保证当前场景中已有实例。`itemScore` 由成绩列表动态 Instantiate，列表行未创建、已回收或 inactive 时，不能靠扫描预制体资产伪造可点击区域。定位问题需同时确认源码生成位置与当前游戏快照，并保留同名实例的完整地址。
+
 - 闪退不能仅看 BepInEx 最后一行。2026-10-24 的 Windows Application / .NET Runtime 记录显示 `ClassInjector.Finalize -> GCHandle.FromIntPtr` 的未初始化句柄异常，现存日志不能确定具体注入类型，也不能归责其他插件。调试拦截层改为原生 Image + 注入 MonoBehaviour / ICanvasRaycastFilter，减少对 Unity 序列化 UI 继承链的依赖；隔离 IL2CPP 压力测试包含双端 GC、600 次拾取、100 次底图重载。当前独立播放器是 2022.3.62f3，与实际游戏 f2/Metadata V29 并不等同，不能把隔离通过说成真实多插件现场已复现并消除。
 - 调试 IPC 的原子替换也可能被短暂文件锁或扫描程序拒绝访问。快照写入失败应延迟重试，保留选中节点和覆盖层，不能走绘制异常的 ResetOverlay；这会在每次拾取时反复销毁、注入 UI。用独占打开 snapshot.json 的测试验证覆盖层身份和选择仍然保留。
 - 节点热重载先 Stop 视频、断开 targetTexture / RawImage.texture / Image.sprite，再隐藏并销毁自有宿主，延迟销毁纹理和 Sprite。RenderTexture.Release 是立即释放 GPU 资源，不能与延迟销毁的消费者交错使用。视频准备通过轮询与超时处理，避免未保存的托管回调跨 IL2CPP 生命周期；清理逐项隔离，防止失效对象阻止剩余资源释放。

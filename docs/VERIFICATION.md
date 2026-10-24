@@ -152,3 +152,15 @@ Live2D 长篇格式/边界说明已从界面移除，技术资料留在开发文
 ## 美术来源
 
 Default 资源来自只读源工程，逐文件哈希验证；界面预览来自主题内真实图片。应用图标 `src/MalodyVThemeLoader.Windows/Assets/mtp.png` 和 `mtp.ico` 为工作区已有文件，本次未修改。没有生成或替换美术资源。
+
+## 2.6.5 鼠标穿透搜索（2026-10-24）
+
+- 新增默认关闭的“穿透搜索”：开启时列出当前场景鼠标位置下所有有效活动 UI 矩形，包含被遮挡、透明、禁用 Graphic、CanvasGroup 透明及遮罩裁剪区域。移回管理器保留候选；中键轮选或列表点选使用独立实例地址。关闭、断连、租约过期或场景切换清除旧候选。游戏始终只显示所选节点的一份粗框和名称。
+- 全解决方案 Release 构建为 0 警告、0 错误。最终发布脚本以实际游戏 IL2CPP 接口校验插件，316 个接口引用通过；运行依赖检查确认 BepInEx/Il2CppInterop，没有 UnityEditor 引用。
+- `test-inspector-runtime.ps1 -Standalone` 通过 4,885 项断言，含普通与穿透命中区别、透明与禁用图片、被裁剪区域、inactive/零宽度/矩形外排除、重叠中键轮选、完整选中边框和开关清理。结果为 `artifacts/inspector-overlay-player-test/result.json`。
+- `test-inspector-il2cpp.ps1 -SkipPlayerBuild` 使用生产代码通过 600 次拾取、100 次底图重载、交替开关穿透搜索与双端 GC。结果为 `artifacts/inspector-il2cpp-probe/result.json`。独立播放器是 Unity 2022.3.62f3，不等于真实游戏 f2 / Metadata V29 与其他插件的组合验证。
+- `test-update-service.ps1` 通过 49 项更新/心跳断言，包含后台续租保留穿透开关。现有下载进度、校验和更新取消逻辑保持通过。
+- `test-scene-inspector.ps1` 在 dark/light 均通过：候选顺序、同名实例、回到管理器保留、精确点选、文字过滤、空候选、未采样状态、旧插件等待、退出穿透模式、媒体编辑与恢复、ZIP。正常/最小、合成 125/150/200% 和 125% 中文字体检查通过。新增截图在 `.impeccable/review/inspector-{dark,light}`；125/200% 用足够大的离屏客户端画布，未宣称物理显示器 DPI 验证。Impeccable 检测无发现。
+- `verify-payload.py` 确认离线 BepInEx 文件与路径、1,428 张目录图片、Default 的 1,626 个资源与源工程一致。最终安装器的 dry-run、内嵌离线安装、修复、验证、卸载、外部 BepInEx 复用、所有权、文件锁回滚和不兼容环境测试全部通过，均使用 artifacts 内假游戏目录。
+- 只读输入审计保留完整差异 `artifacts/reference-changes.json`。历史基线的全树 VerifyStable 仍失败，不能称全部输入未变：源码差异 0；游戏核心 exe/Data、BepInEx core/interop/unity-libs 无差异；加载器自身已有 5 个文件的 10 条差异，当前安装版本仍为本轮修改前观察到的 2.6.4，另有玩家主题、其他插件等差异。本轮未向实际游戏或源工程写入文件，未重录基线或回滚玩家文件。范围说明在 `artifacts/reference-scoped-2.6.5.json`。
+- 最终安装器：`MalodyVThemeLoader-Setup-2.6.5.exe`，314,197,961 bytes，SHA-256 `73ec13f38336be48f4a05848cec22b7c9131a1b38fec7e747f36c4e91a007b4c`。

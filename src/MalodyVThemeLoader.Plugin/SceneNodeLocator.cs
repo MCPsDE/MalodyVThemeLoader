@@ -98,10 +98,15 @@ internal static class SceneNodeLocator
         for (var i = 0; i < 4; i++) points[i] = RectTransformUtility.WorldToScreenPoint(camera, world[i]);
         return points;
     }
+    internal static bool HitThrough(SceneNode node, Vector2 position)
+    {
+        if (node.Transform == null) return false;
+        var rect = node.Transform.GetComponent<RectTransform>();
+        return rect != null && Corners(node) != null && RectTransformUtility.RectangleContainsScreenPoint(rect, position, CameraFor(rect));
+    }
     internal static bool Hit(SceneNode node, Vector2 position)
     {
-        var rect = node.Transform.GetComponent<RectTransform>();
-        if (rect == null || Corners(node) == null || !RectTransformUtility.RectangleContainsScreenPoint(rect, position, CameraFor(rect))) return false;
+        if (!HitThrough(node, position)) return false;
         foreach (var cg in node.Transform.GetComponentsInParent<CanvasGroup>()) if (cg.alpha <= .001f) return false;
         var graphic = node.Transform.GetComponent<Graphic>();
         var decoration = node.Transform.childCount > 0 ? node.Transform.GetChild(0) : null;

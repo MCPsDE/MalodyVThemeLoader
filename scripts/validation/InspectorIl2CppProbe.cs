@@ -87,6 +87,11 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
             typeof(SceneInspectorController).GetField("nextPoll", Flags)!.SetValue(inspector, 0f);
             typeof(SceneInspectorController).GetField("nextSnapshot", Flags)!.SetValue(inspector, 0f);
             Call("Update"); Call("Pick", new Vector2(Screen.width / 2, Screen.height / 2)); Call("LateUpdate");
+            var snapshot = InspectorFiles.Read<InspectorSnapshot>(Path.Combine(Paths.GameRootPath, "ThemeLoader"), InspectorFiles.SnapshotName)!;
+            if (control.PointerSearch && (!snapshot.PointerSearch || !snapshot.HasPointerSample || !snapshot.PointerHits.Contains(target.GetInstanceID())))
+                throw new Exception("Through search lost the active node in the IL2CPP domain.");
+            if (!control.PointerSearch && snapshot.PointerHits.Count > 0)
+                throw new Exception("Disabled through search retained IL2CPP candidates.");
             var overlay = (GameObject)typeof(SceneInspectorController).GetField("overlay", Flags)!.GetValue(inspector)!;
             var mesh = (Mesh)typeof(SceneInspectorController).GetField("mesh", Flags)!.GetValue(inspector)!;
             if (mesh.vertexCount != 16 || overlay.GetComponentsInChildren<Text>().Length != 1)
@@ -112,7 +117,7 @@ public sealed class InspectorLifetimeDriver : MonoBehaviour
     }
     [HideFromIl2Cpp] private void Call(string method, params object[] arguments) => typeof(SceneInspectorController).GetMethod(method, Flags)!.Invoke(inspector, arguments);
     [HideFromIl2Cpp] private void Renew()
-    { control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(Path.Combine(Paths.GameRootPath, "ThemeLoader"), InspectorFiles.ControlName, control); }
+    { control.PointerSearch = tick % 200 >= 100; control.LeaseUtc = DateTime.UtcNow; InspectorFiles.Write(Path.Combine(Paths.GameRootPath, "ThemeLoader"), InspectorFiles.ControlName, control); }
     [HideFromIl2Cpp] private void Finish(bool passed, string error)
     {
         File.WriteAllText(result, JsonSerializer.Serialize(new { passed, picks = tick, reloads = tick / 6, error,

@@ -51,6 +51,7 @@ public sealed class InspectorControl
     public bool ShowNames { get; set; } = true;
     public bool ShowFrames { get; set; } = true;
     public bool IncludeInactive { get; set; }
+    public bool PointerSearch { get; set; }
     public string Runtime { get; set; } = "";
     public int SelectedId { get; set; }
     public long SelectRequest { get; set; }
@@ -69,6 +70,10 @@ public sealed class InspectorSnapshot
     public string SelectionOrigin { get; set; } = "";
     public int SelectedId { get; set; }
     public bool Truncated { get; set; }
+    public bool PointerSearch { get; set; }
+    public bool HasPointerSample { get; set; }
+    public bool PointerInGame { get; set; }
+    public List<int> PointerHits { get; set; } = new();
     public List<InspectorNode> Nodes { get; set; } = new();
 }
 

@@ -80,9 +80,35 @@ try{
     Capture $form 'picked-resource'
     Invoke $editor 'ShowInspector' @([bool]$true)|Out-Null
     $snapshot.SelectedId=2;$snapshot.SelectionRevision=3;$snapshot.SelectionOrigin='editor';Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
+    $through=Field $pane 'pointerSearch';$through.Checked=$true
+    Assert ((Field $pane 'control').PointerSearch -and !(Field $pane 'inactive').Enabled) 'Pointer-search switch did not reach the connection control.'
+    Assert ((Field $pane 'tree').Nodes.Count -eq 0) 'Normal tree was displayed as pointer candidates before runtime acknowledgement.'
+    $snapshot.PointerSearch=$true;$snapshot.HasPointerSample=$true;$snapshot.PointerInGame=$true
+    $snapshot.PointerHits.Add(4);$snapshot.PointerHits.Add(3);$snapshot.PointerHits.Add(2)
+    Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
+    $candidateTree=Field $pane 'tree'
+    Assert ($candidateTree.Nodes.Count -eq 3 -and $candidateTree.Nodes[0].Tag.Id -eq 4 -and $candidateTree.Nodes[1].Tag.Id -eq 3) 'Overlapping or duplicate-name candidates were lost or reordered.'
+    Capture $form 'pointer-search'
+    $snapshot.PointerInGame=$false;Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
+    Assert ($candidateTree.Nodes.Count -eq 3 -and (Field $pane 'pointerStatus').Text -match '已保留') 'Candidates disappeared when moving back to the manager.'
+    $candidateTree.SelectedNode=$candidateTree.Nodes[0]
+    Assert ((Field $pane 'node').Id -eq 4 -and (Field $pane 'control').SelectedId -eq 4) 'Clicking a candidate did not select the exact duplicate node.'
+    $snapshot.SelectedId=4;$snapshot.SelectionRevision=31;$snapshot.SelectionOrigin='game';Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
+    Assert ($pane.Visible) 'Candidate selection unexpectedly left the inspector.'
+    (Field $pane 'search').Text='空白容器'
+    Assert ($candidateTree.Nodes.Count -eq 1 -and $candidateTree.Nodes[0].Tag.Id -eq 2) 'Text filtering failed within pointer candidates.'
+    (Field $pane 'search').Clear()
+    $snapshot.PointerHits.Clear();Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
+    Assert ($candidateTree.Nodes.Count -eq 0) 'Empty pointer results retained old candidates.'
+    $snapshot.HasPointerSample=$false;$snapshot.PointerHits.Add(3);Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
+    Assert ($candidateTree.Nodes.Count -eq 0) 'Unsampled pointer state displayed stale candidates.'
+    $snapshot.HasPointerSample=$true;$snapshot.PointerHits.Add(2);Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
     $form.Size=$form.MinimumSize;$scroll.AutoScrollPosition=[Drawing.Point]::Empty;[Windows.Forms.Application]::DoEvents();Capture $form 'minimum'
     $scroll.ScrollControlIntoView($opacity);[Windows.Forms.Application]::DoEvents();Capture $form 'minimum-video'
     $form.ClientSize=[Drawing.Size]::new(1120,800);$form.Scale([Drawing.SizeF]::new(1.5,1.5));$scroll.ScrollControlIntoView($opacity);[Windows.Forms.Application]::DoEvents();Capture $form 'scale150'
+    $through.Checked=$false
+    Assert (!(Field $pane 'control').PointerSearch -and (Field $pane 'inactive').Enabled -and (Field $pane 'tree').Nodes[0].Text -eq 'SceneSong') 'Closing pointer search did not restore normal hierarchy.'
+    Invoke $pane 'SelectNode' @($node)|Out-Null
     Invoke $pane 'Restore'|Out-Null;Assert ($workspace.Rules.Nodes.Count -eq 0 -and $workspace.Rules.Images.Count -eq 1) 'Restore removed unrelated image rules.'
     $snapshot.SelectedId=3;$snapshot.SelectionRevision=4;Invoke $pane 'AcceptSnapshot' @($snapshot)|Out-Null
     $search=Field $pane 'search';$search.Text='隐藏节点';(Field $pane 'inactive').Checked=$true
@@ -90,5 +116,35 @@ try{
     $package=Join-Path $fake 'Inspector.zip';$type=$shared.GetType('MalodyVThemeLoader.Shared.ThemePackage');$type.GetMethod('CreateFromDirectory').Invoke($null,@([string]$theme,[string]$package))|Out-Null
     $extracted=Join-Path $fake 'round-trip';$type.GetMethod('ExtractToDirectory').Invoke($null,@([string]$package,[string]$extracted))|Out-Null
     Assert (Test-Path (Join-Path $extracted 'resources.json')) 'ZIP did not retain resource rules.'
-    Write-Output 'PASS: live tree/search/hidden nodes, empty-node image + VP8 alpha video, opacity/fit, invalid-codec preservation, exact game-pick resource navigation, duplicate isolation, realtime activation, restore, ZIP and UI geometry.'
+    (Field $pane 'connect').Checked=$false
+    foreach($layout in @(@{Name='scale125';Scale=1.25;Font=1.0},@{Name='scale200';Scale=2.0;Font=1.0},@{Name='font125-minimum';Scale=1.0;Font=1.25})) {
+        $layoutForm=[Activator]::CreateInstance($manager.GetType('MalodyVThemeLoader.ThemeManager.ThemeManagerForm'),@([string]$fake))
+        $layoutCanvas=$null
+        try {
+            $layoutForm.Show();[Windows.Forms.Application]::DoEvents();Invoke $layoutForm 'Navigate' @('resources')|Out-Null
+            $layoutEditor=Field $layoutForm 'resourceEditor';Invoke $layoutEditor 'ShowInspector' @([bool]$true)|Out-Null
+            $layoutPane=Field $layoutEditor 'inspectorPane';(Field $layoutPane 'timer').Stop();(Field $layoutPane 'connect').Checked=$true;(Field $layoutPane 'pointerSearch').Checked=$true
+            Invoke $layoutPane 'AcceptSnapshot' @($snapshot)|Out-Null
+            if($layout.Scale -ne 1){$layoutForm.Scale([Drawing.SizeF]::new($layout.Scale,$layout.Scale))}
+            if($layout.Font -ne 1){
+                $layoutForm.Size=$layoutForm.MinimumSize
+                $queue=[Collections.Generic.Queue[Windows.Forms.Control]]::new();$queue.Enqueue($layoutForm)
+                $fontCases=[Collections.Generic.List[object]]::new()
+                while($queue.Count -gt 0){$target=$queue.Dequeue();$fontCases.Add([pscustomobject]@{Control=$target;Family=$target.Font.FontFamily;Size=$target.Font.Size;Style=$target.Font.Style});foreach($child in $target.Controls){$queue.Enqueue($child)}}
+                foreach($fontCase in $fontCases){$fontCase.Control.Font=[Drawing.Font]::new($fontCase.Family,[single]($fontCase.Size*$layout.Font),$fontCase.Style)}
+                Invoke $layoutForm 'FitNavigation'|Out-Null
+            }
+            if($layout.Scale -ne 1){
+                # Windows caps top-level forms at this desktop's tracking size.
+                # Render the scaled client controls in a full-size offscreen
+                # canvas instead of calling the clamped window a DPI result.
+                $layoutCanvas=[Windows.Forms.Panel]::new();$layoutCanvas.Font=$layoutForm.Font;$layoutCanvas.BackColor=$layoutForm.BackColor
+                $layoutCanvas.Size=[Drawing.Size]::new([int](1120*$layout.Scale),[int](800*$layout.Scale))
+                foreach($section in @($layoutForm.Controls)){$layoutCanvas.Controls.Add($section)}
+                $layoutCanvas.CreateControl();$layoutCanvas.PerformLayout();Capture $layoutCanvas $layout.Name
+                Assert ((Field $layoutPane 'tree').Height -gt 100) 'Synthetic viewport collapsed the pointer candidate list.'
+            }else{Capture $layoutForm $layout.Name}
+        }finally{if($layoutCanvas){$layoutCanvas.Dispose()};$layoutForm.Dispose()}
+    }
+    Write-Output 'PASS: live tree/search/hidden nodes, overlapping pointer candidates and retention, exact duplicate selection, mode recovery, node media/restore/ZIP, and UI geometry in normal/minimum, synthetic 125/150/200% and enlarged CJK fonts.'
 }finally{$form.Close();$form.Dispose()}

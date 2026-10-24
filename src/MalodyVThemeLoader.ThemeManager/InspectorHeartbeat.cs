@@ -23,7 +23,7 @@ internal sealed class InspectorHeartbeat : IDisposable
             if (disposed) return;
             current = new InspectorControl {
                 Client = value.Client, Enabled = value.Enabled, ShowFrames = value.ShowFrames,
-                ShowNames = value.ShowNames, IncludeInactive = value.IncludeInactive,
+                ShowNames = value.ShowNames, IncludeInactive = value.IncludeInactive, PointerSearch = value.PointerSearch,
                 Runtime = value.Runtime, SelectedId = value.SelectedId, SelectRequest = value.SelectRequest
             };
             Write();

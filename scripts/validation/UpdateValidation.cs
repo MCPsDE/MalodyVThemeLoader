@@ -39,13 +39,14 @@ internal static class UpdateValidation
             Console.WriteLine("PASS update " + mode);
         }
         var root = Path.Combine(args[0], "heartbeat"); Directory.CreateDirectory(root);
-        var control = new InspectorControl { Client = "ours", Enabled = true, ShowNames = false, SelectedId = 7, SelectRequest = 11 };
+        var control = new InspectorControl { Client = "ours", Enabled = true, ShowNames = false, PointerSearch = true, SelectedId = 7, SelectRequest = 11 };
         using (var heartbeat = new InspectorHeartbeat(root))
         {
             heartbeat.Update(control);
             // No UI message pump for longer than the full game connection lease.
             Thread.Sleep(6200);
             var live = InspectorFiles.Read<InspectorControl>(root, InspectorFiles.ControlName)!;
+            Require(live.PointerSearch, "Background heartbeat lost the pointer-search switch.");
             Require(live.IsLive && live.Client == "ours" && live.SelectedId == 7 && !live.ShowNames, "Background lease did not survive a blocked UI.");
             var foreign = new InspectorControl { Client = "another-manager", Enabled = true, LeaseUtc = DateTime.UtcNow };
             InspectorFiles.Write(root, InspectorFiles.ControlName, foreign); Thread.Sleep(1200);

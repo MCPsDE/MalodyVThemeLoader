@@ -192,3 +192,4 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - 历史输入基线未重录：源工程与游戏核心 exe/Data、BepInEx core/interop/unity-libs 变化记录均为 0；完整 VerifyStable 仍因历史加载器、玩家内容及其他插件变化失败。全差异及范围统计保存在 `artifacts/recheck-2.6.7/reference-changes.json`、`reference-scoped.json`，不声称整个活动游戏目录未变。
 - 最终载荷校验通过：1,626 份 Default 源资源保持原样、1,428 个目录图像有效；插件仅引用运行时 IL2CPP/BepInEx 程序集。最终 EXE 的假游戏 dry-run、安装、验证、修复、卸载、外部 BepInEx 复用/所有权、锁定目标后的精确回滚及不兼容环境拒绝均通过；锁定文件与禁用 Doorstop 的错误输出属于主动故障测试。
 - 最终安装器 `MalodyVThemeLoader-Setup-2.6.7.exe`，314,202,057 bytes，SHA-256 `c243da25e82c61a81b6d1d52ff161d788e8dd79586df718007bd619a1ced5d40`。安装和更新应先退出游戏，重新启动后才加载新的插件 DLL。
+- GitHub v2.6.7 于 2026-10-24 正式发布，Release ID 为 422564190，draft/prerelease 均为 false，`/releases/latest` 返回该标签。三个附件 state=uploaded，逐一与本地大小和 SHA-256 digest 相同；记录在 `artifacts/recheck-2.6.7/release-assets.json`、`published-release.json` 和 `latest-release.json`。标签对应源代码提交 `8810916f33d8ed9acb0cf52be819dd0a9cd2c833`；随后补充发布审计和遮罩来源调查文档。

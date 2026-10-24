@@ -1,5 +1,7 @@
 # 开发踩坑记录（持续维护）
 
+- 半透明 UI 不一定有专用遮罩图片。入口 `mask/tip` 用通用纯白 `g-white.png` 配 Image 黑色、alpha≈0.502；结算 `Canvas/bgmask` 与底栏也靠 Image 着色，而 `Canvas/Image` 另外叠加真实 `shop_bg1.png`（alpha≈0.447）。只换 Sprite 不会清除 Image.color，移动 RectTransform 也不会改变它。调查时分别核对纹理、组件颜色和独立叠层；不可全局清除同名 mask 或替换复用的 g-white 来处理局部效果。
+
 - IL2CPP 的 `Transform.Find` / `parent` 可返回 CLR 基础 Transform 包装器，即便底层确实是 RectTransform，C# `as` / `is` 也会失败。2.6.6 的入口提示平移因此完全没有绑定，旧 Mono 隔离测试无法发现；改用 `GetComponent<RectTransform>()`，并在原生 IL2CPP 播放器中回放原动画、逐帧检查固定宽度和位移。场景 Start 后绑定使用实例所属 scene，避免 additive 场景下误用 active scene。
 - .NET 字典保留 AudioClip 包装器不等于 Unity 资源保活：`Resources.UnloadUnusedAssets` 会清除未绑定音源的缓存语音。自建缓存设置 `DontUnloadUnusedAsset`，显式管理销毁；逐项检查 `WasCollected` 及 Unity 对象存活，失效后重建，不能一次报错就永久关闭语音。固定 Il2CppInterop 的全局 wrapper pool 命中没有排除 WasCollected；自建 AudioClip 使用与游戏 helper 相同的 Construct_Internal / CreateUserSound 接口创建新包装器，显式保留 SetData 数组至调用结束，不修改全局池。
 - 必须区分自然复现与故障注入：本轮隔离 f3 IL2CPP 自然复现的是缓存被 UnloadUnusedAssets 清除后的 native NullReference，用户的 ObjectCollectedException 没有完整现场栈，不能说成相同根因已自然复现。测试主动使自有 clip/source 句柄失效，确认抛出该异常及后续触发恢复；隔离 Unity f3 的通过不能替代实际游戏 f2 的现场验证。

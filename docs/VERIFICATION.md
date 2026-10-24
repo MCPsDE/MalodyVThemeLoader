@@ -178,3 +178,4 @@ Default 资源来自只读源工程，逐文件哈希验证；界面预览来自
 - `verify-plugin.ps1` 确认插件引用固定 IL2CPP/BepInEx 接口、无 UnityEditor 引用；`verify-payload.py` 校验全部离线运行库、主题清单与路径，Default 的 1,626 个资源与源工程一致，目录包含 1,428 张图片。
 - 最终安装器：`MalodyVThemeLoader-Setup-2.6.6.exe`，314,197,961 bytes，SHA-256 `8365ef822290cb836f4087e55b22eba96ea127cd4ae2a0871352a2dba0997f30`。
 - 最终 EXE 的 dry-run、内嵌离线安装、安装后验证、修复、卸载及未拥有 winhttp.dll 拒绝覆盖通过；外部 BepInEx 复用、所有权保留、文件锁回滚、禁用 Doorstop / Mono 入口 / 缺失核心库拒绝修改通过。对应 `test-installer.ps1` 与 `test-runtime-reuse.ps1`，全部仅操作 artifacts 内的假游戏目录。
+- GitHub v2.6.6 已公开发布并设为 Latest，2026-10-24 的 /releases/latest 返回该标签。三个附件均为 uploaded，逐一与本地 size / SHA-256 digest 一致；记录在 `artifacts/release-assets-2.6.6.json` 和 `artifacts/published-release-2.6.6.json`。发布标签对应 d413a78d744e50cedb181be7bb65807d24c7130a，之后只补发布审计与草稿查询踩坑文档。
